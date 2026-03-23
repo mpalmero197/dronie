@@ -2,14 +2,89 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+/* MapForge Design System — Drone Photogrammetry Platform */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Core surfaces */
+    --background: 40 20% 98%;
+    --foreground: 220 35% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 35% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 35% 12%;
+
+    /* Forest green primary */
+    --primary: 152 52% 22%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Amber accent */
+    --accent: 38 95% 52%;
+    --accent-foreground: 220 35% 12%;
+
+    /* Sky blue highlight */
+    --highlight: 202 85% 48%;
+    --highlight-foreground: 0 0% 100%;
+
+    --secondary: 148 20% 94%;
+    --secondary-foreground: 152 52% 22%;
+
+    --muted: 220 14% 94%;
+    --muted-foreground: 220 20% 48%;
+
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 16% 88%;
+    --input: 220 16% 88%;
+    --ring: 152 52% 22%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 152 40% 16%;
+    --sidebar-foreground: 148 30% 88%;
+    --sidebar-primary: 38 95% 52%;
+    --sidebar-primary-foreground: 220 35% 12%;
+    --sidebar-accent: 152 35% 22%;
+    --sidebar-accent-foreground: 148 30% 90%;
+    --sidebar-border: 152 30% 25%;
+    --sidebar-ring: 38 95% 52%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 148 55% 38%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 38 95% 52%;
+    --accent-foreground: 220 35% 12%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 148 55% 38%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 38 95% 52%;
+    --sidebar-primary-foreground: 220 35% 12%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 38 95% 52%;
+  }
+}
 
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
