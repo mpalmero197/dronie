@@ -1,130 +1,31 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
-  Map,
-  Plus,
-  UploadCloud,
-  MoreVertical,
-  Clock,
-  CheckCircle2,
-  AlertCircle,
-  Loader2,
-  FolderOpen,
-  Download,
-  Eye,
-  Trash2,
-  BarChart3,
-  HardDrive,
-  Zap,
-  ArrowLeft,
+  Map, Plus, UploadCloud, MoreVertical, Clock,
+  CheckCircle2, AlertCircle, Loader2, FolderOpen,
+  Download, Eye, Trash2, BarChart3, HardDrive, Zap,
+  ArrowLeft, LogOut, Shield, User as UserIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase, Project } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
 
 type Status = "complete" | "processing" | "queued" | "failed";
 
-interface Project {
-  id: string;
-  name: string;
-  date: string;
-  images: number;
-  areaha: number;
-  status: Status;
-  progress?: number;
-  outputs: string[];
-  thumbnail?: string;
-}
-
-const projects: Project[] = [
-  {
-    id: "p1",
-    name: "Greenfield Farm — Block 4",
-    date: "Mar 21, 2026",
-    images: 847,
-    areaha: 143.2,
-    status: "complete",
-    outputs: ["Orthomosaic", "DSM", "Point Cloud", "Contours"],
-    progress: 100,
-  },
-  {
-    id: "p2",
-    name: "Site_Survey_March23",
-    date: "Mar 23, 2026",
-    images: 312,
-    areaha: 31.7,
-    status: "processing",
-    outputs: ["Orthomosaic", "DSM"],
-    progress: 59,
-  },
-  {
-    id: "p3",
-    name: "Highway_ROW_Corridor",
-    date: "Mar 23, 2026",
-    images: 1204,
-    areaha: 287.9,
-    status: "queued",
-    outputs: ["Orthomosaic", "Point Cloud", "DTM"],
-    progress: 0,
-  },
-  {
-    id: "p4",
-    name: "Quarry Volume Assessment",
-    date: "Mar 20, 2026",
-    images: 533,
-    areaha: 58.4,
-    status: "complete",
-    outputs: ["Orthomosaic", "DSM", "DTM", "Point Cloud"],
-    progress: 100,
-  },
-  {
-    id: "p5",
-    name: "Coastal_Erosion_Survey_Feb",
-    date: "Feb 28, 2026",
-    images: 291,
-    areaha: 19.6,
-    status: "failed",
-    outputs: [],
-    progress: 32,
-  },
-  {
-    id: "p6",
-    name: "Orchard NDVI Analysis",
-    date: "Mar 18, 2026",
-    images: 718,
-    areaha: 94.1,
-    status: "complete",
-    outputs: ["Orthomosaic", "NDVI Map", "DSM"],
-    progress: 100,
-  },
-];
-
 const statusConfig: Record<Status, { label: string; icon: typeof CheckCircle2; classes: string }> = {
-  complete: {
-    label: "Complete",
-    icon: CheckCircle2,
-    classes: "bg-primary/10 text-primary border-primary/20",
-  },
-  processing: {
-    label: "Processing",
-    icon: Loader2,
-    classes: "bg-accent/15 text-accent border-accent/20",
-  },
-  queued: {
-    label: "Queued",
-    icon: Clock,
-    classes: "bg-muted text-muted-foreground border-border",
-  },
-  failed: {
-    label: "Failed",
-    icon: AlertCircle,
-    classes: "bg-destructive/10 text-destructive border-destructive/20",
-  },
+  complete: { label: "Complete", icon: CheckCircle2, classes: "bg-primary/10 text-primary border-primary/20" },
+  processing: { label: "Processing", icon: Loader2, classes: "bg-accent/15 text-accent border-accent/20" },
+  queued: { label: "Queued", icon: Clock, classes: "bg-muted text-muted-foreground border-border" },
+  failed: { label: "Failed", icon: AlertCircle, classes: "bg-destructive/10 text-destructive border-destructive/20" },
 };
 
 function StatusBadge({ status }: { status: Status }) {
@@ -138,35 +39,92 @@ function StatusBadge({ status }: { status: Status }) {
   );
 }
 
-function StorageBar({ used, total }: { used: number; total: number }) {
-  const pct = Math.round((used / total) * 100);
-  return (
-    <div>
-      <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
-        <span>{used} GB used</span>
-        <span>{total} GB</span>
-      </div>
-      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-        <div
-          className="h-full bg-primary rounded-full transition-all duration-700"
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-    </div>
-  );
-}
-
 export default function Dashboard() {
+  const { user, isAdmin, roles, signOut, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loadingProjects, setLoadingProjects] = useState(true);
   const [dragging, setDragging] = useState(false);
+  const [newProjectOpen, setNewProjectOpen] = useState(false);
+  const [newProjectName, setNewProjectName] = useState("");
+  const [creating, setCreating] = useState(false);
+
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) navigate('/auth');
+  }, [authLoading, user, navigate]);
+
+  async function fetchProjects() {
+    if (!user) return;
+    setLoadingProjects(true);
+    const { data, error } = await supabase
+      .from('projects')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) {
+      toast({ title: 'Error loading projects', description: error.message, variant: 'destructive' });
+    } else {
+      setProjects(data || []);
+    }
+    setLoadingProjects(false);
+  }
+
+  useEffect(() => {
+    if (user) fetchProjects();
+  }, [user]);
+
+  async function createProject() {
+    if (!user || !newProjectName.trim()) return;
+    setCreating(true);
+    const { data, error } = await supabase
+      .from('projects')
+      .insert({ user_id: user.id, name: newProjectName.trim(), status: 'queued' })
+      .select()
+      .single();
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } else {
+      setProjects([data, ...projects]);
+      setNewProjectOpen(false);
+      setNewProjectName('');
+      toast({ title: 'Project created', description: `"${data.name}" is ready for images.` });
+    }
+    setCreating(false);
+  }
+
+  async function deleteProject(id: string) {
+    const { error } = await supabase.from('projects').delete().eq('id', id);
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } else {
+      setProjects(projects.filter((p) => p.id !== id));
+      toast({ title: 'Project deleted' });
+    }
+  }
+
+  async function handleSignOut() {
+    await signOut();
+    navigate('/');
+  }
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   const completeCount = projects.filter((p) => p.status === "complete").length;
   const processingCount = projects.filter((p) => p.status === "processing" || p.status === "queued").length;
+  const totalImages = projects.reduce((sum, p) => sum + (p.image_count || 0), 0);
+  const totalArea = projects.reduce((sum, p) => sum + (Number(p.area_ha) || 0), 0);
 
   return (
     <div className="min-h-screen bg-background flex">
       {/* Sidebar */}
       <aside className="hidden lg:flex flex-col w-64 bg-sidebar border-r border-sidebar-border min-h-screen sticky top-0">
-        {/* Logo */}
         <div className="p-5 border-b border-sidebar-border">
           <Link to="/" className="flex items-center gap-2.5 group">
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shadow">
@@ -176,7 +134,6 @@ export default function Dashboard() {
           </Link>
         </div>
 
-        {/* Nav */}
         <nav className="flex-1 p-4 space-y-1">
           {[
             { icon: FolderOpen, label: "Projects", active: true },
@@ -186,8 +143,7 @@ export default function Dashboard() {
           ].map((item) => {
             const Icon = item.icon;
             return (
-              <button
-                key={item.label}
+              <button key={item.label}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                   item.active
                     ? "bg-sidebar-accent text-sidebar-accent-foreground"
@@ -201,14 +157,32 @@ export default function Dashboard() {
           })}
         </nav>
 
-        {/* Storage */}
-        <div className="p-4 border-t border-sidebar-border">
-          <p className="text-xs font-semibold text-sidebar-foreground/40 uppercase tracking-widest mb-3">Storage</p>
-          <StorageBar used={23.4} total={50} />
-          <Button size="sm" className="w-full mt-3 bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 text-xs transition-all active:scale-[0.97]">
-            <Zap className="w-3 h-3 mr-1.5" />
-            Upgrade Plan
-          </Button>
+        {/* User info */}
+        <div className="p-4 border-t border-sidebar-border space-y-3">
+          {isAdmin && (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-accent/15 border border-accent/20">
+              <Shield className="w-3.5 h-3.5 text-accent flex-shrink-0" />
+              <span className="text-xs font-semibold text-accent">Admin</span>
+            </div>
+          )}
+          <div className="flex items-center gap-2.5 px-1">
+            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+              <UserIcon className="w-4 h-4 text-primary-foreground" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-sidebar-foreground truncate">
+                {user?.user_metadata?.full_name || 'Pilot'}
+              </p>
+              <p className="text-xs text-sidebar-foreground/50 truncate">{user?.email}</p>
+            </div>
+          </div>
+          <button
+            onClick={handleSignOut}
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            Sign out
+          </button>
         </div>
       </aside>
 
@@ -216,21 +190,34 @@ export default function Dashboard() {
       <main className="flex-1 flex flex-col min-h-screen">
         {/* Top bar */}
         <header className="sticky top-0 z-10 bg-card/95 backdrop-blur-md border-b border-border px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link to="/" className="lg:hidden flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
-              <ArrowLeft className="w-4 h-4" />
+          <div className="flex items-center gap-3">
+            <Link to="/" className="lg:hidden">
+              <ArrowLeft className="w-5 h-5 text-muted-foreground hover:text-foreground transition-colors" />
             </Link>
             <div>
-              <h1 className="font-display font-700 text-foreground">Projects</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="font-display font-700 text-foreground">Projects</h1>
+                {isAdmin && (
+                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-accent text-accent-foreground">
+                    <Shield className="w-2.5 h-2.5" />
+                    Admin
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-muted-foreground mt-0.5">
                 {completeCount} complete · {processingCount} in queue
               </p>
             </div>
           </div>
-          <Button className="bg-primary text-primary-foreground hover:bg-primary/90 gap-2 shadow-sm hover:shadow-md transition-all active:scale-[0.97]">
-            <Plus className="w-4 h-4" />
-            New Project
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => setNewProjectOpen(true)}
+              className="bg-primary text-primary-foreground hover:bg-primary/90 gap-2 shadow-sm hover:shadow-md transition-all active:scale-[0.97]"
+            >
+              <Plus className="w-4 h-4" />
+              New Project
+            </Button>
+          </div>
         </header>
 
         <div className="flex-1 p-6 space-y-6">
@@ -238,9 +225,9 @@ export default function Dashboard() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {[
               { label: "Total Projects", value: projects.length.toString(), icon: FolderOpen, color: "text-primary", bg: "bg-secondary" },
-              { label: "Processing", value: processingCount.toString(), icon: Loader2, color: "text-accent", bg: "bg-accent/10" },
-              { label: "Images Processed", value: "3,905", icon: BarChart3, color: "text-highlight", bg: "bg-highlight/10" },
-              { label: "Total Area", value: "635 ha", icon: Map, color: "text-primary", bg: "bg-secondary" },
+              { label: "In Progress", value: processingCount.toString(), icon: Loader2, color: "text-accent", bg: "bg-accent/10" },
+              { label: "Images Uploaded", value: totalImages.toLocaleString() || "0", icon: BarChart3, color: "text-highlight", bg: "bg-highlight/10" },
+              { label: "Total Area", value: totalArea > 0 ? `${totalArea.toFixed(1)} ha` : "—", icon: Map, color: "text-primary", bg: "bg-secondary" },
             ].map((stat) => {
               const Icon = stat.icon;
               return (
@@ -261,111 +248,156 @@ export default function Dashboard() {
           <div
             onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
             onDragLeave={() => setDragging(false)}
-            onDrop={(e) => { e.preventDefault(); setDragging(false); }}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragging(false);
+              setNewProjectOpen(true);
+            }}
             className={`border-2 border-dashed rounded-2xl p-8 text-center transition-all cursor-pointer ${
-              dragging
-                ? "border-accent bg-accent/5"
-                : "border-border hover:border-primary/40 hover:bg-secondary/50"
+              dragging ? "border-accent bg-accent/5" : "border-border hover:border-primary/40 hover:bg-secondary/50"
             }`}
+            onClick={() => setNewProjectOpen(true)}
           >
             <UploadCloud className={`w-10 h-10 mx-auto mb-3 transition-colors ${dragging ? "text-accent" : "text-muted-foreground"}`} />
             <p className="font-semibold text-foreground text-sm">
-              {dragging ? "Drop images to start" : "Drop drone images here"}
+              {dragging ? "Drop images to create a project" : "Drop drone images here to start a new project"}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              JPEG, TIFF, DNG accepted · Folders OK · Up to 5,000 images
+              JPEG, TIFF, DNG accepted · Up to 5,000 images
             </p>
-            <Button variant="outline" size="sm" className="mt-4 hover:border-primary transition-colors active:scale-[0.97]">
-              Browse Files
-            </Button>
           </div>
 
           {/* Project list */}
           <div className="space-y-3">
-            <h2 className="font-display font-600 text-foreground text-sm">Recent Projects</h2>
-            <div className="space-y-2">
-              {projects.map((project) => (
-                <div
-                  key={project.id}
-                  className="bg-card border border-border rounded-xl p-4 hover:border-primary/20 hover:shadow-md transition-all duration-200 group"
-                >
-                  <div className="flex items-center gap-4">
-                    {/* Icon */}
-                    <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center flex-shrink-0 group-hover:bg-primary/10 transition-colors">
-                      <Map className="w-5 h-5 text-primary" />
-                    </div>
+            <h2 className="font-display font-600 text-foreground text-sm">
+              {isAdmin ? 'All Projects' : 'Your Projects'}
+            </h2>
 
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <h3 className="font-semibold text-foreground text-sm truncate">{project.name}</h3>
-                        <StatusBadge status={project.status} />
+            {loadingProjects ? (
+              <div className="flex items-center justify-center py-16">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              </div>
+            ) : projects.length === 0 ? (
+              <div className="text-center py-16 bg-card rounded-2xl border border-dashed border-border">
+                <Map className="w-10 h-10 mx-auto mb-3 text-muted-foreground/40" />
+                <p className="font-semibold text-foreground text-sm">No projects yet</p>
+                <p className="text-xs text-muted-foreground mt-1 mb-4">Create your first project to start processing drone imagery</p>
+                <Button size="sm" onClick={() => setNewProjectOpen(true)} className="bg-primary text-primary-foreground hover:bg-primary/90 gap-2">
+                  <Plus className="w-3.5 h-3.5" /> New Project
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {projects.map((project) => (
+                  <div key={project.id}
+                    className="bg-card border border-border rounded-xl p-4 hover:border-primary/20 hover:shadow-md transition-all duration-200 group"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center flex-shrink-0 group-hover:bg-primary/10 transition-colors">
+                        <Map className="w-5 h-5 text-primary" />
                       </div>
-                      <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                        <span>{project.date}</span>
-                        <span>{project.images.toLocaleString()} images</span>
-                        <span>{project.areaha} ha</span>
-                        {project.outputs.length > 0 && (
-                          <span className="text-primary">{project.outputs.join(" · ")}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <h3 className="font-semibold text-foreground text-sm truncate">{project.name}</h3>
+                          <StatusBadge status={project.status as Status} />
+                        </div>
+                        <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+                          <span>{new Date(project.created_at).toLocaleDateString()}</span>
+                          {project.image_count > 0 && <span>{project.image_count.toLocaleString()} images</span>}
+                          {project.area_ha && <span>{project.area_ha} ha</span>}
+                          {project.outputs && project.outputs.length > 0 && (
+                            <span className="text-primary">{project.outputs.join(' · ')}</span>
+                          )}
+                        </div>
+                        {(project.status === "processing" || project.status === "failed") && (
+                          <div className="mt-2 flex items-center gap-2">
+                            <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all duration-700 ${project.status === "failed" ? "bg-destructive" : "bg-accent"}`}
+                                style={{ width: `${project.progress ?? 0}%` }}
+                              />
+                            </div>
+                            <span className="text-xs text-muted-foreground">{project.progress}%</span>
+                          </div>
                         )}
                       </div>
-
-                      {/* Progress bar for processing */}
-                      {(project.status === "processing" || project.status === "failed") && (
-                        <div className="mt-2 flex items-center gap-2">
-                          <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full transition-all duration-700 ${
-                                project.status === "failed" ? "bg-destructive" : "bg-accent"
-                              }`}
-                              style={{ width: `${project.progress ?? 0}%` }}
-                            />
-                          </div>
-                          <span className="text-xs text-muted-foreground">{project.progress}%</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      {project.status === "complete" && (
-                        <>
-                          <Button variant="ghost" size="sm" className="hidden sm:flex gap-1.5 text-xs hover:text-primary transition-colors active:scale-[0.97]">
-                            <Eye className="w-3.5 h-3.5" />
-                            View
-                          </Button>
-                          <Button variant="ghost" size="sm" className="hidden sm:flex gap-1.5 text-xs hover:text-primary transition-colors active:scale-[0.97]">
-                            <Download className="w-3.5 h-3.5" />
-                            Export
-                          </Button>
-                        </>
-                      )}
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="w-8 h-8 p-0 hover:bg-muted transition-colors">
-                            <MoreVertical className="w-4 h-4 text-muted-foreground" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-40">
-                          <DropdownMenuItem className="gap-2 cursor-pointer">
-                            <Eye className="w-3.5 h-3.5" /> View Map
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="gap-2 cursor-pointer">
-                            <Download className="w-3.5 h-3.5" /> Export
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="gap-2 cursor-pointer text-destructive focus:text-destructive">
-                            <Trash2 className="w-3.5 h-3.5" /> Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        {project.status === "complete" && (
+                          <>
+                            <Button variant="ghost" size="sm" className="hidden sm:flex gap-1.5 text-xs hover:text-primary transition-colors active:scale-[0.97]">
+                              <Eye className="w-3.5 h-3.5" /> View
+                            </Button>
+                            <Button variant="ghost" size="sm" className="hidden sm:flex gap-1.5 text-xs hover:text-primary transition-colors active:scale-[0.97]">
+                              <Download className="w-3.5 h-3.5" /> Export
+                            </Button>
+                          </>
+                        )}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="w-8 h-8 p-0 hover:bg-muted transition-colors">
+                              <MoreVertical className="w-4 h-4 text-muted-foreground" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-40">
+                            <DropdownMenuItem className="gap-2 cursor-pointer">
+                              <Eye className="w-3.5 h-3.5" /> View Map
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="gap-2 cursor-pointer">
+                              <Download className="w-3.5 h-3.5" /> Export
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="gap-2 cursor-pointer text-destructive focus:text-destructive"
+                              onClick={() => deleteProject(project.id)}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" /> Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </main>
+
+      {/* New Project Dialog */}
+      <Dialog open={newProjectOpen} onOpenChange={setNewProjectOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display">New Project</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="projectName">Project name</Label>
+              <Input
+                id="projectName"
+                placeholder="e.g. Farm Survey Block 4"
+                value={newProjectName}
+                onChange={(e) => setNewProjectName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && createProject()}
+                autoFocus
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              You can add imagery and configure processing settings after creation.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNewProjectOpen(false)}>Cancel</Button>
+            <Button
+              onClick={createProject}
+              disabled={creating || !newProjectName.trim()}
+              className="bg-primary text-primary-foreground hover:bg-primary/90 gap-2"
+            >
+              {creating ? <><Loader2 className="w-4 h-4 animate-spin" />Creating...</> : <><Plus className="w-4 h-4" />Create Project</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

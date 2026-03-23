@@ -1,0 +1,181 @@
+import { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { supabase } from '@/lib/supabase';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Map, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+
+export default function AuthPage() {
+  const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      if (mode === 'signup') {
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { data: { full_name: fullName } },
+        });
+        if (error) throw error;
+        toast({ title: 'Account created!', description: 'Welcome to MapForge.' });
+        navigate('/dashboard');
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        navigate('/dashboard');
+      }
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-background flex">
+      {/* Left panel */}
+      <div className="hidden lg:flex flex-col justify-between w-1/2 bg-foreground p-12">
+        <Link to="/" className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+            <Map className="w-4 h-4 text-primary-foreground" />
+          </div>
+          <span className="font-display font-700 text-lg text-primary-foreground">MapForge</span>
+        </Link>
+
+        <div className="space-y-4">
+          <p className="text-4xl font-display font-700 text-primary-foreground leading-tight">
+            Turn drone flights<br />into precise maps.
+          </p>
+          <p className="text-primary-foreground/60 text-base">
+            Upload images. Process in the cloud.<br />Download professional deliverables.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          {[
+            { val: '2.3M+', label: 'Maps processed' },
+            { val: '47K+', label: 'Active pilots' },
+            { val: '99.4%', label: 'Accuracy rate' },
+            { val: '< 2hrs', label: 'Avg. processing' },
+          ].map((s) => (
+            <div key={s.label} className="bg-primary-foreground/5 rounded-xl p-4 border border-primary-foreground/10">
+              <p className="text-2xl font-display font-700 text-accent">{s.val}</p>
+              <p className="text-xs text-primary-foreground/50 mt-0.5">{s.label}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Right panel — form */}
+      <div className="flex-1 flex items-center justify-center px-6 py-12">
+        <div className="w-full max-w-sm space-y-8">
+          {/* Mobile logo */}
+          <div className="lg:hidden flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+              <Map className="w-4 h-4 text-primary-foreground" />
+            </div>
+            <span className="font-display font-700 text-lg text-foreground">MapForge</span>
+          </div>
+
+          <div>
+            <h1 className="text-2xl font-display font-700 text-foreground">
+              {mode === 'login' ? 'Welcome back' : 'Create account'}
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              {mode === 'login'
+                ? 'Sign in to your MapForge dashboard'
+                : 'Start processing drone imagery for free'}
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {mode === 'signup' && (
+              <div className="space-y-1.5">
+                <Label htmlFor="fullName">Full name</Label>
+                <Input
+                  id="fullName"
+                  placeholder="Alex Rivera"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  required
+                />
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="password">Password</Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-semibold shadow-sm hover:shadow-md transition-all active:scale-[0.97]"
+            >
+              {loading ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Please wait</>
+              ) : mode === 'login' ? 'Sign In' : 'Create Account'}
+            </Button>
+          </form>
+
+          <p className="text-sm text-center text-muted-foreground">
+            {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
+            <button
+              onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
+              className="text-primary font-medium hover:underline"
+            >
+              {mode === 'login' ? 'Sign up free' : 'Sign in'}
+            </button>
+          </p>
+
+          <p className="text-xs text-center text-muted-foreground">
+            By continuing you agree to our{' '}
+            <a href="#" className="underline hover:text-foreground">Terms</a> and{' '}
+            <a href="#" className="underline hover:text-foreground">Privacy Policy</a>.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
