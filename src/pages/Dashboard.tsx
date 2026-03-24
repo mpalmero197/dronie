@@ -3,9 +3,10 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   Map, Plus, UploadCloud, MoreVertical, Clock,
   CheckCircle2, AlertCircle, Loader2, FolderOpen,
-  Download, Eye, Trash2, BarChart3, HardDrive, Zap,
-  ArrowLeft, LogOut, Shield, User as UserIcon,
+  Download, Eye, Trash2, BarChart3, HardDrive,
+  ArrowLeft, LogOut, Shield, User as UserIcon, FileArchive, ImageIcon,
 } from "lucide-react";
+import ProjectDetailDialog from "@/components/ProjectDetailDialog";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
@@ -49,6 +50,7 @@ export default function Dashboard() {
   const [newProjectOpen, setNewProjectOpen] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
   const [creating, setCreating] = useState(false);
+  const [detailProject, setDetailProject] = useState<Project | null>(null);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -289,8 +291,10 @@ export default function Dashboard() {
             ) : (
               <div className="space-y-2">
                 {projects.map((project) => (
-                  <div key={project.id}
-                    className="bg-card border border-border rounded-xl p-4 hover:border-primary/20 hover:shadow-md transition-all duration-200 group"
+                  <div
+                    key={project.id}
+                    className="bg-card border border-border rounded-xl p-4 hover:border-primary/20 hover:shadow-md transition-all duration-200 group cursor-pointer"
+                    onClick={() => setDetailProject(project)}
                   >
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center flex-shrink-0 group-hover:bg-primary/10 transition-colors">
@@ -303,7 +307,11 @@ export default function Dashboard() {
                         </div>
                         <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
                           <span>{new Date(project.created_at).toLocaleDateString()}</span>
-                          {project.image_count > 0 && <span>{project.image_count.toLocaleString()} images</span>}
+                          {project.image_count > 0 && (
+                            <span className="flex items-center gap-1">
+                              <ImageIcon className="w-3 h-3" />{project.image_count.toLocaleString()} images
+                            </span>
+                          )}
                           {project.area_ha && <span>{project.area_ha} ha</span>}
                           {project.outputs && project.outputs.length > 0 && (
                             <span className="text-primary">{project.outputs.join(' · ')}</span>
@@ -321,29 +329,26 @@ export default function Dashboard() {
                           </div>
                         )}
                       </div>
-                      <div className="flex items-center gap-1 flex-shrink-0">
-                        {project.status === "complete" && (
-                          <>
-                            <Button variant="ghost" size="sm" className="hidden sm:flex gap-1.5 text-xs hover:text-primary transition-colors active:scale-[0.97]">
-                              <Eye className="w-3.5 h-3.5" /> View
-                            </Button>
-                            <Button variant="ghost" size="sm" className="hidden sm:flex gap-1.5 text-xs hover:text-primary transition-colors active:scale-[0.97]">
-                              <Download className="w-3.5 h-3.5" /> Export
-                            </Button>
-                          </>
-                        )}
+                      <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                        <Button
+                          variant="ghost" size="sm"
+                          className="hidden sm:flex gap-1.5 text-xs hover:text-primary transition-colors active:scale-[0.97]"
+                          onClick={() => setDetailProject(project)}
+                        >
+                          <FileArchive className="w-3.5 h-3.5" /> Upload
+                        </Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="sm" className="w-8 h-8 p-0 hover:bg-muted transition-colors">
                               <MoreVertical className="w-4 h-4 text-muted-foreground" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-40">
-                            <DropdownMenuItem className="gap-2 cursor-pointer">
-                              <Eye className="w-3.5 h-3.5" /> View Map
+                          <DropdownMenuContent align="end" className="w-44">
+                            <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => setDetailProject(project)}>
+                              <FileArchive className="w-3.5 h-3.5" /> Flight Plan
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="gap-2 cursor-pointer">
-                              <Download className="w-3.5 h-3.5" /> Export
+                            <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => setDetailProject(project)}>
+                              <ImageIcon className="w-3.5 h-3.5" /> Drone Images
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
@@ -363,6 +368,17 @@ export default function Dashboard() {
           </div>
         </div>
       </main>
+
+      {/* Project Detail Dialog */}
+      <ProjectDetailDialog
+        project={detailProject}
+        open={!!detailProject}
+        onClose={() => setDetailProject(null)}
+        onProjectUpdated={(updated) => {
+          setProjects((prev) => prev.map((p) => p.id === updated.id ? updated : p));
+          setDetailProject(updated);
+        }}
+      />
 
       {/* New Project Dialog */}
       <Dialog open={newProjectOpen} onOpenChange={setNewProjectOpen}>
