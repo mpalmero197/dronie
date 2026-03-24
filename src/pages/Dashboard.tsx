@@ -50,6 +50,7 @@ export default function Dashboard() {
   const [newProjectOpen, setNewProjectOpen] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
   const [creating, setCreating] = useState(false);
+  const [detailProject, setDetailProject] = useState<Project | null>(null);
 
   // Redirect if not authenticated
   useEffect(() => {
