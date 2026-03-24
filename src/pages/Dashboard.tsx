@@ -3,9 +3,10 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   Map, Plus, UploadCloud, MoreVertical, Clock,
   CheckCircle2, AlertCircle, Loader2, FolderOpen,
-  Download, Eye, Trash2, BarChart3, HardDrive, Zap,
-  ArrowLeft, LogOut, Shield, User as UserIcon,
+  Download, Eye, Trash2, BarChart3, HardDrive,
+  ArrowLeft, LogOut, Shield, User as UserIcon, FileArchive, ImageIcon,
 } from "lucide-react";
+import ProjectDetailDialog from "@/components/ProjectDetailDialog";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
