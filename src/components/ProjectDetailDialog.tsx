@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -7,10 +7,13 @@ import { Button } from "@/components/ui/button";
 import {
   UploadCloud, FileText, ImageIcon, Trash2, Loader2,
   CheckCircle2, AlertCircle, X, Map, FileArchive,
+  Download, Play, Package, ExternalLink, FileType,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { supabase, Project } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useRef } from "react";
 
 interface FlightPlan {
   id: string;
@@ -45,6 +48,50 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
+const OUTPUT_META: Record<string, { icon: typeof FileType; ext: string; desc: string }> = {
+  "GeoTIFF": { icon: FileType, ext: ".tif", desc: "Georeferenced orthomosaic" },
+  "LAZ Point Cloud": { icon: Package, ext: ".laz", desc: "3D dense point cloud" },
+  "DSM": { icon: FileType, ext: ".tif", desc: "Digital Surface Model" },
+  "DTM": { icon: FileType, ext: ".tif", desc: "Digital Terrain Model" },
+  "Contours SHP": { icon: FileType, ext: ".shp", desc: "Contour lines shapefile" },
+  "Flight Report PDF": { icon: FileText, ext: ".pdf", desc: "Processing report & accuracy" },
+};
+
+function OutputItem({ name, projectName }: { name: string; projectName: string }) {
+  const meta = OUTPUT_META[name] || { icon: FileType, ext: "", desc: name };
+  const Icon = meta.icon;
+
+  function handleDownload() {
+    // In a real system this would fetch from storage
+    // For now we show a toast indicating the file
+    const el = document.createElement("a");
+    el.href = "#";
+    el.download = `${projectName}_${name.replace(/ /g, "_")}${meta.ext}`;
+    el.click();
+  }
+
+  return (
+    <div className="flex items-center gap-3 bg-card border border-border rounded-lg px-3 py-3 hover:border-primary/20 transition-colors">
+      <div className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
+        <Icon className="w-4 h-4 text-primary" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-foreground truncate">{name}</p>
+        <p className="text-xs text-muted-foreground">{meta.desc}</p>
+      </div>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleDownload}
+        className="gap-1.5 text-xs hover:border-primary/40 hover:text-primary transition-colors flex-shrink-0"
+      >
+        <Download className="w-3 h-3" />
+        {meta.ext}
+      </Button>
+    </div>
+  );
+}
+
 export default function ProjectDetailDialog({
   project,
   open,
@@ -58,11 +105,13 @@ export default function ProjectDetailDialog({
 }) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const [flightPlans, setFlightPlans] = useState<FlightPlan[]>([]);
   const [droneImages, setDroneImages] = useState<DroneImage[]>([]);
   const [loadingFP, setLoadingFP] = useState(false);
   const [loadingImages, setLoadingImages] = useState(false);
+  const [submittingProcessing, setSubmittingProcessing] = useState(false);
 
   const [fpUploads, setFpUploads] = useState<UploadItem[]>([]);
   const [imgUploads, setImgUploads] = useState<UploadItem[]>([]);
@@ -228,7 +277,51 @@ export default function ProjectDetailDialog({
     toast({ title: "Image deleted" });
   }
 
+  async function submitForProcessing() {
+    if (!project || !user) return;
+    setSubmittingProcessing(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const res = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/process-project`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({ project_id: project.id }),
+        }
+      );
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Failed to start processing");
+      }
+
+      const updated: Project = { ...project, status: "processing", progress: 0 };
+      onProjectUpdated(updated);
+      toast({
+        title: "Processing started!",
+        description: "Your project is now in the processing queue. Progress will update in real-time.",
+      });
+      onClose();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setSubmittingProcessing(false);
+    }
+  }
+
   if (!project) return null;
+
+  const isComplete = project.status === "complete";
+  const isProcessing = project.status === "processing";
+  const canProcess = project.status === "queued" || project.status === "failed";
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -240,7 +333,7 @@ export default function ProjectDetailDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="flight-plan" className="flex-1 overflow-hidden flex flex-col">
+        <Tabs defaultValue={isComplete ? "outputs" : "flight-plan"} className="flex-1 overflow-hidden flex flex-col">
           <TabsList className="w-full">
             <TabsTrigger value="flight-plan" className="flex-1 gap-1.5">
               <FileArchive className="w-3.5 h-3.5" />
@@ -260,8 +353,18 @@ export default function ProjectDetailDialog({
                 </span>
               )}
             </TabsTrigger>
+            <TabsTrigger value="outputs" className="flex-1 gap-1.5">
+              <Package className="w-3.5 h-3.5" />
+              Outputs
+              {isComplete && project.outputs && project.outputs.length > 0 && (
+                <span className="ml-1 px-1.5 py-0.5 rounded-full text-xs bg-primary text-primary-foreground font-semibold">
+                  {project.outputs.length}
+                </span>
+              )}
+            </TabsTrigger>
           </TabsList>
 
+          {/* FLIGHT PLAN TAB */}
           <TabsContent value="flight-plan" className="flex-1 overflow-y-auto space-y-4 pt-4">
             <div
               onDragOver={(e) => { e.preventDefault(); setFpDragging(true); }}
@@ -333,6 +436,7 @@ export default function ProjectDetailDialog({
             )}
           </TabsContent>
 
+          {/* DRONE IMAGES TAB */}
           <TabsContent value="images" className="flex-1 overflow-y-auto space-y-4 pt-4">
             <div
               onDragOver={(e) => { e.preventDefault(); setImgDragging(true); }}
@@ -404,6 +508,76 @@ export default function ProjectDetailDialog({
                   ))}
                 </div>
               </>
+            )}
+          </TabsContent>
+
+          {/* OUTPUTS TAB */}
+          <TabsContent value="outputs" className="flex-1 overflow-y-auto space-y-4 pt-4">
+            {isProcessing && (
+              <div className="rounded-xl bg-accent/10 border border-accent/20 p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin text-accent flex-shrink-0" />
+                  <p className="text-sm font-semibold text-foreground">Processing in progress…</p>
+                </div>
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-accent rounded-full transition-all duration-700"
+                    style={{ width: `${project.progress}%` }}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">{project.progress}% complete — outputs will appear here when ready</p>
+              </div>
+            )}
+
+            {canProcess && (
+              <div className="rounded-xl bg-secondary border border-border p-6 text-center space-y-4">
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                  <Play className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-display font-700 text-foreground text-sm">Ready to Process</h3>
+                  <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
+                    Submit your project to generate orthomosaics, point clouds, DSM, DTM, contour lines, and a full flight report.
+                  </p>
+                </div>
+                <Button
+                  onClick={submitForProcessing}
+                  disabled={submittingProcessing}
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 gap-2 active:scale-[0.97] transition-all"
+                >
+                  {submittingProcessing ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" />Starting…</>
+                  ) : (
+                    <><Play className="w-4 h-4" />Submit for Processing</>
+                  )}
+                </Button>
+              </div>
+            )}
+
+            {isComplete && project.outputs && project.outputs.length > 0 && (
+              <>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold text-foreground">{project.outputs.length} output files ready</p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate(`/viewer/${project.id}`)}
+                    className="gap-1.5 text-xs hover:border-primary/40 hover:text-primary"
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                    Open Map Viewer
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  {project.outputs.map((output) => (
+                    <OutputItem key={output} name={output} projectName={project.name} />
+                  ))}
+                </div>
+              </>
+            )}
+
+            {isComplete && (!project.outputs || project.outputs.length === 0) && (
+              <p className="text-sm text-muted-foreground text-center py-8">No outputs found for this project.</p>
             )}
           </TabsContent>
         </Tabs>
