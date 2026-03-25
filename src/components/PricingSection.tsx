@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { Check, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -17,6 +18,7 @@ const plans = [
       "1 GB storage",
     ],
     cta: "Get Started",
+    ctaAction: "auth",
     highlight: false,
   },
   {
@@ -35,6 +37,7 @@ const plans = [
       "Share links",
     ],
     cta: "Start Free Trial",
+    ctaAction: "auth",
     highlight: true,
     badge: "Most Popular",
   },
@@ -54,12 +57,14 @@ const plans = [
       "Dedicated support",
     ],
     cta: "Contact Sales",
+    ctaAction: "contact",
     highlight: false,
   },
 ];
 
 export default function PricingSection() {
   const sectionRef = useRef<HTMLElement>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -86,6 +91,14 @@ export default function PricingSection() {
     observer.observe(section);
     return () => observer.disconnect();
   }, []);
+
+  function handleCTA(action: string) {
+    if (action === "auth") {
+      navigate("/auth");
+    } else if (action === "contact") {
+      window.location.href = "mailto:sales@mapforge.io?subject=Enterprise%20Inquiry";
+    }
+  }
 
   return (
     <section id="pricing" ref={sectionRef} className="py-24 bg-background">
@@ -164,6 +177,7 @@ export default function PricingSection() {
               </ul>
 
               <Button
+                onClick={() => handleCTA(plan.ctaAction)}
                 className={`w-full font-semibold transition-all active:scale-[0.97] ${
                   plan.highlight
                     ? "bg-accent text-accent-foreground hover:bg-accent/90 shadow-md"

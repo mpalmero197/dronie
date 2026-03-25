@@ -1,8 +1,10 @@
 import { useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Upload, Layers, Download } from "lucide-react";
 import heroMap from "@/assets/hero-map.jpg";
 import droneHero from "@/assets/drone-hero.jpg";
+import { useAuth } from "@/contexts/AuthContext";
 
 const stats = [
   { value: "2.3M+", label: "Maps processed" },
@@ -12,6 +14,8 @@ const stats = [
 ];
 
 export default function HeroSection() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const headlineRef = useRef<HTMLHeadingElement>(null);
   const subRef = useRef<HTMLParagraphElement>(null);
   const ctaRef = useRef<HTMLDivElement>(null);
@@ -36,6 +40,14 @@ export default function HeroSection() {
       }, delay + 100);
     });
   }, []);
+
+  function handleUploadCTA() {
+    if (user) {
+      navigate("/dashboard");
+    } else {
+      navigate("/auth");
+    }
+  }
 
   return (
     <section className="relative min-h-screen flex flex-col pt-16 overflow-hidden bg-foreground">
@@ -101,6 +113,7 @@ export default function HeroSection() {
             >
               <Button
                 size="lg"
+                onClick={handleUploadCTA}
                 className="bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg hover:shadow-xl transition-all active:scale-[0.97] font-semibold gap-2"
               >
                 <Upload className="w-4 h-4" />
@@ -109,6 +122,7 @@ export default function HeroSection() {
               <Button
                 size="lg"
                 variant="outline"
+                onClick={() => navigate("/viewer/demo")}
                 className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 gap-2 transition-all active:scale-[0.97]"
               >
                 See Example Maps
