@@ -487,7 +487,7 @@ export default function Dashboard() {
                       <div
                         key={project.id}
                         className="bg-card border border-border rounded-xl p-4 hover:border-primary/20 hover:shadow-md transition-all duration-200 group cursor-pointer"
-                        onClick={() => setDetailProject(project)}
+                        onClick={() => navigate(`/project/${project.id}`)}
                       >
                         <div className="flex items-center gap-4">
                           <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center flex-shrink-0 group-hover:bg-primary/10 transition-colors">
