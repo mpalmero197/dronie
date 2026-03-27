@@ -44,7 +44,7 @@ export default function Navbar() {
             <Map className="w-4 h-4 text-primary-foreground" />
           </div>
           <span className="font-display font-700 text-lg text-foreground tracking-tight">
-            Droney
+            Dronie
           </span>
         </Link>
 
