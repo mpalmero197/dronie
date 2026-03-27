@@ -1,15 +1,21 @@
-import { useEffect, useState, useCallback } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from "react-leaflet";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { MapContainer, TileLayer } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import html2canvas from "html2canvas";
 import {
-  Map, ArrowLeft, Share2, MapPin, Trash2, Ruler,
-  Layers, Calendar, Image as ImageIcon, AreaChart, CheckCircle2, Loader2,
+  Map, ArrowLeft, Share2, CheckCircle2, Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase, Project } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import MapToolbar, { DrawTool } from "@/components/map/MapToolbar";
+import MapDrawingLayer from "@/components/map/MapDrawingLayer";
+import MapInfoPanel from "@/components/map/MapInfoPanel";
+import LayerSwitcher, { BaseLayer } from "@/components/map/LayerSwitcher";
+import EmbedModal from "@/components/map/EmbedModal";
+import OverlayLegend from "@/components/map/OverlayLegend";
 
 // Fix Leaflet default marker icon issue with Vite
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -19,7 +25,6 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
 });
 
-// Demo project for /viewer/demo
 const DEMO_PROJECT: Project = {
   id: "demo",
   user_id: "demo",
@@ -36,62 +41,39 @@ const DEMO_PROJECT: Project = {
 
 const DEMO_CENTER: [number, number] = [26.2034, -98.2300];
 
-interface Pin {
-  id: string;
-  lat: number;
-  lng: number;
-  note: string;
-}
-
-function AnnotationLayer({
-  pins,
-  addPin,
-  deletePin,
-}: {
-  pins: Pin[];
-  addPin: (lat: number, lng: number) => void;
-  deletePin: (id: string) => void;
-}) {
-  useMapEvents({
-    contextmenu(e) {
-      addPin(e.latlng.lat, e.latlng.lng);
-    },
-  });
-
-  return (
-    <>
-      {pins.map((pin) => (
-        <Marker key={pin.id} position={[pin.lat, pin.lng]}>
-          <Popup>
-            <div className="min-w-[140px]">
-              <p className="font-semibold text-xs mb-1">Annotation Pin</p>
-              <p className="text-xs text-gray-500 mb-2">
-                {pin.lat.toFixed(5)}, {pin.lng.toFixed(5)}
-              </p>
-              <button
-                onClick={() => deletePin(pin.id)}
-                className="text-xs text-red-500 hover:text-red-700 flex items-center gap-1"
-              >
-                <Trash2 className="w-3 h-3" /> Remove pin
-              </button>
-            </div>
-          </Popup>
-        </Marker>
-      ))}
-    </>
-  );
-}
+const TILE_URLS: Record<BaseLayer, { url: string; attribution: string }> = {
+  satellite: {
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    attribution: '&copy; <a href="https://www.esri.com/">Esri</a>',
+  },
+  streets: {
+    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
+  },
+  terrain: {
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",
+    attribution: '&copy; <a href="https://www.esri.com/">Esri</a>',
+  },
+  hybrid: {
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    attribution: '&copy; <a href="https://www.esri.com/">Esri</a>',
+  },
+};
 
 export default function MapViewer() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const mapContainerRef = useRef<HTMLDivElement>(null);
 
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
-  const [pins, setPins] = useState<Pin[]>([]);
-  const [measuring, setMeasuring] = useState(false);
+  const [activeTool, setActiveTool] = useState<DrawTool>(null);
   const [showInfo, setShowInfo] = useState(true);
+  const [baseLayer, setBaseLayer] = useState<BaseLayer>("satellite");
+  const [activeOverlay, setActiveOverlay] = useState<string | null>(null);
+  const [showEmbed, setShowEmbed] = useState(false);
+  const [measurement, setMeasurement] = useState<string | null>(null);
 
   const isDemo = projectId === "demo";
 
@@ -101,46 +83,38 @@ export default function MapViewer() {
       setLoading(false);
       return;
     }
-
     async function fetchProject() {
       const { data, error } = await supabase
-        .from("projects")
-        .select("*")
-        .eq("id", projectId!)
-        .single();
-
-      if (error || !data) {
-        setLoading(false);
-        return;
-      }
+        .from("projects").select("*").eq("id", projectId!).single();
+      if (error || !data) { setLoading(false); return; }
       setProject(data as Project);
       setLoading(false);
     }
-
     fetchProject();
   }, [projectId, isDemo]);
 
-  const addPin = useCallback((lat: number, lng: number) => {
-    const newPin: Pin = {
-      id: crypto.randomUUID(),
-      lat,
-      lng,
-      note: "",
-    };
-    setPins((prev) => [...prev, newPin]);
-    toast({ title: "Pin added", description: `${lat.toFixed(4)}, ${lng.toFixed(4)}` });
-  }, [toast]);
-
-  const deletePin = useCallback((id: string) => {
-    setPins((prev) => prev.filter((p) => p.id !== id));
-  }, []);
-
   const shareLink = useCallback(() => {
     navigator.clipboard.writeText(window.location.href);
-    toast({ title: "Link copied!", description: "Share this URL for public access — no login required." });
+    toast({ title: "Link copied!", description: "Share this URL for public access." });
   }, [toast]);
 
+  const exportPng = useCallback(async () => {
+    if (!mapContainerRef.current) return;
+    try {
+      toast({ title: "Capturing…", description: "Generating map screenshot" });
+      const canvas = await html2canvas(mapContainerRef.current, { useCORS: true, allowTaint: true });
+      const link = document.createElement("a");
+      link.download = `${project?.name || "map"}-export.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+      toast({ title: "Exported!", description: "PNG saved to downloads." });
+    } catch {
+      toast({ title: "Export failed", variant: "destructive" });
+    }
+  }, [project, toast]);
+
   const center: [number, number] = isDemo ? DEMO_CENTER : [37.7749, -122.4194];
+  const tile = TILE_URLS[baseLayer];
 
   if (loading) {
     return (
@@ -155,7 +129,6 @@ export default function MapViewer() {
       <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-4">
         <Map className="w-12 h-12 text-muted-foreground/40" />
         <h2 className="font-display font-700 text-foreground">Project not found</h2>
-        <p className="text-muted-foreground text-sm">This project may not exist or isn't complete yet.</p>
         <Button onClick={() => navigate("/dashboard")} variant="outline" className="gap-2">
           <ArrowLeft className="w-4 h-4" /> Back to Dashboard
         </Button>
@@ -168,7 +141,6 @@ export default function MapViewer() {
       <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-4">
         <Loader2 className="w-12 h-12 text-primary animate-spin" />
         <h2 className="font-display font-700 text-foreground">Processing in Progress</h2>
-        <p className="text-muted-foreground text-sm">The map viewer will be available once processing is complete.</p>
         <div className="w-64 h-2 bg-muted rounded-full overflow-hidden">
           <div className="h-full bg-accent rounded-full transition-all" style={{ width: `${project.progress}%` }} />
         </div>
@@ -182,13 +154,10 @@ export default function MapViewer() {
 
   return (
     <div className="h-screen w-screen flex flex-col bg-background overflow-hidden">
-      {/* Top bar */}
+      {/* Header */}
       <header className="z-[1000] bg-card/95 backdrop-blur border-b border-border px-4 py-3 flex items-center justify-between gap-3 flex-shrink-0">
         <div className="flex items-center gap-3 min-w-0">
-          <button
-            onClick={() => navigate("/dashboard")}
-            className="p-1.5 rounded-lg hover:bg-secondary transition-colors flex-shrink-0"
-          >
+          <button onClick={() => navigate("/dashboard")} className="p-1.5 rounded-lg hover:bg-secondary transition-colors flex-shrink-0">
             <ArrowLeft className="w-4 h-4 text-muted-foreground" />
           </button>
           <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center flex-shrink-0">
@@ -208,109 +177,77 @@ export default function MapViewer() {
         </div>
 
         <div className="flex items-center gap-2 flex-shrink-0">
+          {measurement && (
+            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent/10 border border-accent/20 text-xs font-semibold text-accent">
+              📐 {measurement}
+            </div>
+          )}
           <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setMeasuring((v) => !v)}
-            className={`gap-1.5 text-xs hidden sm:flex ${measuring ? "border-accent text-accent bg-accent/10" : ""}`}
-          >
-            <Ruler className="w-3.5 h-3.5" />
-            {measuring ? "Measuring…" : "Measure"}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowInfo((v) => !v)}
+            variant="outline" size="sm"
+            onClick={() => setShowInfo(v => !v)}
             className="gap-1.5 text-xs hidden sm:flex"
           >
-            <Layers className="w-3.5 h-3.5" />
             Info
           </Button>
           <Button
-            size="sm"
-            onClick={shareLink}
+            size="sm" onClick={shareLink}
             className="gap-1.5 text-xs bg-primary text-primary-foreground hover:bg-primary/90"
           >
-            <Share2 className="w-3.5 h-3.5" />
-            Share
+            <Share2 className="w-3.5 h-3.5" /> Share
           </Button>
         </div>
       </header>
 
-      {/* Map area */}
-      <div className="flex-1 relative overflow-hidden">
-        <MapContainer
-          center={center}
-          zoom={isDemo ? 14 : 12}
-          className="w-full h-full"
-          zoomControl={true}
-        >
-          {/* Satellite tiles for orthomosaic feel */}
-          <TileLayer
-            attribution='&copy; <a href="https://www.esri.com/">Esri</a>'
-            url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-          />
-          {/* Road/label overlay */}
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            opacity={0.25}
-          />
-
-          <AnnotationLayer pins={pins} addPin={addPin} deletePin={deletePin} />
+      {/* Map */}
+      <div className="flex-1 relative overflow-hidden" ref={mapContainerRef}>
+        <MapContainer center={center} zoom={isDemo ? 14 : 12} className="w-full h-full" zoomControl={true}>
+          <TileLayer attribution={tile.attribution} url={tile.url} />
+          {baseLayer === "hybrid" && (
+            <TileLayer
+              attribution='&copy; OSM'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              opacity={0.25}
+            />
+          )}
+          <MapDrawingLayer activeTool={activeTool} onMeasurement={setMeasurement} />
         </MapContainer>
 
-        {/* Info panel overlay */}
-        {showInfo && (
-          <div className="absolute top-4 right-4 z-[900] w-56 bg-card/95 backdrop-blur rounded-xl border border-border shadow-xl p-4 space-y-3">
-            <h3 className="font-display font-700 text-foreground text-sm truncate">{project.name}</h3>
-            <div className="space-y-2 text-xs">
-              {project.area_ha && (
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <AreaChart className="w-3.5 h-3.5 text-primary flex-shrink-0" />
-                  <span>{project.area_ha} ha</span>
-                </div>
-              )}
-              {project.image_count > 0 && (
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <ImageIcon className="w-3.5 h-3.5 text-primary flex-shrink-0" />
-                  <span>{project.image_count.toLocaleString()} images</span>
-                </div>
-              )}
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Calendar className="w-3.5 h-3.5 text-primary flex-shrink-0" />
-                <span>{new Date(project.created_at).toLocaleDateString()}</span>
-              </div>
-              {pins.length > 0 && (
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <MapPin className="w-3.5 h-3.5 text-accent flex-shrink-0" />
-                  <span>{pins.length} annotation{pins.length !== 1 ? "s" : ""}</span>
-                </div>
-              )}
-            </div>
+        {/* Toolbar */}
+        <MapToolbar
+          activeTool={activeTool}
+          onToolChange={setActiveTool}
+          onExportPng={exportPng}
+          onEmbedCode={() => setShowEmbed(true)}
+          activeOverlay={activeOverlay}
+          onOverlayChange={setActiveOverlay}
+        />
 
-            {project.outputs && project.outputs.length > 0 && (
-              <div>
-                <p className="text-xs font-semibold text-foreground mb-1.5">Outputs</p>
-                <div className="flex flex-wrap gap-1">
-                  {project.outputs.map((o) => (
-                    <span key={o} className="px-1.5 py-0.5 rounded text-xs bg-secondary text-secondary-foreground font-medium">
-                      {o}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+        {/* Layer Switcher */}
+        <LayerSwitcher activeLayer={baseLayer} onChange={setBaseLayer} />
 
-        {/* Hint overlay */}
+        {/* Info Panel */}
+        {showInfo && <MapInfoPanel project={project} pinCount={0} measurement={measurement} />}
+
+        {/* Overlay Legend */}
+        {activeOverlay && <OverlayLegend type={activeOverlay as "elevation" | "ndvi"} />}
+
+        {/* Hint */}
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-[900] pointer-events-none">
           <div className="bg-card/90 backdrop-blur rounded-full px-4 py-2 border border-border shadow text-xs text-muted-foreground flex items-center gap-2">
-            <MapPin className="w-3.5 h-3.5 text-accent" />
-            Right-click anywhere on the map to drop an annotation pin
+            {activeTool
+              ? `${activeTool === "measure-distance" ? "Click to measure distance, double-click to finish" :
+                  activeTool === "measure-area" ? "Click to draw area, double-click to finish" :
+                  activeTool === "polyline" ? "Click to draw line, double-click to finish" :
+                  activeTool === "polygon" ? "Click to draw polygon, double-click to finish" :
+                  activeTool === "rectangle" ? "Click two corners" :
+                  activeTool === "circle" ? "Click center, then edge" :
+                  "Click on the map to place a pin"}`
+              : "Select a tool from the left toolbar to start drawing"}
           </div>
         </div>
+
+        {/* Embed Modal */}
+        {showEmbed && projectId && <EmbedModal projectId={projectId} onClose={() => setShowEmbed(false)} />}
       </div>
     </div>
   );

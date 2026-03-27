@@ -332,6 +332,15 @@ export default function Dashboard() {
             Map Viewer
           </button>
 
+          {/* Gallery link */}
+          <button
+            onClick={() => navigate('/gallery')}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+          >
+            <Map className="w-4 h-4 flex-shrink-0" />
+            Sample Gallery
+          </button>
+
           {isAdmin && (
             <button
               onClick={() => navigate('/admin')}
