@@ -463,6 +463,19 @@ export default function ProjectDetail() {
       </header>
 
       <div className="max-w-6xl mx-auto p-6">
+        {/* Editable description */}
+        <div className="bg-card rounded-2xl border border-border p-4 mb-6">
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            onBlur={saveDescription}
+            placeholder="Add project notes or description…"
+            className="w-full bg-transparent text-sm text-foreground resize-none outline-none placeholder:text-muted-foreground min-h-[60px]"
+            rows={2}
+          />
+          {savingDesc && <p className="text-xs text-muted-foreground mt-1">Saving…</p>}
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left: Pipeline + Outputs */}
           <div className="lg:col-span-2 space-y-6">
