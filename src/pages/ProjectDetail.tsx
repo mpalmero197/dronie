@@ -558,6 +558,11 @@ export default function ProjectDetail() {
                     Flight Plans
                     {flightPlans.length > 0 && <span className="ml-1 px-1.5 py-0.5 rounded-full text-xs bg-primary text-primary-foreground font-semibold">{flightPlans.length}</span>}
                   </TabsTrigger>
+                  <TabsTrigger value="gcps" className="flex-1 gap-1.5">
+                    <MapPin className="w-3.5 h-3.5" />
+                    GCPs
+                    {gcps.length > 0 && <span className="ml-1 px-1.5 py-0.5 rounded-full text-xs bg-primary text-primary-foreground font-semibold">{gcps.length}</span>}
+                  </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="images" className="space-y-3 pt-4">
