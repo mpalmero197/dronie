@@ -648,6 +648,41 @@ export default function ProjectDetail() {
                     </div>
                   )}
                 </TabsContent>
+
+                <TabsContent value="gcps" className="space-y-3 pt-4">
+                  <div
+                    onClick={() => gcpInputRef.current?.click()}
+                    className="border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all border-border hover:border-primary/40 hover:bg-secondary/50"
+                  >
+                    <input ref={gcpInputRef} type="file" accept=".csv,.txt" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadGcpCsv(f); e.target.value = ""; }} />
+                    <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+                    <p className="font-semibold text-sm text-foreground">Upload GCP file</p>
+                    <p className="text-xs text-muted-foreground mt-1">CSV format: name, latitude, longitude, elevation (optional)</p>
+                  </div>
+
+                  {loadingGcps ? (
+                    <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div>
+                  ) : gcps.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">No ground control points added yet.</p>
+                  ) : (
+                    <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+                      <div className="grid grid-cols-5 gap-2 text-xs font-semibold text-muted-foreground px-3 py-1">
+                        <span>Name</span><span>Latitude</span><span>Longitude</span><span>Elevation</span><span></span>
+                      </div>
+                      {gcps.map((gcp) => (
+                        <div key={gcp.id} className="grid grid-cols-5 gap-2 items-center bg-secondary/40 rounded-lg px-3 py-2 text-xs">
+                          <span className="font-medium text-foreground truncate">{gcp.name}</span>
+                          <span className="text-muted-foreground">{gcp.latitude.toFixed(6)}</span>
+                          <span className="text-muted-foreground">{gcp.longitude.toFixed(6)}</span>
+                          <span className="text-muted-foreground">{gcp.elevation?.toFixed(1) ?? "—"}</span>
+                          <Button variant="ghost" size="sm" className="w-6 h-6 p-0 hover:text-destructive justify-self-end" onClick={() => deleteGcp(gcp.id)}>
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </TabsContent>
               </Tabs>
             </div>
           </div>
