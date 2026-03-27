@@ -55,6 +55,47 @@ export type Database = {
           },
         ]
       }
+      ground_control_points: {
+        Row: {
+          created_at: string
+          elevation: number | null
+          id: string
+          latitude: number
+          longitude: number
+          name: string
+          project_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          elevation?: number | null
+          id?: string
+          latitude: number
+          longitude: number
+          name: string
+          project_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          elevation?: number | null
+          id?: string
+          latitude?: number
+          longitude?: number
+          name?: string
+          project_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ground_control_points_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
