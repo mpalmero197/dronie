@@ -195,9 +195,14 @@ export default function ProjectDetail() {
   const [imgUploads, setImgUploads] = useState<UploadItem[]>([]);
   const [fpDragging, setFpDragging] = useState(false);
   const [imgDragging, setImgDragging] = useState(false);
+  const [gcps, setGcps] = useState<GCP[]>([]);
+  const [loadingGcps, setLoadingGcps] = useState(false);
+  const [description, setDescription] = useState("");
+  const [savingDesc, setSavingDesc] = useState(false);
 
   const fpInputRef = useRef<HTMLInputElement>(null);
   const imgInputRef = useRef<HTMLInputElement>(null);
+  const gcpInputRef = useRef<HTMLInputElement>(null);
 
   /* ── Load project ── */
   useEffect(() => {
