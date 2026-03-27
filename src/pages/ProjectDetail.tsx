@@ -5,7 +5,7 @@ import {
   Play, Settings2, ImageIcon, FileArchive, Package,
   Download, Eye, Share2, Trash2, UploadCloud, FileText,
   AlertCircle, X, ChevronRight, Sliders, Layers,
-  Mountain, Grid3X3, Ruler, FileType,
+  Mountain, Grid3X3, Ruler, FileType, MapPin, Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -44,6 +44,15 @@ interface UploadItem {
   status: "pending" | "uploading" | "done" | "error";
   progress: number;
   error?: string;
+}
+
+interface GCP {
+  id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  elevation: number | null;
+  created_at: string;
 }
 
 interface ProcessingSettings {
@@ -186,9 +195,14 @@ export default function ProjectDetail() {
   const [imgUploads, setImgUploads] = useState<UploadItem[]>([]);
   const [fpDragging, setFpDragging] = useState(false);
   const [imgDragging, setImgDragging] = useState(false);
+  const [gcps, setGcps] = useState<GCP[]>([]);
+  const [loadingGcps, setLoadingGcps] = useState(false);
+  const [description, setDescription] = useState("");
+  const [savingDesc, setSavingDesc] = useState(false);
 
   const fpInputRef = useRef<HTMLInputElement>(null);
   const imgInputRef = useRef<HTMLInputElement>(null);
+  const gcpInputRef = useRef<HTMLInputElement>(null);
 
   /* ── Load project ── */
   useEffect(() => {
@@ -208,6 +222,7 @@ export default function ProjectDetail() {
         return;
       }
       setProject(data as Project);
+      setDescription(data.description || "");
       setLoading(false);
     }
     load();
@@ -242,8 +257,16 @@ export default function ProjectDetail() {
     setLoadingImages(false);
   }, [project, user]);
 
+  const loadGcps = useCallback(async () => {
+    if (!project) return;
+    setLoadingGcps(true);
+    const { data } = await supabase.from("ground_control_points").select("*").eq("project_id", project.id).order("created_at", { ascending: true });
+    if (data) setGcps(data as GCP[]);
+    setLoadingGcps(false);
+  }, [project]);
+
   useEffect(() => {
-    if (project) { loadFlightPlans(); loadDroneImages(); }
+    if (project) { loadFlightPlans(); loadDroneImages(); loadGcps(); }
   }, [project?.id]);
 
   /* ── Upload handlers ── */
@@ -306,6 +329,53 @@ export default function ProjectDetail() {
     const { data } = await supabase.from("projects").update({ image_count: nc }).eq("id", project.id).select().single();
     if (data) setProject(data as Project);
     toast({ title: "Image deleted" });
+  }
+
+  /* ── GCP upload ── */
+  async function uploadGcpCsv(file: File) {
+    if (!project || !user) return;
+    try {
+      const text = await file.text();
+      const lines = text.trim().split("\n");
+      const header = lines[0].toLowerCase();
+      const hasHeader = header.includes("name") || header.includes("lat");
+      const dataLines = hasHeader ? lines.slice(1) : lines;
+      const rows: { name: string; latitude: number; longitude: number; elevation: number | null }[] = [];
+      for (const line of dataLines) {
+        const parts = line.split(",").map(s => s.trim());
+        if (parts.length < 3) continue;
+        const name = parts[0];
+        const lat = parseFloat(parts[1]);
+        const lng = parseFloat(parts[2]);
+        const elev = parts[3] ? parseFloat(parts[3]) : null;
+        if (isNaN(lat) || isNaN(lng)) continue;
+        rows.push({ name, latitude: lat, longitude: lng, elevation: elev });
+      }
+      if (!rows.length) { toast({ title: "No valid GCPs found", variant: "destructive" }); return; }
+      const inserts = rows.map(r => ({ ...r, project_id: project.id, user_id: user.id }));
+      const { error } = await supabase.from("ground_control_points").insert(inserts);
+      if (error) throw error;
+      toast({ title: `${rows.length} GCPs imported` });
+      loadGcps();
+    } catch (err: any) {
+      toast({ title: "GCP import failed", description: err.message, variant: "destructive" });
+    }
+  }
+
+  async function deleteGcp(id: string) {
+    await supabase.from("ground_control_points").delete().eq("id", id);
+    setGcps(prev => prev.filter(g => g.id !== id));
+    toast({ title: "GCP deleted" });
+  }
+
+  /* ── Save description ── */
+  async function saveDescription() {
+    if (!project) return;
+    setSavingDesc(true);
+    const { data } = await supabase.from("projects").update({ description }).eq("id", project.id).select().single();
+    if (data) setProject(data as Project);
+    setSavingDesc(false);
+    toast({ title: "Description saved" });
   }
 
   /* ── Submit processing ── */
@@ -393,6 +463,19 @@ export default function ProjectDetail() {
       </header>
 
       <div className="max-w-6xl mx-auto p-6">
+        {/* Editable description */}
+        <div className="bg-card rounded-2xl border border-border p-4 mb-6">
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            onBlur={saveDescription}
+            placeholder="Add project notes or description…"
+            className="w-full bg-transparent text-sm text-foreground resize-none outline-none placeholder:text-muted-foreground min-h-[60px]"
+            rows={2}
+          />
+          {savingDesc && <p className="text-xs text-muted-foreground mt-1">Saving…</p>}
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left: Pipeline + Outputs */}
           <div className="lg:col-span-2 space-y-6">
@@ -475,6 +558,11 @@ export default function ProjectDetail() {
                     Flight Plans
                     {flightPlans.length > 0 && <span className="ml-1 px-1.5 py-0.5 rounded-full text-xs bg-primary text-primary-foreground font-semibold">{flightPlans.length}</span>}
                   </TabsTrigger>
+                  <TabsTrigger value="gcps" className="flex-1 gap-1.5">
+                    <MapPin className="w-3.5 h-3.5" />
+                    GCPs
+                    {gcps.length > 0 && <span className="ml-1 px-1.5 py-0.5 rounded-full text-xs bg-primary text-primary-foreground font-semibold">{gcps.length}</span>}
+                  </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="images" className="space-y-3 pt-4">
@@ -554,6 +642,41 @@ export default function ProjectDetail() {
                           </div>
                           <Button variant="ghost" size="sm" className="w-7 h-7 p-0 hover:text-destructive" onClick={() => deleteFlightPlan(fp)}>
                             <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="gcps" className="space-y-3 pt-4">
+                  <div
+                    onClick={() => gcpInputRef.current?.click()}
+                    className="border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all border-border hover:border-primary/40 hover:bg-secondary/50"
+                  >
+                    <input ref={gcpInputRef} type="file" accept=".csv,.txt" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadGcpCsv(f); e.target.value = ""; }} />
+                    <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+                    <p className="font-semibold text-sm text-foreground">Upload GCP file</p>
+                    <p className="text-xs text-muted-foreground mt-1">CSV format: name, latitude, longitude, elevation (optional)</p>
+                  </div>
+
+                  {loadingGcps ? (
+                    <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div>
+                  ) : gcps.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">No ground control points added yet.</p>
+                  ) : (
+                    <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+                      <div className="grid grid-cols-5 gap-2 text-xs font-semibold text-muted-foreground px-3 py-1">
+                        <span>Name</span><span>Latitude</span><span>Longitude</span><span>Elevation</span><span></span>
+                      </div>
+                      {gcps.map((gcp) => (
+                        <div key={gcp.id} className="grid grid-cols-5 gap-2 items-center bg-secondary/40 rounded-lg px-3 py-2 text-xs">
+                          <span className="font-medium text-foreground truncate">{gcp.name}</span>
+                          <span className="text-muted-foreground">{gcp.latitude.toFixed(6)}</span>
+                          <span className="text-muted-foreground">{gcp.longitude.toFixed(6)}</span>
+                          <span className="text-muted-foreground">{gcp.elevation?.toFixed(1) ?? "—"}</span>
+                          <Button variant="ghost" size="sm" className="w-6 h-6 p-0 hover:text-destructive justify-self-end" onClick={() => deleteGcp(gcp.id)}>
+                            <Trash2 className="w-3 h-3" />
                           </Button>
                         </div>
                       ))}

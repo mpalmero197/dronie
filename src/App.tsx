@@ -10,6 +10,7 @@ import AuthPage from "./pages/AuthPage.tsx";
 import MapViewer from "./pages/MapViewer.tsx";
 import AdminPanel from "./pages/AdminPanel.tsx";
 import ProjectDetail from "./pages/ProjectDetail.tsx";
+import Gallery from "./pages/Gallery.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
             <Route path="/viewer/:projectId" element={<MapViewer />} />
             <Route path="/admin" element={<AdminPanel />} />
             <Route path="/project/:projectId" element={<ProjectDetail />} />
+            <Route path="/gallery" element={<Gallery />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
