@@ -46,6 +46,15 @@ interface UploadItem {
   error?: string;
 }
 
+interface GCP {
+  id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  elevation: number | null;
+  created_at: string;
+}
+
 interface ProcessingSettings {
   quality: "low" | "medium" | "high" | "ultra";
   meshType: "3d" | "2.5d" | "none";
