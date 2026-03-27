@@ -331,6 +331,53 @@ export default function ProjectDetail() {
     toast({ title: "Image deleted" });
   }
 
+  /* ── GCP upload ── */
+  async function uploadGcpCsv(file: File) {
+    if (!project || !user) return;
+    try {
+      const text = await file.text();
+      const lines = text.trim().split("\n");
+      const header = lines[0].toLowerCase();
+      const hasHeader = header.includes("name") || header.includes("lat");
+      const dataLines = hasHeader ? lines.slice(1) : lines;
+      const rows: { name: string; latitude: number; longitude: number; elevation: number | null }[] = [];
+      for (const line of dataLines) {
+        const parts = line.split(",").map(s => s.trim());
+        if (parts.length < 3) continue;
+        const name = parts[0];
+        const lat = parseFloat(parts[1]);
+        const lng = parseFloat(parts[2]);
+        const elev = parts[3] ? parseFloat(parts[3]) : null;
+        if (isNaN(lat) || isNaN(lng)) continue;
+        rows.push({ name, latitude: lat, longitude: lng, elevation: elev });
+      }
+      if (!rows.length) { toast({ title: "No valid GCPs found", variant: "destructive" }); return; }
+      const inserts = rows.map(r => ({ ...r, project_id: project.id, user_id: user.id }));
+      const { error } = await supabase.from("ground_control_points").insert(inserts);
+      if (error) throw error;
+      toast({ title: `${rows.length} GCPs imported` });
+      loadGcps();
+    } catch (err: any) {
+      toast({ title: "GCP import failed", description: err.message, variant: "destructive" });
+    }
+  }
+
+  async function deleteGcp(id: string) {
+    await supabase.from("ground_control_points").delete().eq("id", id);
+    setGcps(prev => prev.filter(g => g.id !== id));
+    toast({ title: "GCP deleted" });
+  }
+
+  /* ── Save description ── */
+  async function saveDescription() {
+    if (!project) return;
+    setSavingDesc(true);
+    const { data } = await supabase.from("projects").update({ description }).eq("id", project.id).select().single();
+    if (data) setProject(data as Project);
+    setSavingDesc(false);
+    toast({ title: "Description saved" });
+  }
+
   /* ── Submit processing ── */
   async function submitForProcessing() {
     if (!project || !user) return;
