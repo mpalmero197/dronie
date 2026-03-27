@@ -5,7 +5,7 @@ import {
   Play, Settings2, ImageIcon, FileArchive, Package,
   Download, Eye, Share2, Trash2, UploadCloud, FileText,
   AlertCircle, X, ChevronRight, Sliders, Layers,
-  Mountain, Grid3X3, Ruler, FileType,
+  Mountain, Grid3X3, Ruler, FileType, MapPin, Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
