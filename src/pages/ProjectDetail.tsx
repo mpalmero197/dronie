@@ -222,6 +222,7 @@ export default function ProjectDetail() {
         return;
       }
       setProject(data as Project);
+      setDescription(data.description || "");
       setLoading(false);
     }
     load();
