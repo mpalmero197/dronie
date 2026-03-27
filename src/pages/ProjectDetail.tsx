@@ -257,8 +257,16 @@ export default function ProjectDetail() {
     setLoadingImages(false);
   }, [project, user]);
 
+  const loadGcps = useCallback(async () => {
+    if (!project) return;
+    setLoadingGcps(true);
+    const { data } = await supabase.from("ground_control_points").select("*").eq("project_id", project.id).order("created_at", { ascending: true });
+    if (data) setGcps(data as GCP[]);
+    setLoadingGcps(false);
+  }, [project]);
+
   useEffect(() => {
-    if (project) { loadFlightPlans(); loadDroneImages(); }
+    if (project) { loadFlightPlans(); loadDroneImages(); loadGcps(); }
   }, [project?.id]);
 
   /* ── Upload handlers ── */
