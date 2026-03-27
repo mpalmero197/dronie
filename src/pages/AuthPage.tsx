@@ -25,7 +25,7 @@ export default function AuthPage() {
         const { error } = await supabase.auth.signUp({
           email,
           password,
-          options: { data: { full_name: fullName } },
+          options: { data: { full_name: fullName } }
         });
         if (error) throw error;
         toast({ title: 'Account created!', description: 'Welcome to MapForge.' });
@@ -50,7 +50,8 @@ export default function AuthPage() {
           <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
             <Map className="w-4 h-4 text-primary-foreground" />
           </div>
-          <span className="font-display font-700 text-lg text-primary-foreground">MapForge</span>
+          <span className="font-display font-700 text-lg text-primary-foreground">Dronie
+</span>
         </Link>
 
         <div className="space-y-4">
@@ -63,17 +64,16 @@ export default function AuthPage() {
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          {[
-            { val: '2.3M+', label: 'Maps processed' },
-            { val: '47K+', label: 'Active pilots' },
-            { val: '99.4%', label: 'Accuracy rate' },
-            { val: '< 2hrs', label: 'Avg. processing' },
-          ].map((s) => (
-            <div key={s.label} className="bg-primary-foreground/5 rounded-xl p-4 border border-primary-foreground/10">
+          {[{ val: '2.3M+', label: 'Maps processed' },
+          { val: '47K+', label: 'Active pilots' },
+          { val: '99.4%', label: 'Accuracy rate' },
+          { val: '< 2hrs', label: 'Avg. processing' }].
+          map((s) =>
+          <div key={s.label} className="bg-primary-foreground/5 rounded-xl p-4 border border-primary-foreground/10">
               <p className="text-2xl font-display font-700 text-accent">{s.val}</p>
               <p className="text-xs text-primary-foreground/50 mt-0.5">{s.label}</p>
             </div>
-          ))}
+          )}
         </div>
       </div>
 
@@ -93,25 +93,25 @@ export default function AuthPage() {
               {mode === 'login' ? 'Welcome back' : 'Create account'}
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              {mode === 'login'
-                ? 'Sign in to your MapForge dashboard'
-                : 'Start processing drone imagery for free'}
+              {mode === 'login' ?
+              'Sign in to your MapForge dashboard' :
+              'Start processing drone imagery for free'}
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {mode === 'signup' && (
-              <div className="space-y-1.5">
+            {mode === 'signup' &&
+            <div className="space-y-1.5">
                 <Label htmlFor="fullName">Full name</Label>
                 <Input
-                  id="fullName"
-                  placeholder="Alex Rivera"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  required
-                />
+                id="fullName"
+                placeholder="Alex Rivera"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                required />
+              
               </div>
-            )}
+            }
 
             <div className="space-y-1.5">
               <Label htmlFor="email">Email</Label>
@@ -121,8 +121,8 @@ export default function AuthPage() {
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                required
-              />
+                required />
+              
             </div>
 
             <div className="space-y-1.5">
@@ -136,13 +136,13 @@ export default function AuthPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   minLength={6}
-                  className="pr-10"
-                />
+                  className="pr-10" />
+                
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                >
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                  
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
@@ -151,11 +151,11 @@ export default function AuthPage() {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-semibold shadow-sm hover:shadow-md transition-all active:scale-[0.97]"
-            >
-              {loading ? (
-                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Please wait</>
-              ) : mode === 'login' ? 'Sign In' : 'Create Account'}
+              className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-semibold shadow-sm hover:shadow-md transition-all active:scale-[0.97]">
+              
+              {loading ?
+              <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Please wait</> :
+              mode === 'login' ? 'Sign In' : 'Create Account'}
             </Button>
           </form>
 
@@ -163,8 +163,8 @@ export default function AuthPage() {
             {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
             <button
               onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
-              className="text-primary font-medium hover:underline"
-            >
+              className="text-primary font-medium hover:underline">
+              
               {mode === 'login' ? 'Sign up free' : 'Sign in'}
             </button>
           </p>
@@ -176,6 +176,6 @@ export default function AuthPage() {
           </p>
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 }
