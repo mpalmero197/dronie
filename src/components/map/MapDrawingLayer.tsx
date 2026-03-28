@@ -23,6 +23,7 @@ interface MeasurementResult {
 interface MapDrawingLayerProps {
   activeTool: DrawTool;
   onMeasurement?: (result: string) => void;
+  onPolygonComplete?: (positions: [number, number][]) => void;
 }
 
 function haversineDistance(p1: [number, number], p2: [number, number]): number {
