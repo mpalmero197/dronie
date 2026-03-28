@@ -204,7 +204,7 @@ export default function HeroSection() {
             {/* Floating output badges */}
             <div className="absolute -top-3 -right-3 bg-card rounded-xl px-3 py-2 shadow-xl border border-border flex items-center gap-2">
               <Layers className="w-4 h-4 text-primary" />
-              <span className="text-xs font-semibold text-foreground">3D Model Ready</span>
+              <span className="text-xs font-semibold text-foreground">Open Standards</span>
             </div>
             <div className="absolute top-1/3 -left-4 bg-card rounded-xl px-3 py-2 shadow-xl border border-border flex items-center gap-2">
               <Download className="w-4 h-4 text-accent" />
