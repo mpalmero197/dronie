@@ -35,6 +35,8 @@ const App = () => (
             <Route path="/admin" element={<AdminPanel />} />
             <Route path="/project/:projectId" element={<ProjectDetail />} />
             <Route path="/gallery" element={<Gallery />} />
+            <Route path="/fleet" element={<FleetManagement />} />
+            <Route path="/jobs" element={<ActiveJobs />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/terms" element={<TermsOfService />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
