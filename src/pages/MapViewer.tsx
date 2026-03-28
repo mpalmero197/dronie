@@ -269,6 +269,7 @@ export default function MapViewer() {
             activeTool={activeTool}
             onMeasurement={setMeasurement}
             onPolygonComplete={flightPlannerOpen ? (pts) => setSurveyPolygon(pts) : undefined}
+            onPolylineComplete={flightPlannerOpen ? (pts) => setCorridorLine(pts) : undefined}
           />
           {activeOverlay === "airspace" && <AirspaceOverlay />}
           <LaancChecker active={activeTool === "laanc-check"} />
@@ -278,11 +279,14 @@ export default function MapViewer() {
           <FlightPlanner
             active={flightPlannerOpen}
             surveyPolygon={surveyPolygon}
+            corridorLine={corridorLine}
             projectId={projectId}
             mapContainerRef={mapContainerRef}
+            onPolygonEdit={setSurveyPolygon}
             onClose={() => {
               setFlightPlannerOpen(false);
               setSurveyPolygon(null);
+              setCorridorLine(null);
               setActiveTool(null);
             }}
           />
