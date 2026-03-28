@@ -11,6 +11,8 @@ import MapViewer from "./pages/MapViewer.tsx";
 import AdminPanel from "./pages/AdminPanel.tsx";
 import ProjectDetail from "./pages/ProjectDetail.tsx";
 import Gallery from "./pages/Gallery.tsx";
+import FleetManagement from "./pages/FleetManagement.tsx";
+import ActiveJobs from "./pages/ActiveJobs.tsx";
 import PrivacyPolicy from "./pages/PrivacyPolicy.tsx";
 import TermsOfService from "./pages/TermsOfService.tsx";
 import CookieConsent from "./components/CookieConsent.tsx";
