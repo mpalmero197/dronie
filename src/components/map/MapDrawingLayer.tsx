@@ -16,6 +16,7 @@ interface MapDrawingLayerProps {
   activeTool: DrawTool;
   onMeasurement?: (result: string) => void;
   onPolygonComplete?: (positions: [number, number][]) => void;
+  onPolylineComplete?: (positions: [number, number][]) => void;
 }
 
 export interface MapDrawingLayerRef {
@@ -58,7 +59,7 @@ function polygonArea(pts: [number, number][]): number {
 }
 
 const MapDrawingLayer = forwardRef<MapDrawingLayerRef, MapDrawingLayerProps>(
-  ({ activeTool, onMeasurement, onPolygonComplete }, ref) => {
+  ({ activeTool, onMeasurement, onPolygonComplete, onPolylineComplete }, ref) => {
     const [shapes, setShapes] = useState<DrawnShape[]>([]);
     const [undoStack, setUndoStack] = useState<DrawnShape[][]>([]);
     const [redoStack, setRedoStack] = useState<DrawnShape[][]>([]);
@@ -167,9 +168,11 @@ const MapDrawingLayer = forwardRef<MapDrawingLayerRef, MapDrawingLayerProps>(
       dblclick(e) {
         if (activeTool === "polyline" && drawingPoints.length >= 2) {
           e.originalEvent.preventDefault();
+          const pts = [...drawingPoints];
           pushUndo(shapes);
-          setShapes(prev => [...prev, { id: crypto.randomUUID(), type: "polyline", positions: [...drawingPoints], note: "" }]);
+          setShapes(prev => [...prev, { id: crypto.randomUUID(), type: "polyline", positions: pts, note: "" }]);
           setDrawingPoints([]);
+          onPolylineComplete?.(pts);
         }
         if (activeTool === "polygon" && drawingPoints.length >= 3) {
           e.originalEvent.preventDefault();

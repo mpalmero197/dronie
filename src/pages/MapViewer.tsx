@@ -95,6 +95,7 @@ export default function MapViewer() {
   const [showEmbed, setShowEmbed] = useState(false);
   const [measurement, setMeasurement] = useState<string | null>(null);
   const [surveyPolygon, setSurveyPolygon] = useState<[number, number][] | null>(null);
+  const [corridorLine, setCorridorLine] = useState<[number, number][] | null>(null);
   const [flightPlannerOpen, setFlightPlannerOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [undoRedoTick, setUndoRedoTick] = useState(0);
@@ -269,6 +270,7 @@ export default function MapViewer() {
             activeTool={activeTool}
             onMeasurement={setMeasurement}
             onPolygonComplete={flightPlannerOpen ? (pts) => setSurveyPolygon(pts) : undefined}
+            onPolylineComplete={flightPlannerOpen ? (pts) => setCorridorLine(pts) : undefined}
           />
           {activeOverlay === "airspace" && <AirspaceOverlay />}
           <LaancChecker active={activeTool === "laanc-check"} />
@@ -278,17 +280,22 @@ export default function MapViewer() {
           <FlightPlanner
             active={flightPlannerOpen}
             surveyPolygon={surveyPolygon}
+            corridorLine={corridorLine}
             projectId={projectId}
             mapContainerRef={mapContainerRef}
+            onPolygonEdit={setSurveyPolygon}
             onClose={() => {
               setFlightPlannerOpen(false);
               setSurveyPolygon(null);
+              setCorridorLine(null);
               setActiveTool(null);
             }}
           />
           <MousePositionDisplay />
           <MapContextMenu onDropPin={handleDropPin} />
           <GeolocationButton />
+          <WeatherWidget />
+          <SunPositionWidget />
         </MapContainer>
 
         {/* Toolbar */}
@@ -322,10 +329,6 @@ export default function MapViewer() {
 
         {/* Overlay Legend */}
         {activeOverlay && <OverlayLegend type={activeOverlay as "elevation" | "ndvi" | "airspace"} />}
-
-        {/* Weather & Sun widgets */}
-        <WeatherWidget />
-        <SunPositionWidget />
 
         {/* Hint */}
         <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-[900] pointer-events-none">
