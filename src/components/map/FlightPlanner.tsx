@@ -3,15 +3,20 @@ import { useMap, Polyline, Marker, Polygon as LeafletPolygon, CircleMarker } fro
 import L from "leaflet";
 import {
   Plane, X, Download, RotateCcw, Battery, MapPin, Grid3X3,
+  Mountain, Save, FolderOpen, Trash2, Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface FlightPlannerProps {
   active: boolean;
   surveyPolygon: [number, number][] | null;
   onClose: () => void;
+  projectId?: string;
 }
 
 type FlightPattern = "single" | "crosshatch";
@@ -19,7 +24,7 @@ type FlightPattern = "single" | "crosshatch";
 interface DroneModel {
   name: string;
   batteryMinutes: number;
-  maxSpeed: number; // m/s
+  maxSpeed: number;
 }
 
 const DRONE_MODELS: DroneModel[] = [
@@ -37,8 +42,9 @@ interface FlightParams {
   heading: number;
   speed: number;
   pattern: FlightPattern;
-  crossHeadingOffset: number; // degrees offset for second grid
+  crossHeadingOffset: number;
   droneModelIdx: number;
+  terrainFollow: boolean;
 }
 
 const DEFAULT_PARAMS: FlightParams = {
@@ -50,7 +56,23 @@ const DEFAULT_PARAMS: FlightParams = {
   pattern: "single",
   crossHeadingOffset: 90,
   droneModelIdx: 0,
+  terrainFollow: false,
 };
+
+interface SavedPlan {
+  id: string;
+  name: string;
+  polygon: [number, number][];
+  home_position: [number, number] | null;
+  params: FlightParams;
+  created_at: string;
+}
+
+interface TerrainData {
+  elevations: number[];
+  minElev: number;
+  maxElev: number;
+}
 
 const SENSOR_WIDTH = 13.2;
 const SENSOR_HEIGHT = 8.8;
@@ -159,8 +181,20 @@ function generateLawnmowerPath(
   return waypoints;
 }
 
-function generateKML(waypoints: [number, number][], altitude: number, name: string, homePos?: [number, number]): string {
-  const coords = waypoints.map(w => `${w[1]},${w[0]},${altitude}`).join("\n            ");
+function generateKML(
+  waypoints: [number, number][],
+  altitude: number,
+  name: string,
+  homePos?: [number, number],
+  perWpAltitudes?: number[],
+): string {
+  const coords = waypoints.map((w, i) => {
+    const alt = perWpAltitudes ? perWpAltitudes[i] : altitude;
+    return `${w[1]},${w[0]},${alt}`;
+  }).join("\n            ");
+
+  const altMode = perWpAltitudes ? "absolute" : "relativeToGround";
+
   return `<?xml version="1.0" encoding="UTF-8"?>
 <kml xmlns="http://www.opengis.net/kml/2.2">
   <Document>
@@ -174,30 +208,70 @@ function generateKML(waypoints: [number, number][], altitude: number, name: stri
     <Placemark>
       <name>Flight Path</name>
       <LineString>
-        <altitudeMode>relativeToGround</altitudeMode>
+        <altitudeMode>${altMode}</altitudeMode>
         <coordinates>
             ${coords}
         </coordinates>
       </LineString>
     </Placemark>
-    ${waypoints.map((w, i) => `
+    ${waypoints.map((w, i) => {
+      const alt = perWpAltitudes ? perWpAltitudes[i] : altitude;
+      return `
     <Placemark>
       <name>WP${i + 1}</name>
       <Point>
-        <altitudeMode>relativeToGround</altitudeMode>
-        <coordinates>${w[1]},${w[0]},${altitude}</coordinates>
+        <altitudeMode>${altMode}</altitudeMode>
+        <coordinates>${w[1]},${w[0]},${alt}</coordinates>
       </Point>
-    </Placemark>`).join("")}
+    </Placemark>`;
+    }).join("")}
   </Document>
 </kml>`;
 }
 
-function generateCSV(waypoints: [number, number][], altitude: number): string {
+function generateCSV(
+  waypoints: [number, number][],
+  altitude: number,
+  perWpAltitudes?: number[],
+): string {
   let csv = "wp,lat,lng,alt_m,heading,speed,action\n";
   waypoints.forEach((w, i) => {
-    csv += `${i + 1},${w[0].toFixed(7)},${w[1].toFixed(7)},${altitude},0,0,take_photo\n`;
+    const alt = perWpAltitudes ? perWpAltitudes[i] : altitude;
+    csv += `${i + 1},${w[0].toFixed(7)},${w[1].toFixed(7)},${alt.toFixed(1)},0,0,take_photo\n`;
   });
   return csv;
+}
+
+async function fetchTerrainElevations(waypoints: [number, number][]): Promise<number[]> {
+  // Batch in groups of 100
+  const BATCH = 100;
+  const elevations: number[] = [];
+  for (let i = 0; i < waypoints.length; i += BATCH) {
+    const batch = waypoints.slice(i, i + BATCH);
+    const locations = batch.map(w => ({ latitude: w[0], longitude: w[1] }));
+    try {
+      const resp = await fetch("https://api.open-elevation.com/api/v1/lookup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ locations }),
+      });
+      if (!resp.ok) throw new Error("Elevation API error");
+      const data = await resp.json();
+      elevations.push(...data.results.map((r: any) => r.elevation as number));
+    } catch {
+      // Fallback: assume 0 elevation
+      elevations.push(...batch.map(() => 0));
+    }
+  }
+  return elevations;
+}
+
+function getElevationColor(elev: number, min: number, max: number): string {
+  if (max === min) return "#22c55e";
+  const t = (elev - min) / (max - min);
+  if (t < 0.33) return "#22c55e"; // green
+  if (t < 0.66) return "#eab308"; // yellow
+  return "#ef4444"; // red
 }
 
 const homeIcon = new L.DivIcon({
@@ -209,13 +283,22 @@ const homeIcon = new L.DivIcon({
   iconAnchor: [12, 12],
 });
 
-export default function FlightPlanner({ active, surveyPolygon, onClose }: FlightPlannerProps) {
+export default function FlightPlanner({ active, surveyPolygon, onClose, projectId }: FlightPlannerProps) {
   const map = useMap();
   const { toast } = useToast();
   const [params, setParams] = useState<FlightParams>(DEFAULT_PARAMS);
   const [homePosition, setHomePosition] = useState<[number, number] | null>(null);
+  const [terrainData, setTerrainData] = useState<TerrainData | null>(null);
+  const [terrainLoading, setTerrainLoading] = useState(false);
 
-  // Set default home position when polygon is drawn
+  // Save/Load state
+  const [savedPlans, setSavedPlans] = useState<SavedPlan[]>([]);
+  const [saveName, setSaveName] = useState("");
+  const [showSaveInput, setShowSaveInput] = useState(false);
+  const [showLoadList, setShowLoadList] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [loadingPlans, setLoadingPlans] = useState(false);
+
   useEffect(() => {
     if (surveyPolygon && surveyPolygon.length >= 3 && !homePosition) {
       setHomePosition([surveyPolygon[0][0], surveyPolygon[0][1]]);
@@ -225,83 +308,149 @@ export default function FlightPlanner({ active, surveyPolygon, onClose }: Flight
   const result = useMemo(() => {
     if (!surveyPolygon || surveyPolygon.length < 3) return null;
     const { altitude, frontOverlap, sideOverlap, heading, pattern, crossHeadingOffset } = params;
-
     const primaryWps = generateLawnmowerPath(surveyPolygon, altitude, frontOverlap, sideOverlap, heading);
-
     if (pattern === "crosshatch") {
       const secondaryWps = generateLawnmowerPath(
         surveyPolygon, altitude, frontOverlap, sideOverlap,
         (heading + crossHeadingOffset) % 360
       );
-      return {
-        waypoints: [...primaryWps, ...secondaryWps],
-        primaryWps,
-        secondaryWps,
-      };
+      return { waypoints: [...primaryWps, ...secondaryWps], primaryWps, secondaryWps };
     }
-
     return { waypoints: primaryWps, primaryWps, secondaryWps: [] as [number, number][] };
   }, [surveyPolygon, params]);
+
+  // Fetch terrain data when terrain follow is enabled
+  useEffect(() => {
+    if (!params.terrainFollow || !result || result.waypoints.length === 0) {
+      setTerrainData(null);
+      return;
+    }
+    let cancelled = false;
+    setTerrainLoading(true);
+    fetchTerrainElevations(result.waypoints).then(elevations => {
+      if (cancelled) return;
+      const minElev = Math.min(...elevations);
+      const maxElev = Math.max(...elevations);
+      setTerrainData({ elevations, minElev, maxElev });
+      setTerrainLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [params.terrainFollow, result]);
+
+  const perWpAltitudes = useMemo(() => {
+    if (!terrainData || !params.terrainFollow || !result) return undefined;
+    return terrainData.elevations.map(elev => params.altitude + elev);
+  }, [terrainData, params.terrainFollow, params.altitude, result]);
 
   const stats = useMemo(() => {
     if (!result || !surveyPolygon) return null;
     const { waypoints, primaryWps, secondaryWps } = result;
-
     let totalDist = 0;
     for (let i = 1; i < primaryWps.length; i++) totalDist += haversineDistance(primaryWps[i - 1], primaryWps[i]);
     for (let i = 1; i < secondaryWps.length; i++) totalDist += haversineDistance(secondaryWps[i - 1], secondaryWps[i]);
-
-    // Add distance from home to first WP and last WP back to home
     if (homePosition && waypoints.length > 0) {
       totalDist += haversineDistance(homePosition, waypoints[0]);
       totalDist += haversineDistance(waypoints[waypoints.length - 1], homePosition);
     }
-
     const area = polygonArea(surveyPolygon);
     const flightTime = totalDist / params.speed;
     const gsd = (params.altitude * SENSOR_WIDTH) / (FOCAL_LENGTH * IMAGE_WIDTH) * 100;
-
     const drone = DRONE_MODELS[params.droneModelIdx];
-    const usableBatterySeconds = drone.batteryMinutes * 60 * 0.85; // 85% usable
+    const usableBatterySeconds = drone.batteryMinutes * 60 * 0.85;
     const batteriesNeeded = Math.ceil(flightTime / usableBatterySeconds);
     const batteryPercent = Math.min(100, Math.round((flightTime / usableBatterySeconds) * 100));
-
     return {
-      waypoints: waypoints.length,
-      distance: totalDist,
-      area,
-      flightTime,
-      gsd,
-      photos: waypoints.length,
-      batteriesNeeded,
-      batteryPercent,
-      droneName: drone.name,
+      waypoints: waypoints.length, distance: totalDist, area, flightTime, gsd,
+      photos: waypoints.length, batteriesNeeded, batteryPercent, droneName: drone.name,
     };
   }, [result, surveyPolygon, params, homePosition]);
 
   const downloadKML = useCallback(() => {
     if (!result) return;
-    const kml = generateKML(result.waypoints, params.altitude, "Flight Plan", homePosition ?? undefined);
+    const kml = generateKML(result.waypoints, params.altitude, "Flight Plan", homePosition ?? undefined, perWpAltitudes);
     const blob = new Blob([kml], { type: "application/vnd.google-earth.kml+xml" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = "flight-plan.kml"; a.click();
+    const a = document.createElement("a"); a.href = url; a.download = "flight-plan.kml"; a.click();
     URL.revokeObjectURL(url);
     toast({ title: "KML exported" });
-  }, [result, params.altitude, homePosition, toast]);
+  }, [result, params.altitude, homePosition, perWpAltitudes, toast]);
 
   const downloadCSV = useCallback(() => {
     if (!result) return;
-    const csv = generateCSV(result.waypoints, params.altitude);
+    const csv = generateCSV(result.waypoints, params.altitude, perWpAltitudes);
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = "flight-plan-waypoints.csv"; a.click();
+    const a = document.createElement("a"); a.href = url; a.download = "flight-plan-waypoints.csv"; a.click();
     URL.revokeObjectURL(url);
     toast({ title: "CSV exported" });
-  }, [result, params.altitude, toast]);
+  }, [result, params.altitude, perWpAltitudes, toast]);
 
-  const resetParams = () => { setParams(DEFAULT_PARAMS); setHomePosition(null); };
+  const resetParams = () => { setParams(DEFAULT_PARAMS); setHomePosition(null); setTerrainData(null); };
+
+  // Save/Load functions
+  const loadSavedPlans = useCallback(async () => {
+    setLoadingPlans(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast({ title: "Login required", description: "Save & load requires authentication.", variant: "destructive" });
+      setLoadingPlans(false);
+      return;
+    }
+    let query = supabase.from("saved_flight_plans").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
+    if (projectId && projectId !== "demo") {
+      query = query.eq("project_id", projectId);
+    }
+    const { data, error } = await query;
+    if (error) {
+      toast({ title: "Failed to load plans", variant: "destructive" });
+    } else {
+      setSavedPlans((data || []).map((d: any) => ({
+        id: d.id,
+        name: d.name,
+        polygon: d.polygon as [number, number][],
+        home_position: d.home_position as [number, number] | null,
+        params: d.params as FlightParams,
+        created_at: d.created_at,
+      })));
+    }
+    setLoadingPlans(false);
+  }, [projectId, toast]);
+
+  const savePlan = useCallback(async () => {
+    if (!surveyPolygon || !saveName.trim()) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast({ title: "Login required", description: "Save requires authentication.", variant: "destructive" });
+      return;
+    }
+    setSaving(true);
+    const { error } = await supabase.from("saved_flight_plans").insert({
+      user_id: user.id,
+      project_id: projectId && projectId !== "demo" ? projectId : null,
+      name: saveName.trim(),
+      polygon: surveyPolygon as any,
+      home_position: homePosition as any,
+      params: params as any,
+    });
+    setSaving(false);
+    if (error) {
+      toast({ title: "Save failed", variant: "destructive" });
+    } else {
+      toast({ title: "Plan saved!" });
+      setSaveName("");
+      setShowSaveInput(false);
+    }
+  }, [surveyPolygon, saveName, homePosition, params, projectId, toast]);
+
+  const deletePlan = useCallback(async (planId: string) => {
+    const { error } = await supabase.from("saved_flight_plans").delete().eq("id", planId);
+    if (error) {
+      toast({ title: "Delete failed", variant: "destructive" });
+    } else {
+      setSavedPlans(prev => prev.filter(p => p.id !== planId));
+      toast({ title: "Plan deleted" });
+    }
+  }, [toast]);
 
   if (!active) return null;
 
@@ -330,14 +479,20 @@ export default function FlightPlanner({ active, surveyPolygon, onClose }: Flight
             positions={result.primaryWps}
             pathOptions={{ color: "#f59e0b", weight: 2, opacity: 0.9 }}
           />
-          {result.primaryWps.filter((_, i) => i % Math.max(1, Math.floor(result.primaryWps.length / 30)) === 0).map((wp, i) => (
-            <CircleMarker
-              key={`p-${i}`}
-              center={wp}
-              radius={3}
-              pathOptions={{ color: "#ffffff", fillColor: "#f59e0b", fillOpacity: 1, weight: 1.5 }}
-            />
-          ))}
+          {result.primaryWps.filter((_, i) => i % Math.max(1, Math.floor(result.primaryWps.length / 30)) === 0).map((wp, i) => {
+            const globalIdx = i * Math.max(1, Math.floor(result.primaryWps.length / 30));
+            const color = terrainData && params.terrainFollow
+              ? getElevationColor(terrainData.elevations[globalIdx] ?? 0, terrainData.minElev, terrainData.maxElev)
+              : "#f59e0b";
+            return (
+              <CircleMarker
+                key={`p-${i}`}
+                center={wp}
+                radius={3}
+                pathOptions={{ color: "#ffffff", fillColor: color, fillOpacity: 1, weight: 1.5 }}
+              />
+            );
+          })}
         </>
       )}
 
@@ -348,14 +503,20 @@ export default function FlightPlanner({ active, surveyPolygon, onClose }: Flight
             positions={result.secondaryWps}
             pathOptions={{ color: "#8b5cf6", weight: 2, opacity: 0.8 }}
           />
-          {result.secondaryWps.filter((_, i) => i % Math.max(1, Math.floor(result.secondaryWps.length / 30)) === 0).map((wp, i) => (
-            <CircleMarker
-              key={`s-${i}`}
-              center={wp}
-              radius={3}
-              pathOptions={{ color: "#ffffff", fillColor: "#8b5cf6", fillOpacity: 1, weight: 1.5 }}
-            />
-          ))}
+          {result.secondaryWps.filter((_, i) => i % Math.max(1, Math.floor(result.secondaryWps.length / 30)) === 0).map((wp, i) => {
+            const globalIdx = result.primaryWps.length + i * Math.max(1, Math.floor(result.secondaryWps.length / 30));
+            const color = terrainData && params.terrainFollow
+              ? getElevationColor(terrainData.elevations[globalIdx] ?? 0, terrainData.minElev, terrainData.maxElev)
+              : "#8b5cf6";
+            return (
+              <CircleMarker
+                key={`s-${i}`}
+                center={wp}
+                radius={3}
+                pathOptions={{ color: "#ffffff", fillColor: color, fillOpacity: 1, weight: 1.5 }}
+              />
+            );
+          })}
         </>
       )}
 
@@ -381,12 +542,57 @@ export default function FlightPlanner({ active, surveyPolygon, onClose }: Flight
             <Plane className="w-4 h-4 text-primary" />
             <h3 className="text-xs font-semibold text-foreground">Flight Planner</h3>
           </div>
-          <button onClick={onClose} className="p-1 rounded hover:bg-secondary transition-colors">
-            <X className="w-3.5 h-3.5 text-muted-foreground" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => { setShowLoadList(v => !v); if (!showLoadList) loadSavedPlans(); }}
+              className="p-1 rounded hover:bg-secondary transition-colors" title="Load plan"
+            >
+              <FolderOpen className="w-3.5 h-3.5 text-muted-foreground" />
+            </button>
+            <button onClick={onClose} className="p-1 rounded hover:bg-secondary transition-colors">
+              <X className="w-3.5 h-3.5 text-muted-foreground" />
+            </button>
+          </div>
         </div>
 
         <div className="p-3 space-y-3 max-h-[70vh] overflow-y-auto">
+          {/* Load plans list */}
+          {showLoadList && (
+            <div className="space-y-1.5 pb-2 border-b border-border">
+              <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Saved Plans</h4>
+              {loadingPlans ? (
+                <div className="flex justify-center py-3"><Loader2 className="w-4 h-4 animate-spin text-muted-foreground" /></div>
+              ) : savedPlans.length === 0 ? (
+                <p className="text-[10px] text-muted-foreground py-2">No saved plans found.</p>
+              ) : (
+                savedPlans.map(plan => (
+                  <div key={plan.id} className="flex items-center justify-between gap-1 px-2 py-1.5 rounded-md bg-secondary/50 hover:bg-secondary transition-colors">
+                    <button
+                      onClick={() => {
+                        setParams(plan.params);
+                        if (plan.home_position) setHomePosition(plan.home_position);
+                        setShowLoadList(false);
+                        toast({ title: `Loaded: ${plan.name}` });
+                      }}
+                      className="flex-1 text-left"
+                    >
+                      <p className="text-xs font-medium text-foreground truncate">{plan.name}</p>
+                      <p className="text-[9px] text-muted-foreground">
+                        {new Date(plan.created_at).toLocaleDateString()}
+                      </p>
+                    </button>
+                    <button
+                      onClick={() => deletePlan(plan.id)}
+                      className="p-1 rounded hover:bg-destructive/20 transition-colors flex-shrink-0"
+                    >
+                      <Trash2 className="w-3 h-3 text-destructive" />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+
           {!hasPoly ? (
             <div className="text-center py-6 space-y-2">
               <Plane className="w-8 h-8 mx-auto text-muted-foreground/40" />
@@ -437,10 +643,45 @@ export default function FlightPlanner({ active, surveyPolygon, onClose }: Flight
                 </div>
               </div>
 
+              {/* Terrain Following */}
+              <div className="flex items-center justify-between px-2 py-1.5 rounded-lg bg-accent/10 border border-accent/20">
+                <div className="flex items-center gap-2">
+                  <Mountain className="w-3.5 h-3.5 text-accent flex-shrink-0" />
+                  <span className="text-xs font-medium text-foreground">Terrain Following</span>
+                </div>
+                <Switch
+                  checked={params.terrainFollow}
+                  onCheckedChange={(v) => setParams(p => ({ ...p, terrainFollow: v }))}
+                />
+              </div>
+
+              {terrainLoading && (
+                <div className="flex items-center gap-2 px-2 py-1.5 text-[10px] text-muted-foreground">
+                  <Loader2 className="w-3 h-3 animate-spin" /> Fetching elevation data…
+                </div>
+              )}
+
+              {terrainData && params.terrainFollow && (
+                <div className="grid grid-cols-3 gap-1 text-[10px]">
+                  <div className="px-2 py-1 rounded bg-green-500/10 text-center">
+                    <span className="text-muted-foreground block">Min</span>
+                    <span className="font-semibold text-foreground">{terrainData.minElev.toFixed(0)}m</span>
+                  </div>
+                  <div className="px-2 py-1 rounded bg-yellow-500/10 text-center">
+                    <span className="text-muted-foreground block">Max</span>
+                    <span className="font-semibold text-foreground">{terrainData.maxElev.toFixed(0)}m</span>
+                  </div>
+                  <div className="px-2 py-1 rounded bg-red-500/10 text-center">
+                    <span className="text-muted-foreground block">Δ</span>
+                    <span className="font-semibold text-foreground">{(terrainData.maxElev - terrainData.minElev).toFixed(0)}m</span>
+                  </div>
+                </div>
+              )}
+
               {/* Altitude */}
               <div className="space-y-1.5">
                 <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">Altitude</span>
+                  <span className="text-muted-foreground">Altitude {params.terrainFollow ? "(AGL)" : ""}</span>
                   <span className="font-semibold text-foreground">{params.altitude}m</span>
                 </div>
                 <Slider value={[params.altitude]} onValueChange={([v]) => setParams(p => ({ ...p, altitude: v }))} min={20} max={150} step={5} />
@@ -473,7 +714,7 @@ export default function FlightPlanner({ active, surveyPolygon, onClose }: Flight
                 <Slider value={[params.heading]} onValueChange={([v]) => setParams(p => ({ ...p, heading: v }))} min={0} max={355} step={5} />
               </div>
 
-              {/* Cross heading offset (only for crosshatch) */}
+              {/* Cross heading offset */}
               {params.pattern === "crosshatch" && (
                 <div className="space-y-1.5">
                   <div className="flex justify-between text-xs">
@@ -572,6 +813,36 @@ export default function FlightPlanner({ active, surveyPolygon, onClose }: Flight
                   <Download className="w-3 h-3" /> KML
                 </Button>
               </div>
+
+              {/* Save plan */}
+              {showSaveInput ? (
+                <div className="flex gap-1.5">
+                  <Input
+                    value={saveName}
+                    onChange={e => setSaveName(e.target.value)}
+                    placeholder="Plan name…"
+                    className="h-8 text-xs flex-1"
+                  />
+                  <Button
+                    size="sm"
+                    onClick={savePlan}
+                    disabled={saving || !saveName.trim()}
+                    className="h-8 text-xs gap-1 bg-primary text-primary-foreground hover:bg-primary/90"
+                  >
+                    {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                    Save
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowSaveInput(true)}
+                  className="w-full h-8 text-xs gap-1.5"
+                >
+                  <Save className="w-3 h-3" /> Save Plan
+                </Button>
+              )}
             </>
           )}
         </div>
