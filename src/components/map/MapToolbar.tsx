@@ -87,7 +87,7 @@ export default function MapToolbar({
   const hasActiveSpecial = SPECIAL_TOOLS.some(t => t.id === activeTool);
 
   return (
-    <div className="absolute top-3 left-3 z-[900] flex flex-col gap-0.5 bg-card/95 backdrop-blur rounded-xl border border-border shadow-xl p-1 max-h-[calc(100vh-7rem)] overflow-y-auto scrollbar-none">
+    <div className="absolute top-3 left-3 z-[900] flex flex-col gap-0.5 bg-card/95 backdrop-blur rounded-xl border border-border shadow-xl p-1 max-h-[calc(100vh-10rem)] sm:max-h-[calc(100vh-7rem)] overflow-y-auto scrollbar-none">
       {/* Undo / Redo */}
       <div className="flex gap-0.5">
         <Tooltip>

@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AreaChart, Image as ImageIcon, Calendar, MapPin, ChevronRight, ChevronLeft } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import type { Project } from "@/lib/supabase";
 
 interface MapInfoPanelProps {
@@ -9,7 +10,13 @@ interface MapInfoPanelProps {
 }
 
 export default function MapInfoPanel({ project, pinCount, measurement }: MapInfoPanelProps) {
+  const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState(false);
+
+  // Auto-collapse on mobile to avoid overlapping weather/sun widgets
+  useEffect(() => {
+    if (isMobile) setCollapsed(true);
+  }, [isMobile]);
 
   if (collapsed) {
     return (
