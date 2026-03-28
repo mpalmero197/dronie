@@ -96,7 +96,7 @@ export default function PricingSection() {
     if (action === "auth") {
       navigate("/auth");
     } else if (action === "contact") {
-      window.location.href = "mailto:sales@mapforge.io?subject=Enterprise%20Inquiry";
+      window.location.href = "mailto:sales@dronie.com?subject=Enterprise%20Inquiry";
     }
   }
 
