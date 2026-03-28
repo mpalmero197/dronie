@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   MapPin, Ruler, Pentagon, Minus, Circle, Square,
-  Layers, Code2, Camera, Leaf, Mountain, MousePointerClick, Plane,
+  Layers, Code2, Camera, Leaf, Mountain, MousePointerClick, Plane, ShieldAlert,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,6 +32,7 @@ const TOOLS: { id: DrawTool; icon: typeof MapPin; label: string; group: string }
 const OVERLAYS = [
   { id: "elevation", icon: Mountain, label: "Elevation" },
   { id: "ndvi", icon: Leaf, label: "NDVI" },
+  { id: "airspace", icon: ShieldAlert, label: "Airspace / No-Fly Zones" },
 ];
 
 export default function MapToolbar({

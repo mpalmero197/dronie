@@ -20,6 +20,7 @@ import AddressSearch from "@/components/map/AddressSearch";
 import PropertyLines from "@/components/map/PropertyLines";
 import ParcelFetcher from "@/components/map/ParcelFetcher";
 import FlightPlanner from "@/components/map/FlightPlanner";
+import AirspaceOverlay from "@/components/map/AirspaceOverlay";
 
 // Fix Leaflet default marker icon issue with Vite
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -220,6 +221,7 @@ export default function MapViewer() {
             onMeasurement={setMeasurement}
             onPolygonComplete={flightPlannerOpen ? (pts) => setSurveyPolygon(pts) : undefined}
           />
+          {activeOverlay === "airspace" && <AirspaceOverlay />}
           <AddressSearch />
           <PropertyLines />
           <ParcelFetcher active={activeTool === "fetch-parcels"} />
@@ -259,7 +261,7 @@ export default function MapViewer() {
         {showInfo && <MapInfoPanel project={project} pinCount={0} measurement={measurement} />}
 
         {/* Overlay Legend */}
-        {activeOverlay && <OverlayLegend type={activeOverlay as "elevation" | "ndvi"} />}
+        {activeOverlay && <OverlayLegend type={activeOverlay as "elevation" | "ndvi" | "airspace"} />}
 
         {/* Hint */}
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-[900] pointer-events-none">
