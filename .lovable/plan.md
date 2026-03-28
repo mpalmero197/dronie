@@ -1,67 +1,83 @@
 
 
-## Plan: Enrich Map Viewer with New Features
+# Real Photogrammetry Processing with WebODM + Simulated Fallback
 
-### What exists today
-Drawing tools, measurement, overlays (elevation/NDVI/airspace), address search, property line import, parcel fetcher, flight planner, LAANC checker, layer switcher, PNG export, embed, share.
+## Overview
 
-### New features to add
+Replace the current sleep-based simulation with a dual-mode processing pipeline:
+1. **WebODM mode** — when a WebODM API URL and token are configured, submit tasks to a real WebODM/NodeODM instance for actual photogrammetry (orthomosaics, point clouds, DSM/DTM)
+2. **Simulated mode** — when no WebODM is configured, generate real downloadable output files (PDF report, sample GeoTIFF, contour GeoJSON) from uploaded image EXIF metadata
 
-**1. Live Coordinate Display (MousePositionDisplay)**
-- Shows lat/lng under the cursor in real-time at the bottom-right corner
-- Click to copy coordinates to clipboard
-- Toggle between decimal degrees, DMS, and UTM formats
+## Architecture
 
-**2. "Locate Me" Geolocation Button**
-- GPS button in the toolbar that flies the map to the user's current location
-- Adds a pulsing blue dot at their position with accuracy circle
-- Uses browser `navigator.geolocation` API
+```text
+┌─────────────┐     POST /process-project
+│  Frontend   │ ──────────────────────────►┌──────────────────────┐
+│ ProjectDetail│                           │  process-project     │
+└─────────────┘                            │  (edge function)     │
+                                           │                      │
+                                           │  Has WEBODM_URL?     │
+                                           │   ├─ YES → WebODM    │
+                                           │   │   POST /task/new  │
+                                           │   │   poll status     │
+                                           │   │   download assets │
+                                           │   │   store in bucket │
+                                           │   └─ NO → Simulate   │
+                                           │       extract EXIF   │
+                                           │       gen PDF report  │
+                                           │       gen GeoJSON     │
+                                           │       store in bucket │
+                                           └──────────────────────┘
+```
 
-**3. Right-Click Context Menu**
-- Copy coordinates at click point
-- Drop pin here
-- Measure from here
-- Center map here
-- What's here? (reverse geocode via Nominatim)
+## Plan
 
-**4. Map Scale Bar**
-- Add Leaflet's built-in `ScaleControl` (metric + imperial)
+### 1. Create `project-outputs` storage bucket
+- New public bucket for generated/downloaded output files
+- RLS policies: users read own project outputs, service role writes
+- Path pattern: `{user_id}/{project_id}/{filename}`
 
-**5. Fullscreen Toggle**
-- Button to enter/exit browser fullscreen mode on the map container
-- Uses `document.fullscreenElement` API
+### 2. Add `outputs_urls` column to `projects` table
+- JSONB column to store a map of output name → storage path (e.g., `{"orthomosaic": "uid/pid/ortho.tif", "report": "uid/pid/report.pdf"}`)
+- This replaces the current text array `outputs` with actionable download paths
 
-**6. Weather Widget**
-- Small collapsible panel showing current conditions at map center (wind speed/direction, temp, visibility)
-- Uses Open-Meteo free API (no key needed)
-- Critical for drone flight planning (wind speed affects flight safety)
+### 3. Rewrite `process-project` edge function — simulated mode
+When `WEBODM_URL` is not set:
+- List uploaded images from `drone-images` bucket for the project
+- Extract EXIF GPS coordinates and camera metadata from images (using a lightweight EXIF parser)
+- Generate a **Flight Report PDF** with: image locations plotted, camera info, estimated coverage area, timestamp summary
+- Generate a **contours GeoJSON** file from the image GPS bounding box (sample elevation contours)
+- Generate a **sample orthomosaic placeholder** (a simple GeoTIFF-like file or composite thumbnail)
+- Upload all generated files to `project-outputs` bucket
+- Update `projects.outputs_urls` with download paths
+- Still update progress in steps so the UI pipeline animation works
 
-**7. Sun Position / Golden Hour Indicator**
-- Calculates sun altitude and azimuth for the map center
-- Shows sunrise/sunset times and golden hour windows
-- Uses pure math (solar position algorithm) — no API needed
-- Useful for drone photography planning
+### 4. Rewrite `process-project` edge function — WebODM mode
+When `WEBODM_URL` and `WEBODM_TOKEN` secrets are set:
+- Download images from `drone-images` bucket
+- POST to WebODM `/api/projects` then `/api/projects/{id}/tasks` with the images
+- Poll task status every 10s, mapping WebODM progress to the 7 pipeline steps
+- On completion, download orthomosaic, point cloud, DSM/DTM from WebODM
+- Upload results to `project-outputs` bucket
+- Update `projects.outputs_urls`
+- On failure, set project status to `failed` with error message
 
-**8. Undo/Redo for Drawings**
-- Track drawing history stack in MapDrawingLayer
-- Undo/Redo buttons at top of toolbar
-- Keyboard shortcuts: Ctrl+Z / Ctrl+Shift+Z
+### 5. Update `ProjectDetail.tsx` — downloadable outputs
+- Replace the "Demo" badges on output files with actual **Download** buttons
+- Each output links to a signed URL from the `project-outputs` bucket
+- Remove the "demo mode" warning banner when real outputs exist
+- Keep the banner only when `outputs_urls` is empty/null
 
-### Files to create
-- `src/components/map/MousePositionDisplay.tsx` — cursor coordinate tracker
-- `src/components/map/MapContextMenu.tsx` — right-click menu
-- `src/components/map/WeatherWidget.tsx` — weather panel using Open-Meteo
-- `src/components/map/SunPosition.tsx` — sun/golden hour calculator
-- `src/components/map/GeolocationButton.tsx` — GPS locate button
+### 6. Secret management
+- Use the `add_secret` tool to let the user optionally provide `WEBODM_URL` and `WEBODM_TOKEN`
+- The edge function checks for these at runtime and chooses the appropriate mode
+- No secrets needed for simulated mode
 
-### Files to modify
-- `src/pages/MapViewer.tsx` — integrate all new components, add fullscreen toggle, add ScaleControl
-- `src/components/map/MapToolbar.tsx` — add geolocation, fullscreen, undo/redo buttons; add new DrawTool types
-- `src/components/map/MapDrawingLayer.tsx` — add undo/redo history stack, expose undo/redo callbacks
+## Technical Details
 
-### Technical notes
-- Open-Meteo API is free, no key required: `https://api.open-meteo.com/v1/forecast?latitude=X&longitude=Y&current_weather=true`
-- Sun position calculated with standard solar equations (no external dependency)
-- Context menu positioned at click point using absolute positioning over the map
-- All new UI panels follow existing design patterns (glassmorphic cards, compact sizing)
+- **EXIF parsing in Deno**: Use `npm:exif-parser` or `npm:exifreader` via esm.sh to extract GPS coords and camera model from JPEG files
+- **PDF generation in edge function**: Use `npm:jspdf` (already a project dependency) to create the flight report
+- **WebODM API**: Standard NodeODM REST API — `POST /task/new` with multipart form, `GET /task/{id}/info` for status, `GET /task/{id}/download/{asset}` for results
+- **Edge function timeout**: WebODM processing can take minutes/hours, so we use `EdgeRuntime.waitUntil()` with polling loops (already established pattern)
+- **Fallback detection**: Simple `Deno.env.get("WEBODM_URL")` check at the start of `runProcessing`
 
