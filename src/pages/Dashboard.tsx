@@ -415,6 +415,16 @@ export default function Dashboard() {
 
         {/* User info */}
         <div className="p-4 border-t border-sidebar-border space-y-3">
+          {/* Subscription tier badge */}
+          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${isSubscribed ? "bg-accent/15 border border-accent/20" : "bg-secondary border border-border"}`}>
+            <Zap className={`w-3.5 h-3.5 flex-shrink-0 ${isSubscribed ? "text-accent" : "text-muted-foreground"}`} />
+            <span className={`text-xs font-semibold ${isSubscribed ? "text-accent" : "text-muted-foreground"}`}>
+              {tierLimits.tierLabel}
+            </span>
+            {tierLimits.priorityProcessing && (
+              <span className="ml-auto text-[9px] px-1.5 py-0.5 rounded-full bg-accent/20 text-accent font-bold uppercase">Priority</span>
+            )}
+          </div>
           {isAdmin && (
             <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-accent/15 border border-accent/20">
               <Shield className="w-3.5 h-3.5 text-accent flex-shrink-0" />
