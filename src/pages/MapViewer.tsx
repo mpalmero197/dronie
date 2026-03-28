@@ -237,7 +237,14 @@ export default function MapViewer() {
         {/* Toolbar */}
         <MapToolbar
           activeTool={activeTool}
-          onToolChange={setActiveTool}
+          onToolChange={(tool) => {
+            if (tool === "flight-plan") {
+              setFlightPlannerOpen(v => !v);
+              setActiveTool(v => v === "flight-plan" ? "polygon" : "polygon");
+              return;
+            }
+            setActiveTool(tool);
+          }}
           onExportPng={exportPng}
           onEmbedCode={() => setShowEmbed(true)}
           activeOverlay={activeOverlay}
