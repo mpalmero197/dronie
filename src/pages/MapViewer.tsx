@@ -267,8 +267,8 @@ export default function MapViewer() {
         {activeOverlay && <OverlayLegend type={activeOverlay as "elevation" | "ndvi" | "airspace"} />}
 
         {/* Hint */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-[900] pointer-events-none">
-          <div className="bg-card/90 backdrop-blur rounded-full px-4 py-2 border border-border shadow text-xs text-muted-foreground flex items-center gap-2">
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-[900] pointer-events-none">
+          <div className="bg-card/90 backdrop-blur rounded-full px-3 py-1.5 border border-border shadow text-[11px] text-muted-foreground flex items-center gap-2">
             {activeTool
               ? `${activeTool === "measure-distance" ? "Click to measure distance, double-click to finish" :
                   activeTool === "measure-area" ? "Click to draw area, double-click to finish" :
