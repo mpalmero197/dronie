@@ -235,7 +235,7 @@ export default function Dashboard() {
     if (error) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     } else {
-      setProjects([data, ...projects]);
+      setProjects([data as Project, ...projects]);
       setNewProjectOpen(false);
       setNewProjectName('');
       toast({ title: 'Project created', description: `"${data.name}" is ready for images.` });
