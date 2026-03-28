@@ -176,6 +176,7 @@ const statusConfig = {
 
 interface Props {
   active: boolean;
+  onResult?: (result: LaancResult | null) => void;
 }
 
 export default function LaancChecker({ active }: Props) {
