@@ -8,7 +8,7 @@ import {
   Tooltip, TooltipContent, TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-export type DrawTool = "marker" | "polyline" | "polygon" | "rectangle" | "circle" | "measure-distance" | "measure-area" | null;
+export type DrawTool = "marker" | "polyline" | "polygon" | "rectangle" | "circle" | "measure-distance" | "measure-area" | "fetch-parcels" | "flight-plan" | null;
 
 interface MapToolbarProps {
   activeTool: DrawTool;
