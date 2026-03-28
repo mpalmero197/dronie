@@ -12,7 +12,7 @@ interface AirspaceZone {
   upperLimit?: any;
 }
 
-interface LaancResult {
+export interface LaancResult {
   lat: number;
   lng: number;
   zones: AirspaceZone[];
@@ -176,9 +176,10 @@ const statusConfig = {
 
 interface Props {
   active: boolean;
+  onResult?: (result: LaancResult | null) => void;
 }
 
-export default function LaancChecker({ active }: Props) {
+export default function LaancChecker({ active, onResult }: Props) {
   const map = useMap();
   const [result, setResult] = useState<LaancResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -187,6 +188,11 @@ export default function LaancChecker({ active }: Props) {
   useEffect(() => {
     if (!active) setResult(null);
   }, [active]);
+
+  // Notify parent of result changes
+  useEffect(() => {
+    onResult?.(result);
+  }, [result, onResult]);
 
   useMapEvents({
     click: async (e) => {

@@ -30,6 +30,16 @@ interface TerrainData {
   maxElev: number;
 }
 
+interface LaancData {
+  authorization: "authorized" | "requires_auth" | "prohibited" | "uncontrolled";
+  maxAutoAltFt: number;
+  message: string;
+  details: string[];
+  lat: number;
+  lng: number;
+  zones: { name: string; classLabel: string }[];
+}
+
 interface GenerateMissionPDFOptions {
   stats: MissionStats;
   params: FlightParams;
@@ -38,6 +48,7 @@ interface GenerateMissionPDFOptions {
   projectName: string;
   terrainData: TerrainData | null;
   perWpAltitudes?: number[];
+  laancData?: LaancData;
 }
 
 function formatTime(seconds: number): string {
@@ -47,7 +58,7 @@ function formatTime(seconds: number): string {
 }
 
 export function generateMissionPDF(options: GenerateMissionPDFOptions): Blob {
-  const { stats, params, waypoints, mapScreenshot, projectName, terrainData, perWpAltitudes } = options;
+  const { stats, params, waypoints, mapScreenshot, projectName, terrainData, perWpAltitudes, laancData } = options;
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
@@ -141,6 +152,104 @@ export function generateMissionPDF(options: GenerateMissionPDFOptions): Blob {
   });
 
   y += 8;
+
+  // --- LAANC / AIRSPACE AUTHORIZATION ---
+  if (laancData) {
+    if (y > pageH - 60) {
+      addFooter();
+      doc.addPage();
+      y = margin;
+    }
+
+    const laancColors: Record<string, [number, number, number]> = {
+      authorized: [22, 163, 74],     // green
+      uncontrolled: [22, 163, 74],
+      requires_auth: [217, 119, 6],  // amber
+      prohibited: [220, 38, 38],     // red
+    };
+    const statusLabels: Record<string, string> = {
+      authorized: "AUTHORIZED",
+      uncontrolled: "NO AUTH NEEDED",
+      requires_auth: "AUTH REQUIRED",
+      prohibited: "PROHIBITED",
+    };
+    const lColor = laancColors[laancData.authorization] || [100, 100, 100];
+
+    doc.setTextColor(30, 64, 175);
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("Airspace Authorization (LAANC)", margin, y);
+    y += 7;
+
+    // Status badge
+    doc.setFillColor(lColor[0], lColor[1], lColor[2]);
+    doc.roundedRect(margin, y - 3.5, 40, 7, 1.5, 1.5, "F");
+    doc.setTextColor(255);
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.text(statusLabels[laancData.authorization] || "UNKNOWN", margin + 2, y);
+    y += 8;
+
+    // Info rows
+    const laancRows: [string, string][] = [
+      ["Check Location", `${laancData.lat.toFixed(5)}, ${laancData.lng.toFixed(5)}`],
+      ["Max Auto-Approval", laancData.maxAutoAltFt > 0 ? `${laancData.maxAutoAltFt} ft AGL` : "N/A"],
+      ["Status", laancData.message],
+    ];
+
+    doc.setFontSize(8);
+    laancRows.forEach((row, i) => {
+      if (y > pageH - 25) { addFooter(); doc.addPage(); y = margin; }
+      const bgColor = i % 2 === 0 ? 245 : 255;
+      doc.setFillColor(bgColor, bgColor, bgColor);
+      doc.rect(margin, y - 3.5, contentW, rowH, "F");
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(100);
+      doc.text(row[0], margin + 2, y);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(30);
+      doc.text(row[1], margin + colW, y);
+      y += rowH;
+    });
+
+    // Details
+    y += 2;
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(80);
+    laancData.details.forEach((d) => {
+      if (y > pageH - 18) { addFooter(); doc.addPage(); y = margin; }
+      doc.text(`• ${d}`, margin + 2, y);
+      y += 4.5;
+    });
+
+    // Zones list
+    if (laancData.zones.length > 0) {
+      y += 3;
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(60);
+      doc.text(`Airspace Zones Detected (${laancData.zones.length})`, margin + 2, y);
+      y += 5;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7);
+      laancData.zones.slice(0, 8).forEach((z) => {
+        if (y > pageH - 18) { addFooter(); doc.addPage(); y = margin; }
+        doc.setTextColor(50);
+        doc.text(`${z.name || "Unnamed"} — ${z.classLabel}`, margin + 4, y);
+        y += 4.5;
+      });
+    }
+
+    // Disclaimer
+    y += 3;
+    doc.setFontSize(6);
+    doc.setTextColor(130);
+    doc.setFont("helvetica", "italic");
+    const disclaimer = "Advisory only. Always verify via an FAA-approved LAANC app (Aloft, AirMap, DroneUp) before flight. Check TFRs and local regulations.";
+    doc.text(disclaimer, margin + 2, y, { maxWidth: contentW - 4 });
+    y += 10;
+  }
 
   // --- WAYPOINT TABLE ---
   if (y > pageH - 40) {

@@ -19,6 +19,8 @@ import {
   generatePerimeterPath, generateOrbitPath, generateCorridorPath, calculateGSD,
 } from "@/lib/flightPathGenerators";
 
+import type { LaancResult } from "@/components/map/LaancChecker";
+
 interface FlightPlannerProps {
   active: boolean;
   surveyPolygon: [number, number][] | null;
@@ -28,6 +30,7 @@ interface FlightPlannerProps {
   corridorLine?: [number, number][] | null;
   orbitCenter?: [number, number] | null;
   onPolygonEdit?: (polygon: [number, number][]) => void;
+  laancResult?: LaancResult | null;
 }
 
 type FlightMode = "grid" | "perimeter" | "orbit" | "corridor";
@@ -175,7 +178,7 @@ const vertexIcon = new L.DivIcon({
 
 export default function FlightPlanner({
   active, surveyPolygon, onClose, projectId, mapContainerRef,
-  corridorLine, orbitCenter, onPolygonEdit,
+  corridorLine, orbitCenter, onPolygonEdit, laancResult,
 }: FlightPlannerProps) {
   const map = useMap();
   const { toast } = useToast();
@@ -332,6 +335,22 @@ export default function FlightPlanner({
       const blob = generateMissionPDF({
         stats, params, waypoints: result.waypoints, mapScreenshot,
         projectName: projectId || "Flight Plan", terrainData, perWpAltitudes,
+        laancData: laancResult ? {
+          authorization: laancResult.authorization,
+          maxAutoAltFt: laancResult.maxAutoAltFt,
+          message: laancResult.message,
+          details: laancResult.details,
+          lat: laancResult.lat,
+          lng: laancResult.lng,
+          zones: laancResult.zones.map(z => ({
+            name: z.name,
+            classLabel: z.icaoClass !== undefined
+              ? `Class ${["A","B","C","D","E","F","G"][z.icaoClass] || z.icaoClass}`
+              : z.type !== undefined
+                ? ({0:"Other",1:"Restricted",2:"Danger",3:"Prohibited",4:"CTR",5:"TMZ",6:"RMZ",7:"TMA",8:"TRA",9:"TSA",10:"FIR",13:"ATZ",14:"MATZ",17:"Alert",18:"Warning",19:"Protected"}[z.type] || `Type ${z.type}`)
+                : "Unknown",
+          })),
+        } : undefined,
       });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a"); a.href = url; a.download = "mission-summary.pdf"; a.click();
@@ -340,7 +359,7 @@ export default function FlightPlanner({
     } catch {
       toast({ title: "PDF export failed", variant: "destructive" });
     }
-  }, [result, stats, params, mapContainerRef, projectId, terrainData, perWpAltitudes, toast]);
+  }, [result, stats, params, mapContainerRef, projectId, terrainData, perWpAltitudes, laancResult, toast]);
 
   const resetParams = () => {
     setParams(DEFAULT_PARAMS);

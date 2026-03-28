@@ -22,6 +22,7 @@ import ParcelFetcher from "@/components/map/ParcelFetcher";
 import FlightPlanner from "@/components/map/FlightPlanner";
 import AirspaceOverlay from "@/components/map/AirspaceOverlay";
 import LaancChecker from "@/components/map/LaancChecker";
+import type { LaancResult } from "@/components/map/LaancChecker";
 import MousePositionDisplay from "@/components/map/MousePositionDisplay";
 import MapContextMenu from "@/components/map/MapContextMenu";
 import WeatherWidget from "@/components/map/WeatherWidget";
@@ -100,6 +101,7 @@ export default function MapViewer() {
   const [flightPlannerOpen, setFlightPlannerOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [undoRedoTick, setUndoRedoTick] = useState(0);
+  const [laancResult, setLaancResult] = useState<LaancResult | null>(null);
 
   const isDemo = projectId === "demo";
   const prevOverlayRef = useRef<string | null>(null);
@@ -286,8 +288,7 @@ export default function MapViewer() {
             onPolygonComplete={flightPlannerOpen ? (pts) => setSurveyPolygon(pts) : undefined}
             onPolylineComplete={flightPlannerOpen ? (pts) => setCorridorLine(pts) : undefined}
           />
-          {activeOverlay === "airspace" && <AirspaceOverlay />}
-          <LaancChecker active={activeTool === "laanc-check"} />
+          <LaancChecker active={activeTool === "laanc-check"} onResult={setLaancResult} />
           <AddressSearch />
           <PropertyLines />
           <ParcelFetcher active={activeTool === "fetch-parcels"} />
@@ -298,6 +299,7 @@ export default function MapViewer() {
             projectId={projectId}
             mapContainerRef={mapContainerRef}
             onPolygonEdit={setSurveyPolygon}
+            laancResult={laancResult}
             onClose={() => {
               setFlightPlannerOpen(false);
               setSurveyPolygon(null);
