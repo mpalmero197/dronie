@@ -115,7 +115,7 @@ const MapDrawingLayer = forwardRef<MapDrawingLayerRef, MapDrawingLayerProps>(
 
     useMapEvents({
       click(e) {
-        if (!activeTool) return;
+        if (!activeTool || activeTool === "fetch-parcels" || activeTool === "flight-plan" || activeTool === "laanc-check") return;
         const pt: [number, number] = [e.latlng.lat, e.latlng.lng];
 
         if (activeTool === "marker") {
