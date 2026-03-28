@@ -57,7 +57,7 @@ function polygonArea(pts: [number, number][]): number {
   return Math.abs((area * R * R) / 2);
 }
 
-export default function MapDrawingLayer({ activeTool, onMeasurement }: MapDrawingLayerProps) {
+export default function MapDrawingLayer({ activeTool, onMeasurement, onPolygonComplete }: MapDrawingLayerProps) {
   const [shapes, setShapes] = useState<DrawnShape[]>([]);
   const [measurements, setMeasurements] = useState<MeasurementResult[]>([]);
   const [drawingPoints, setDrawingPoints] = useState<[number, number][]>([]);
