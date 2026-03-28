@@ -98,6 +98,7 @@ export default function PricingSection() {
     } else if (action === "contact") {
       window.location.href = "mailto:sales@dronie.com?subject=Enterprise%20Inquiry";
     }
+    // "none" action = no-op (coming soon)
   }
 
   return (
