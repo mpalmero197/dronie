@@ -28,7 +28,7 @@ export default function AuthPage() {
           options: { data: { full_name: fullName } }
         });
         if (error) throw error;
-        toast({ title: 'Account created!', description: 'Welcome to MapForge.' });
+        toast({ title: 'Account created!', description: 'Welcome to Dronie.' });
         navigate('/dashboard');
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
