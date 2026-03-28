@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Map, Plus, UploadCloud, MoreVertical, Clock,
   CheckCircle2, AlertCircle, Loader2, FolderOpen,
   Eye, Trash2, BarChart3, HardDrive,
   ArrowLeft, LogOut, Shield, User as UserIcon, FileArchive, ImageIcon,
-  Play, Share2,
+  Play, Share2, Zap, Lock,
 } from "lucide-react";
 import ProjectDetailDialog from "@/components/ProjectDetailDialog";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase, Project } from "@/lib/supabase";
+import { getTierLimits, canCreateProject, getProjectsRemaining } from "@/lib/subscription-limits";
+import UpgradePrompt from "@/components/UpgradePrompt";
 import { useToast } from "@/hooks/use-toast";
 
 type Status = "complete" | "processing" | "queued" | "failed";
