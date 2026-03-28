@@ -1,83 +1,39 @@
 
 
-# Real Photogrammetry Processing with WebODM + Simulated Fallback
+# Auto-enable Airspace Overlay with LAANC Check
 
-## Overview
+## What changes
 
-Replace the current sleep-based simulation with a dual-mode processing pipeline:
-1. **WebODM mode** — when a WebODM API URL and token are configured, submit tasks to a real WebODM/NodeODM instance for actual photogrammetry (orthomosaics, point clouds, DSM/DTM)
-2. **Simulated mode** — when no WebODM is configured, generate real downloadable output files (PDF report, sample GeoTIFF, contour GeoJSON) from uploaded image EXIF metadata
+When the user selects the LAANC check tool, the airspace overlay should automatically turn on so pilots can visually see airspace zones. When LAANC check is deactivated, the overlay should revert to its previous state (not force-disable it if the user had it on independently).
 
-## Architecture
+## Implementation
 
-```text
-┌─────────────┐     POST /process-project
-│  Frontend   │ ──────────────────────────►┌──────────────────────┐
-│ ProjectDetail│                           │  process-project     │
-└─────────────┘                            │  (edge function)     │
-                                           │                      │
-                                           │  Has WEBODM_URL?     │
-                                           │   ├─ YES → WebODM    │
-                                           │   │   POST /task/new  │
-                                           │   │   poll status     │
-                                           │   │   download assets │
-                                           │   │   store in bucket │
-                                           │   └─ NO → Simulate   │
-                                           │       extract EXIF   │
-                                           │       gen PDF report  │
-                                           │       gen GeoJSON     │
-                                           │       store in bucket │
-                                           └──────────────────────┘
+**File: `src/pages/MapViewer.tsx`** (single file change)
+
+In the `onToolChange` handler (around line 305-312), add logic:
+- When `tool === "laanc-check"`, also set `activeOverlay` to `"airspace"` if it isn't already
+- Store the previous overlay state so we can restore it when LAANC is deactivated
+- When switching away from `"laanc-check"`, restore the previous overlay (or `null`)
+
+Alternatively, simpler approach: use a `useEffect` that watches `activeTool` — when it becomes `"laanc-check"`, save current overlay and set `"airspace"`; when it stops being `"laanc-check"`, restore the saved overlay.
+
+Add a `useRef<string | null>` to track the overlay state before LAANC was activated:
+
+```typescript
+const prevOverlayRef = useRef<string | null>(null);
+
+useEffect(() => {
+  if (activeTool === "laanc-check") {
+    prevOverlayRef.current = activeOverlay;
+    setActiveOverlay("airspace");
+  } else {
+    // Only restore if airspace was auto-set
+    if (activeOverlay === "airspace" && prevOverlayRef.current !== "airspace") {
+      setActiveOverlay(prevOverlayRef.current);
+    }
+  }
+}, [activeTool]);
 ```
 
-## Plan
-
-### 1. Create `project-outputs` storage bucket
-- New public bucket for generated/downloaded output files
-- RLS policies: users read own project outputs, service role writes
-- Path pattern: `{user_id}/{project_id}/{filename}`
-
-### 2. Add `outputs_urls` column to `projects` table
-- JSONB column to store a map of output name → storage path (e.g., `{"orthomosaic": "uid/pid/ortho.tif", "report": "uid/pid/report.pdf"}`)
-- This replaces the current text array `outputs` with actionable download paths
-
-### 3. Rewrite `process-project` edge function — simulated mode
-When `WEBODM_URL` is not set:
-- List uploaded images from `drone-images` bucket for the project
-- Extract EXIF GPS coordinates and camera metadata from images (using a lightweight EXIF parser)
-- Generate a **Flight Report PDF** with: image locations plotted, camera info, estimated coverage area, timestamp summary
-- Generate a **contours GeoJSON** file from the image GPS bounding box (sample elevation contours)
-- Generate a **sample orthomosaic placeholder** (a simple GeoTIFF-like file or composite thumbnail)
-- Upload all generated files to `project-outputs` bucket
-- Update `projects.outputs_urls` with download paths
-- Still update progress in steps so the UI pipeline animation works
-
-### 4. Rewrite `process-project` edge function — WebODM mode
-When `WEBODM_URL` and `WEBODM_TOKEN` secrets are set:
-- Download images from `drone-images` bucket
-- POST to WebODM `/api/projects` then `/api/projects/{id}/tasks` with the images
-- Poll task status every 10s, mapping WebODM progress to the 7 pipeline steps
-- On completion, download orthomosaic, point cloud, DSM/DTM from WebODM
-- Upload results to `project-outputs` bucket
-- Update `projects.outputs_urls`
-- On failure, set project status to `failed` with error message
-
-### 5. Update `ProjectDetail.tsx` — downloadable outputs
-- Replace the "Demo" badges on output files with actual **Download** buttons
-- Each output links to a signed URL from the `project-outputs` bucket
-- Remove the "demo mode" warning banner when real outputs exist
-- Keep the banner only when `outputs_urls` is empty/null
-
-### 6. Secret management
-- Use the `add_secret` tool to let the user optionally provide `WEBODM_URL` and `WEBODM_TOKEN`
-- The edge function checks for these at runtime and chooses the appropriate mode
-- No secrets needed for simulated mode
-
-## Technical Details
-
-- **EXIF parsing in Deno**: Use `npm:exif-parser` or `npm:exifreader` via esm.sh to extract GPS coords and camera model from JPEG files
-- **PDF generation in edge function**: Use `npm:jspdf` (already a project dependency) to create the flight report
-- **WebODM API**: Standard NodeODM REST API — `POST /task/new` with multipart form, `GET /task/{id}/info` for status, `GET /task/{id}/download/{asset}` for results
-- **Edge function timeout**: WebODM processing can take minutes/hours, so we use `EdgeRuntime.waitUntil()` with polling loops (already established pattern)
-- **Fallback detection**: Simple `Deno.env.get("WEBODM_URL")` check at the start of `runProcessing`
+This keeps it clean — one `useEffect`, no other files touched.
 
