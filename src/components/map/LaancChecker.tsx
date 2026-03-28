@@ -3,6 +3,7 @@ import { useMapEvents, useMap, CircleMarker, Popup } from "react-leaflet";
 import {
   ShieldCheck, ShieldAlert, ShieldX, AlertTriangle, Plane, ArrowDown, ArrowUp, X, Info,
 } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 
 interface AirspaceZone {
   name: string;
