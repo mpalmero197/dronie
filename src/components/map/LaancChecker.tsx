@@ -12,7 +12,7 @@ interface AirspaceZone {
   upperLimit?: any;
 }
 
-interface LaancResult {
+export interface LaancResult {
   lat: number;
   lng: number;
   zones: AirspaceZone[];
