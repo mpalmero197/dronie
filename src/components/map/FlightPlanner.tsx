@@ -390,6 +390,40 @@ export default function FlightPlanner({ active, surveyPolygon, onClose, projectI
 
   const resetParams = () => { setParams(DEFAULT_PARAMS); setHomePosition(null); setTerrainData(null); };
 
+  const downloadPDF = useCallback(async () => {
+    if (!result || !stats) return;
+    toast({ title: "Generating PDF…", description: "Capturing map and building report" });
+    let mapScreenshot = "";
+    if (mapContainerRef?.current) {
+      try {
+        const canvas = await html2canvas(mapContainerRef.current, { useCORS: true, allowTaint: true });
+        mapScreenshot = canvas.toDataURL("image/png");
+      } catch {
+        // proceed without screenshot
+      }
+    }
+    try {
+      const blob = generateMissionPDF({
+        stats,
+        params,
+        waypoints: result.waypoints,
+        mapScreenshot,
+        projectName: projectId || "Flight Plan",
+        terrainData,
+        perWpAltitudes,
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "mission-summary.pdf";
+      a.click();
+      URL.revokeObjectURL(url);
+      toast({ title: "PDF exported!" });
+    } catch {
+      toast({ title: "PDF export failed", variant: "destructive" });
+    }
+  }, [result, stats, params, mapContainerRef, projectId, terrainData, perWpAltitudes, toast]);
+
   // Save/Load functions
   const loadSavedPlans = useCallback(async () => {
     setLoadingPlans(true);
