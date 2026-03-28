@@ -277,6 +277,7 @@ export default function MapViewer() {
                   activeTool === "rectangle" ? "Click two corners" :
                   activeTool === "circle" ? "Click center, then edge" :
                   activeTool === "fetch-parcels" ? "Click on the map to fetch parcel boundaries" :
+                  activeTool === "laanc-check" ? "Click anywhere to check LAANC authorization status" :
                   "Click on the map to place a pin"}`
               : "Select a tool from the left toolbar to start drawing"}
           </div>
