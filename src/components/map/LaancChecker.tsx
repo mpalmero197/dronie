@@ -189,6 +189,11 @@ export default function LaancChecker({ active, onResult }: Props) {
     if (!active) setResult(null);
   }, [active]);
 
+  // Notify parent of result changes
+  useEffect(() => {
+    onResult?.(result);
+  }, [result, onResult]);
+
   useMapEvents({
     click: async (e) => {
       if (!active) return;

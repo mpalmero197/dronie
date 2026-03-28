@@ -22,6 +22,7 @@ import ParcelFetcher from "@/components/map/ParcelFetcher";
 import FlightPlanner from "@/components/map/FlightPlanner";
 import AirspaceOverlay from "@/components/map/AirspaceOverlay";
 import LaancChecker from "@/components/map/LaancChecker";
+import type { LaancResult } from "@/components/map/LaancChecker";
 import MousePositionDisplay from "@/components/map/MousePositionDisplay";
 import MapContextMenu from "@/components/map/MapContextMenu";
 import WeatherWidget from "@/components/map/WeatherWidget";
