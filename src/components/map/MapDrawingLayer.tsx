@@ -23,6 +23,7 @@ interface MeasurementResult {
 interface MapDrawingLayerProps {
   activeTool: DrawTool;
   onMeasurement?: (result: string) => void;
+  onPolygonComplete?: (positions: [number, number][]) => void;
 }
 
 function haversineDistance(p1: [number, number], p2: [number, number]): number {
@@ -56,7 +57,7 @@ function polygonArea(pts: [number, number][]): number {
   return Math.abs((area * R * R) / 2);
 }
 
-export default function MapDrawingLayer({ activeTool, onMeasurement }: MapDrawingLayerProps) {
+export default function MapDrawingLayer({ activeTool, onMeasurement, onPolygonComplete }: MapDrawingLayerProps) {
   const [shapes, setShapes] = useState<DrawnShape[]>([]);
   const [measurements, setMeasurements] = useState<MeasurementResult[]>([]);
   const [drawingPoints, setDrawingPoints] = useState<[number, number][]>([]);
@@ -139,10 +140,12 @@ export default function MapDrawingLayer({ activeTool, onMeasurement }: MapDrawin
       }
       if (activeTool === "polygon" && drawingPoints.length >= 3) {
         e.originalEvent.preventDefault();
+        const pts = [...drawingPoints];
         setShapes(prev => [...prev, {
-          id: crypto.randomUUID(), type: "polygon", positions: [...drawingPoints], note: "",
+          id: crypto.randomUUID(), type: "polygon", positions: pts, note: "",
         }]);
         setDrawingPoints([]);
+        onPolygonComplete?.(pts);
       }
       if (activeTool === "measure-distance" || activeTool === "measure-area") {
         e.originalEvent.preventDefault();

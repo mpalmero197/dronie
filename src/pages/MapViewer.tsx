@@ -18,6 +18,8 @@ import EmbedModal from "@/components/map/EmbedModal";
 import OverlayLegend from "@/components/map/OverlayLegend";
 import AddressSearch from "@/components/map/AddressSearch";
 import PropertyLines from "@/components/map/PropertyLines";
+import ParcelFetcher from "@/components/map/ParcelFetcher";
+import FlightPlanner from "@/components/map/FlightPlanner";
 
 // Fix Leaflet default marker icon issue with Vite
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -76,6 +78,8 @@ export default function MapViewer() {
   const [activeOverlay, setActiveOverlay] = useState<string | null>(null);
   const [showEmbed, setShowEmbed] = useState(false);
   const [measurement, setMeasurement] = useState<string | null>(null);
+  const [surveyPolygon, setSurveyPolygon] = useState<[number, number][] | null>(null);
+  const [flightPlannerOpen, setFlightPlannerOpen] = useState(false);
 
   const isDemo = projectId === "demo";
 
@@ -211,15 +215,36 @@ export default function MapViewer() {
               opacity={0.25}
             />
           )}
-          <MapDrawingLayer activeTool={activeTool} onMeasurement={setMeasurement} />
+          <MapDrawingLayer
+            activeTool={activeTool}
+            onMeasurement={setMeasurement}
+            onPolygonComplete={flightPlannerOpen ? (pts) => setSurveyPolygon(pts) : undefined}
+          />
           <AddressSearch />
           <PropertyLines />
+          <ParcelFetcher active={activeTool === "fetch-parcels"} />
+          <FlightPlanner
+            active={flightPlannerOpen}
+            surveyPolygon={surveyPolygon}
+            onClose={() => {
+              setFlightPlannerOpen(false);
+              setSurveyPolygon(null);
+              setActiveTool(null);
+            }}
+          />
         </MapContainer>
 
         {/* Toolbar */}
         <MapToolbar
           activeTool={activeTool}
-          onToolChange={setActiveTool}
+          onToolChange={(tool) => {
+            if (tool === "flight-plan") {
+              setFlightPlannerOpen(v => !v);
+              setActiveTool(v => v === "flight-plan" ? "polygon" : "polygon");
+              return;
+            }
+            setActiveTool(tool);
+          }}
           onExportPng={exportPng}
           onEmbedCode={() => setShowEmbed(true)}
           activeOverlay={activeOverlay}
@@ -242,9 +267,10 @@ export default function MapViewer() {
               ? `${activeTool === "measure-distance" ? "Click to measure distance, double-click to finish" :
                   activeTool === "measure-area" ? "Click to draw area, double-click to finish" :
                   activeTool === "polyline" ? "Click to draw line, double-click to finish" :
-                  activeTool === "polygon" ? "Click to draw polygon, double-click to finish" :
+                  activeTool === "polygon" ? (flightPlannerOpen ? "Draw survey area polygon, double-click to finish" : "Click to draw polygon, double-click to finish") :
                   activeTool === "rectangle" ? "Click two corners" :
                   activeTool === "circle" ? "Click center, then edge" :
+                  activeTool === "fetch-parcels" ? "Click on the map to fetch parcel boundaries" :
                   "Click on the map to place a pin"}`
               : "Select a tool from the left toolbar to start drawing"}
           </div>
