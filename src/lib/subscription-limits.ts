@@ -1,5 +1,20 @@
 import type { SubscriptionTier } from "./stripe-config";
 
+const ADMIN_LIMITS: TierLimits = {
+  projectsPerMonth: Infinity,
+  imagesPerProject: Infinity,
+  storageGB: Infinity,
+  priorityProcessing: true,
+  shareLinks: true,
+  pointCloud: true,
+  contourExport: true,
+  gcpSupport: true,
+  multiSpectral: true,
+  apiAccess: true,
+  whiteLabel: true,
+  tierLabel: "Admin",
+};
+
 export interface TierLimits {
   projectsPerMonth: number;
   imagesPerProject: number;
