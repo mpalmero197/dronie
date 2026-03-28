@@ -1,9 +1,11 @@
 
 
-# Make MapForge Feature-Rich Like Maps Made Easy
+# Auto-Load Parcel Data + Drone Flight Path Planner
 
-## What Maps Made Easy has that MapForge is missing
+## Overview
 
-Based on the Maps Made Easy feature set, here are the key gaps:
+Two major features: (1) click-on-map to fetch parcel boundaries from a free public API, and (2) a full drone flight path planning tool inspired by Maps Made Easy.
 
-1. **Drawing/Annotation Tools on Map** — MME has polyline, polygon, rectangle, circle, marker drawing tools with stroke/font
+## 1. Auto-Load Parcel Data via Map Click
+
+**Approach**: Use the free **OpenStreetMap Nominatim reverse geocode** + **Overpass API** to fetch building/land-use boundaries near a clicked point. For US parcels specifically, we can query the free **LOVELAND/Regrid public tile endpoint** or fall back to Overpass for
