@@ -179,7 +179,7 @@ export default function Dashboard() {
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [upgradeFeature, setUpgradeFeature] = useState({ feature: "", description: "" });
 
-  const tierLimits = getTierLimits(subscriptionTier);
+  const tierLimits = getTierLimits(subscriptionTier, isAdmin);
 
   // Count projects created this month
   const monthlyProjectCount = useMemo(() => {
@@ -188,8 +188,8 @@ export default function Dashboard() {
     return projects.filter((p) => new Date(p.created_at) >= startOfMonth).length;
   }, [projects]);
 
-  const projectsRemaining = getProjectsRemaining(subscriptionTier, monthlyProjectCount);
-  const canCreate = canCreateProject(subscriptionTier, monthlyProjectCount);
+  const projectsRemaining = getProjectsRemaining(subscriptionTier, monthlyProjectCount, isAdmin);
+  const canCreate = canCreateProject(subscriptionTier, monthlyProjectCount, isAdmin);
 
   // Handle checkout redirect
   useEffect(() => {
