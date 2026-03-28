@@ -178,7 +178,7 @@ const vertexIcon = new L.DivIcon({
 
 export default function FlightPlanner({
   active, surveyPolygon, onClose, projectId, mapContainerRef,
-  corridorLine, orbitCenter, onPolygonEdit,
+  corridorLine, orbitCenter, onPolygonEdit, laancResult,
 }: FlightPlannerProps) {
   const map = useMap();
   const { toast } = useToast();
