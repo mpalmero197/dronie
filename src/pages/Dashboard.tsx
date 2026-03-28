@@ -254,6 +254,15 @@ export default function Dashboard() {
 
   async function createProject() {
     if (!user || !newProjectName.trim()) return;
+    if (!canCreate) {
+      setNewProjectOpen(false);
+      setUpgradeFeature({
+        feature: "Project Limit Reached",
+        description: `You've used all ${tierLimits.projectsPerMonth} projects this month on the ${tierLimits.tierLabel} plan. Upgrade to Professional for unlimited projects.`,
+      });
+      setUpgradeOpen(true);
+      return;
+    }
     setCreating(true);
     const { data, error } = await supabase
       .from('projects')
@@ -269,6 +278,30 @@ export default function Dashboard() {
       toast({ title: 'Project created', description: `"${data.name}" is ready for images.` });
     }
     setCreating(false);
+  }
+
+  function handleNewProject() {
+    if (!canCreate) {
+      setUpgradeFeature({
+        feature: "Project Limit Reached",
+        description: `You've used all ${tierLimits.projectsPerMonth} projects this month on the ${tierLimits.tierLabel} plan. Upgrade to Professional for unlimited projects.`,
+      });
+      setUpgradeOpen(true);
+      return;
+    }
+    setNewProjectOpen(true);
+  }
+
+  function handleShareProject(project: Project) {
+    if (!isSubscribed && subscriptionTier !== "professional" && subscriptionTier !== "enterprise") {
+      setUpgradeFeature({
+        feature: "Share Links",
+        description: "Shareable map links are available on the Professional plan and above. Upgrade to share your maps with clients and colleagues.",
+      });
+      setUpgradeOpen(true);
+      return;
+    }
+    shareProject(project);
   }
 
   async function deleteProject(id: string) {
