@@ -20,6 +20,7 @@ import AddressSearch from "@/components/map/AddressSearch";
 import PropertyLines from "@/components/map/PropertyLines";
 import ParcelFetcher from "@/components/map/ParcelFetcher";
 import FlightPlanner from "@/components/map/FlightPlanner";
+import AirspaceOverlay from "@/components/map/AirspaceOverlay";
 
 // Fix Leaflet default marker icon issue with Vite
 delete (L.Icon.Default.prototype as any)._getIconUrl;
