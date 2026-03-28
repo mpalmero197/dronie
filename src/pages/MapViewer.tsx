@@ -287,8 +287,7 @@ export default function MapViewer() {
             onPolygonComplete={flightPlannerOpen ? (pts) => setSurveyPolygon(pts) : undefined}
             onPolylineComplete={flightPlannerOpen ? (pts) => setCorridorLine(pts) : undefined}
           />
-          {activeOverlay === "airspace" && <AirspaceOverlay />}
-          <LaancChecker active={activeTool === "laanc-check"} />
+          <LaancChecker active={activeTool === "laanc-check"} onResult={setLaancResult} />
           <AddressSearch />
           <PropertyLines />
           <ParcelFetcher active={activeTool === "fetch-parcels"} />
