@@ -17,7 +17,7 @@ export interface LaancResult {
   lat: number;
   lng: number;
   zones: AirspaceZone[];
-  authorization: "authorized" | "requires_auth" | "prohibited" | "uncontrolled";
+  authorization: "authorized" | "requires_auth" | "prohibited" | "uncontrolled" | "error";
   maxAutoAltFt: number;
   message: string;
   details: string[];
