@@ -286,7 +286,7 @@ const homeIcon = new L.DivIcon({
   iconAnchor: [12, 12],
 });
 
-export default function FlightPlanner({ active, surveyPolygon, onClose, projectId }: FlightPlannerProps) {
+export default function FlightPlanner({ active, surveyPolygon, onClose, projectId, mapContainerRef }: FlightPlannerProps) {
   const map = useMap();
   const { toast } = useToast();
   const [params, setParams] = useState<FlightParams>(DEFAULT_PARAMS);
