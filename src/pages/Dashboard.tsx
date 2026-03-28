@@ -631,8 +631,8 @@ export default function Dashboard() {
                                     <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => navigate(`/viewer/${project.id}`)}>
                                       <Eye className="w-3.5 h-3.5" /> View Map
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => shareProject(project)}>
-                                      <Share2 className="w-3.5 h-3.5" /> Copy Share Link
+                                    <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => handleShareProject(project)}>
+                                      <Share2 className="w-3.5 h-3.5" /> Copy Share Link {!tierLimits.shareLinks && <Lock className="w-3 h-3 text-muted-foreground ml-auto" />}
                                     </DropdownMenuItem>
                                   </>
                                 )}
