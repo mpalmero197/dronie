@@ -16,6 +16,8 @@ import MapInfoPanel from "@/components/map/MapInfoPanel";
 import LayerSwitcher, { BaseLayer } from "@/components/map/LayerSwitcher";
 import EmbedModal from "@/components/map/EmbedModal";
 import OverlayLegend from "@/components/map/OverlayLegend";
+import AddressSearch from "@/components/map/AddressSearch";
+import PropertyLines from "@/components/map/PropertyLines";
 
 // Fix Leaflet default marker icon issue with Vite
 delete (L.Icon.Default.prototype as any)._getIconUrl;
