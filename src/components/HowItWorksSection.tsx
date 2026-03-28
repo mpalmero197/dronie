@@ -81,7 +81,7 @@ export default function HowItWorksSection() {
             From raw flight to<br />finished deliverables
           </h2>
           <p className="mt-4 text-muted-foreground leading-relaxed">
-            A streamlined four-step process trusted by surveyors, agronomists, engineers, and real estate developers worldwide.
+            A streamlined four-step process designed for surveyors, agronomists, engineers, and real estate developers.
           </p>
         </div>
 

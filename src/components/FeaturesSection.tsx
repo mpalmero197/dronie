@@ -55,8 +55,8 @@ const features = [
   },
   {
     icon: Share2,
-    title: "Team Collaboration",
-    desc: "Invite team members, assign roles, and comment on projects. Built for survey crews and GIS professionals.",
+    title: "Share & Embed",
+    desc: "Share interactive map links with clients. Embed your maps on any website with a single code snippet.",
     color: "text-primary",
     bg: "bg-secondary",
   },

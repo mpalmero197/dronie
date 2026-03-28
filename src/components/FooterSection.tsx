@@ -2,23 +2,38 @@ import { Map } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const cols = [
-{
-  title: "Product",
-  links: ["Features", "Pricing", "Changelog", "Roadmap", "API Docs"]
-},
-{
-  title: "Use Cases",
-  links: ["Agriculture", "Construction", "Surveying", "Mining", "Real Estate"]
-},
-{
-  title: "Resources",
-  links: ["Documentation", "Sample Projects", "Blog", "Community", "Webinars"]
-},
-{
-  title: "Company",
-  links: ["About", "Careers", "Privacy Policy", "Terms of Service", "Contact"]
-}];
-
+  {
+    title: "Product",
+    links: [
+      { label: "Features", href: "/#features" },
+      { label: "Pricing", href: "/#pricing" },
+      { label: "How It Works", href: "/#how-it-works" },
+    ],
+  },
+  {
+    title: "Use Cases",
+    links: [
+      { label: "Agriculture", href: "/#features" },
+      { label: "Construction", href: "/#features" },
+      { label: "Surveying", href: "/#features" },
+      { label: "Real Estate", href: "/#features" },
+    ],
+  },
+  {
+    title: "Resources",
+    links: [
+      { label: "Sample Projects", href: "/gallery" },
+      { label: "Map Viewer Demo", href: "/viewer/demo" },
+    ],
+  },
+  {
+    title: "Company",
+    links: [
+      { label: "Privacy Policy", href: "/#" },
+      { label: "Terms of Service", href: "/#" },
+    ],
+  },
+];
 
 export default function FooterSection() {
   return (
@@ -36,49 +51,39 @@ export default function FooterSection() {
             <p className="text-sm text-primary-foreground/50 leading-relaxed">
               Professional drone photogrammetry processing in the cloud. Built for the field.
             </p>
-            <div className="flex gap-3 pt-1">
-              {["𝕏", "in", "▶"].map((s) =>
-              <button
-                key={s}
-                className="w-8 h-8 rounded-lg bg-primary-foreground/10 hover:bg-primary-foreground/20 text-sm font-bold transition-colors">
-                
-                  {s}
-                </button>
-              )}
-            </div>
           </div>
 
           {/* Link columns */}
-          {cols.map((col) =>
-          <div key={col.title}>
+          {cols.map((col) => (
+            <div key={col.title}>
               <h4 className="text-xs font-semibold uppercase tracking-widest text-primary-foreground/40 mb-4">
                 {col.title}
               </h4>
               <ul className="space-y-2.5">
-                {col.links.map((l) =>
-              <li key={l}>
-                    <a
-                  href="#"
-                  className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors">
-                  
-                      {l}
-                    </a>
+                {col.links.map((l) => (
+                  <li key={l.label}>
+                    <Link
+                      to={l.href}
+                      className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors"
+                    >
+                      {l.label}
+                    </Link>
                   </li>
-              )}
+                ))}
               </ul>
             </div>
-          )}
+          ))}
         </div>
 
         <div className="border-t border-primary-foreground/10 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-xs text-primary-foreground/40">
-            © 2026 Dronie Inc. All rights reserved.
+            © {new Date().getFullYear()} Dronie. All rights reserved.
           </p>
           <p className="text-xs text-primary-foreground/40">
-            Trusted by 47,000+ drone pilots in 94 countries.
+            Open-source standards · GeoTIFF · LAS · SHP
           </p>
         </div>
       </div>
-    </footer>);
-
+    </footer>
+  );
 }

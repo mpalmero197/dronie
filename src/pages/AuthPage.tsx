@@ -64,10 +64,10 @@ export default function AuthPage() {
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          {[{ val: '2.3M+', label: 'Maps processed' },
-          { val: '47K+', label: 'Active pilots' },
-          { val: '99.4%', label: 'Accuracy rate' },
-          { val: '< 2hrs', label: 'Avg. processing' }].
+          {[{ val: 'GeoTIFF', label: 'Ortho export' },
+          { val: 'LAS/LAZ', label: 'Point clouds' },
+          { val: 'Browser', label: 'Map viewer' },
+          { val: 'Free', label: 'To get started' }].
           map((s) =>
           <div key={s.label} className="bg-primary-foreground/5 rounded-xl p-4 border border-primary-foreground/10">
               <p className="text-2xl font-display font-700 text-accent">{s.val}</p>

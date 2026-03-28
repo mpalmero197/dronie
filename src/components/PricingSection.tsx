@@ -191,8 +191,7 @@ export default function PricingSection() {
         </div>
 
         <p className="text-center text-sm text-muted-foreground mt-8">
-          All plans include SSL, automated backups, and our processing SLA.
-          <a href="#" className="text-primary font-medium hover:underline ml-1">Compare full features →</a>
+          All plans include SSL and automated backups. Paid plans coming soon — enjoy full access during beta.
         </p>
       </div>
     </section>
