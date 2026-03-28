@@ -46,6 +46,7 @@ const DEMO_PROJECT: Project = {
   status: "complete",
   progress: 100,
   outputs: ["GeoTIFF", "LAZ Point Cloud", "DSM", "DTM", "Contours SHP", "Flight Report PDF"],
+  outputs_urls: null,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 };

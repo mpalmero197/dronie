@@ -21,6 +21,7 @@ export interface Project {
   status: 'queued' | 'processing' | 'complete' | 'failed';
   progress: number;
   outputs: string[];
+  outputs_urls: Record<string, string> | null;
   created_at: string;
   updated_at: string;
 }

@@ -129,6 +129,7 @@ export type Database = {
           image_count: number
           name: string
           outputs: string[] | null
+          outputs_urls: Json | null
           progress: number
           status: string
           updated_at: string
@@ -142,6 +143,7 @@ export type Database = {
           image_count?: number
           name: string
           outputs?: string[] | null
+          outputs_urls?: Json | null
           progress?: number
           status?: string
           updated_at?: string
@@ -155,6 +157,7 @@ export type Database = {
           image_count?: number
           name?: string
           outputs?: string[] | null
+          outputs_urls?: Json | null
           progress?: number
           status?: string
           updated_at?: string
