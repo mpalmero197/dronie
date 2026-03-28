@@ -32,6 +32,7 @@ const TOOLS: { id: DrawTool; icon: typeof MapPin; label: string; group: string }
 const OVERLAYS = [
   { id: "elevation", icon: Mountain, label: "Elevation" },
   { id: "ndvi", icon: Leaf, label: "NDVI" },
+  { id: "airspace", icon: ShieldAlert, label: "Airspace / No-Fly Zones" },
 ];
 
 export default function MapToolbar({

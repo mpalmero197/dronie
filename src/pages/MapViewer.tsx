@@ -261,7 +261,7 @@ export default function MapViewer() {
         {showInfo && <MapInfoPanel project={project} pinCount={0} measurement={measurement} />}
 
         {/* Overlay Legend */}
-        {activeOverlay && <OverlayLegend type={activeOverlay as "elevation" | "ndvi"} />}
+        {activeOverlay && <OverlayLegend type={activeOverlay as "elevation" | "ndvi" | "airspace"} />}
 
         {/* Hint */}
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-[900] pointer-events-none">
