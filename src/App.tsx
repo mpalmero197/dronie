@@ -11,6 +11,8 @@ import MapViewer from "./pages/MapViewer.tsx";
 import AdminPanel from "./pages/AdminPanel.tsx";
 import ProjectDetail from "./pages/ProjectDetail.tsx";
 import Gallery from "./pages/Gallery.tsx";
+import PrivacyPolicy from "./pages/PrivacyPolicy.tsx";
+import TermsOfService from "./pages/TermsOfService.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
