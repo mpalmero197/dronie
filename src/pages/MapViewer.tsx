@@ -299,6 +299,7 @@ export default function MapViewer() {
             projectId={projectId}
             mapContainerRef={mapContainerRef}
             onPolygonEdit={setSurveyPolygon}
+            laancResult={laancResult}
             onClose={() => {
               setFlightPlannerOpen(false);
               setSurveyPolygon(null);

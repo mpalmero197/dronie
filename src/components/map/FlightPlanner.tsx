@@ -19,6 +19,8 @@ import {
   generatePerimeterPath, generateOrbitPath, generateCorridorPath, calculateGSD,
 } from "@/lib/flightPathGenerators";
 
+import type { LaancResult } from "@/components/map/LaancChecker";
+
 interface FlightPlannerProps {
   active: boolean;
   surveyPolygon: [number, number][] | null;
@@ -28,6 +30,7 @@ interface FlightPlannerProps {
   corridorLine?: [number, number][] | null;
   orbitCenter?: [number, number] | null;
   onPolygonEdit?: (polygon: [number, number][]) => void;
+  laancResult?: LaancResult | null;
 }
 
 type FlightMode = "grid" | "perimeter" | "orbit" | "corridor";
