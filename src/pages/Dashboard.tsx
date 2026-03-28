@@ -521,7 +521,7 @@ export default function Dashboard() {
                 onDrop={(e) => {
                   e.preventDefault();
                   setDragging(false);
-                  setNewProjectOpen(true);
+                  handleNewProject();
                 }}
                 className={`border-2 border-dashed rounded-2xl p-8 text-center transition-all cursor-pointer ${
                   dragging ? "border-accent bg-accent/5" : "border-border hover:border-primary/40 hover:bg-secondary/50"
