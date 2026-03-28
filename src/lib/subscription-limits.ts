@@ -75,22 +75,26 @@ const LIMITS: Record<string, TierLimits> = {
   },
 };
 
-export function getTierLimits(tier: SubscriptionTier): TierLimits {
+export function getTierLimits(tier: SubscriptionTier, isAdmin = false): TierLimits {
+  if (isAdmin) return ADMIN_LIMITS;
   return LIMITS[tier || "free"];
 }
 
-export function canCreateProject(tier: SubscriptionTier, currentMonthProjectCount: number): boolean {
+export function canCreateProject(tier: SubscriptionTier, currentMonthProjectCount: number, isAdmin = false): boolean {
+  if (isAdmin) return true;
   const limits = getTierLimits(tier);
   return currentMonthProjectCount < limits.projectsPerMonth;
 }
 
-export function getProjectsRemaining(tier: SubscriptionTier, currentMonthProjectCount: number): number {
+export function getProjectsRemaining(tier: SubscriptionTier, currentMonthProjectCount: number, isAdmin = false): number {
+  if (isAdmin) return Infinity;
   const limits = getTierLimits(tier);
   if (limits.projectsPerMonth === Infinity) return Infinity;
   return Math.max(0, limits.projectsPerMonth - currentMonthProjectCount);
 }
 
-export function canUseFeature(tier: SubscriptionTier, feature: keyof Omit<TierLimits, "projectsPerMonth" | "imagesPerProject" | "storageGB" | "tierLabel">): boolean {
+export function canUseFeature(tier: SubscriptionTier, feature: keyof Omit<TierLimits, "projectsPerMonth" | "imagesPerProject" | "storageGB" | "tierLabel">, isAdmin = false): boolean {
+  if (isAdmin) return true;
   const limits = getTierLimits(tier);
   return limits[feature] as boolean;
 }
