@@ -335,6 +335,22 @@ export default function FlightPlanner({
       const blob = generateMissionPDF({
         stats, params, waypoints: result.waypoints, mapScreenshot,
         projectName: projectId || "Flight Plan", terrainData, perWpAltitudes,
+        laancData: laancResult ? {
+          authorization: laancResult.authorization,
+          maxAutoAltFt: laancResult.maxAutoAltFt,
+          message: laancResult.message,
+          details: laancResult.details,
+          lat: laancResult.lat,
+          lng: laancResult.lng,
+          zones: laancResult.zones.map(z => ({
+            name: z.name,
+            classLabel: z.icaoClass !== undefined
+              ? `Class ${["A","B","C","D","E","F","G"][z.icaoClass] || z.icaoClass}`
+              : z.type !== undefined
+                ? ({0:"Other",1:"Restricted",2:"Danger",3:"Prohibited",4:"CTR",5:"TMZ",6:"RMZ",7:"TMA",8:"TRA",9:"TSA",10:"FIR",13:"ATZ",14:"MATZ",17:"Alert",18:"Warning",19:"Protected"}[z.type] || `Type ${z.type}`)
+                : "Unknown",
+          })),
+        } : undefined,
       });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a"); a.href = url; a.download = "mission-summary.pdf"; a.click();
