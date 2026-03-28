@@ -16,7 +16,7 @@ const steps = [
     step: "02",
     title: "Cloud Processing",
     desc: "Our photogrammetry engine runs SfM (Structure from Motion) and MVS (Multi-View Stereo) algorithms on your imagery. Track progress in real time.",
-    detail: "GPU-accelerated · Typical job < 2 hours",
+    detail: "Automated pipeline · Real-time progress tracking",
     color: "text-accent",
     accent: "bg-accent",
   },
