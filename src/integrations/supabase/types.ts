@@ -162,6 +162,50 @@ export type Database = {
         }
         Relationships: []
       }
+      saved_flight_plans: {
+        Row: {
+          created_at: string
+          home_position: Json | null
+          id: string
+          name: string
+          params: Json
+          polygon: Json
+          project_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          home_position?: Json | null
+          id?: string
+          name: string
+          params: Json
+          polygon: Json
+          project_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          home_position?: Json | null
+          id?: string
+          name?: string
+          params?: Json
+          polygon?: Json
+          project_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_flight_plans_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
