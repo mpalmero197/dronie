@@ -162,8 +162,9 @@ function StoragePanel({ projects }: { projects: Project[] }) {
 }
 
 export default function Dashboard() {
-  const { user, isAdmin, signOut, loading: authLoading } = useAuth();
+  const { user, isAdmin, signOut, loading: authLoading, checkSubscription } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(true);
@@ -173,6 +174,17 @@ export default function Dashboard() {
   const [creating, setCreating] = useState(false);
   const [detailProject, setDetailProject] = useState<Project | null>(null);
   const [sidebarView, setSidebarView] = useState<SidebarView>("projects");
+
+  // Handle checkout redirect
+  useEffect(() => {
+    const checkout = searchParams.get('checkout');
+    if (checkout === 'success') {
+      toast({ title: '🎉 Subscription activated!', description: 'Your plan has been upgraded. Enjoy your new features!' });
+      checkSubscription();
+    } else if (checkout === 'cancelled') {
+      toast({ title: 'Checkout cancelled', description: 'No changes were made to your plan.' });
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (!authLoading && !user) navigate('/auth');
