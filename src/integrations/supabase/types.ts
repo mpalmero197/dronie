@@ -14,6 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      drones: {
+        Row: {
+          altitude: number | null
+          assigned_pilot_id: string | null
+          battery_level: number
+          created_at: string
+          flight_time_minutes: number | null
+          heading: number | null
+          id: string
+          latitude: number | null
+          longitude: number | null
+          model: string
+          name: string
+          serial_number: string
+          speed: number | null
+          status: Database["public"]["Enums"]["drone_status"]
+          stream_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          altitude?: number | null
+          assigned_pilot_id?: string | null
+          battery_level?: number
+          created_at?: string
+          flight_time_minutes?: number | null
+          heading?: number | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          model?: string
+          name: string
+          serial_number?: string
+          speed?: number | null
+          status?: Database["public"]["Enums"]["drone_status"]
+          stream_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          altitude?: number | null
+          assigned_pilot_id?: string | null
+          battery_level?: number
+          created_at?: string
+          flight_time_minutes?: number | null
+          heading?: number | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          model?: string
+          name?: string
+          serial_number?: string
+          speed?: number | null
+          status?: Database["public"]["Enums"]["drone_status"]
+          stream_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       flight_plans: {
         Row: {
           created_at: string
@@ -89,6 +146,63 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "ground_control_points_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jobs: {
+        Row: {
+          created_at: string
+          drone_id: string
+          ended_at: string | null
+          id: string
+          mission_type: string
+          notes: string | null
+          pilot_id: string
+          project_id: string | null
+          started_at: string
+          status: Database["public"]["Enums"]["job_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          drone_id: string
+          ended_at?: string | null
+          id?: string
+          mission_type?: string
+          notes?: string | null
+          pilot_id: string
+          project_id?: string | null
+          started_at?: string
+          status?: Database["public"]["Enums"]["job_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          drone_id?: string
+          ended_at?: string | null
+          id?: string
+          mission_type?: string
+          notes?: string | null
+          pilot_id?: string
+          project_id?: string | null
+          started_at?: string
+          status?: Database["public"]["Enums"]["job_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jobs_drone_id_fkey"
+            columns: ["drone_id"]
+            isOneToOne: false
+            referencedRelation: "drones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
@@ -245,6 +359,8 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "pilot" | "viewer"
+      drone_status: "idle" | "active" | "maintenance" | "offline"
+      job_status: "active" | "completed" | "aborted"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -373,6 +489,8 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "pilot", "viewer"],
+      drone_status: ["idle", "active", "maintenance", "offline"],
+      job_status: ["active", "completed", "aborted"],
     },
   },
 } as const
