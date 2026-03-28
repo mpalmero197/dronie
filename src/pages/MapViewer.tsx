@@ -294,6 +294,8 @@ export default function MapViewer() {
           <MousePositionDisplay />
           <MapContextMenu onDropPin={handleDropPin} />
           <GeolocationButton />
+          <WeatherWidget />
+          <SunPositionWidget />
         </MapContainer>
 
         {/* Toolbar */}
@@ -327,10 +329,6 @@ export default function MapViewer() {
 
         {/* Overlay Legend */}
         {activeOverlay && <OverlayLegend type={activeOverlay as "elevation" | "ndvi" | "airspace"} />}
-
-        {/* Weather & Sun widgets */}
-        <WeatherWidget />
-        <SunPositionWidget />
 
         {/* Hint */}
         <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-[900] pointer-events-none">
