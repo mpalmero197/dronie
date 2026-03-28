@@ -95,6 +95,7 @@ export default function MapViewer() {
   const [showEmbed, setShowEmbed] = useState(false);
   const [measurement, setMeasurement] = useState<string | null>(null);
   const [surveyPolygon, setSurveyPolygon] = useState<[number, number][] | null>(null);
+  const [corridorLine, setCorridorLine] = useState<[number, number][] | null>(null);
   const [flightPlannerOpen, setFlightPlannerOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [undoRedoTick, setUndoRedoTick] = useState(0);
