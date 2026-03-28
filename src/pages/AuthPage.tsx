@@ -28,7 +28,7 @@ export default function AuthPage() {
           options: { data: { full_name: fullName } }
         });
         if (error) throw error;
-        toast({ title: 'Account created!', description: 'Welcome to MapForge.' });
+        toast({ title: 'Account created!', description: 'Welcome to Dronie.' });
         navigate('/dashboard');
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -64,10 +64,10 @@ export default function AuthPage() {
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          {[{ val: '2.3M+', label: 'Maps processed' },
-          { val: '47K+', label: 'Active pilots' },
-          { val: '99.4%', label: 'Accuracy rate' },
-          { val: '< 2hrs', label: 'Avg. processing' }].
+          {[{ val: 'GeoTIFF', label: 'Ortho export' },
+          { val: 'LAS/LAZ', label: 'Point clouds' },
+          { val: 'Browser', label: 'Map viewer' },
+          { val: 'Free', label: 'To get started' }].
           map((s) =>
           <div key={s.label} className="bg-primary-foreground/5 rounded-xl p-4 border border-primary-foreground/10">
               <p className="text-2xl font-display font-700 text-accent">{s.val}</p>
@@ -85,7 +85,7 @@ export default function AuthPage() {
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
               <Map className="w-4 h-4 text-primary-foreground" />
             </div>
-            <span className="font-display font-700 text-lg text-foreground">MapForge</span>
+            <span className="font-display font-700 text-lg text-foreground">Dronie</span>
           </div>
 
           <div>
@@ -94,7 +94,7 @@ export default function AuthPage() {
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
               {mode === 'login' ?
-              'Sign in to your MapForge dashboard' :
+              'Sign in to your Dronie dashboard' :
               'Start processing drone imagery for free'}
             </p>
           </div>

@@ -7,7 +7,7 @@ const steps = [
     step: "01",
     title: "Fly & Upload",
     desc: "Complete your drone survey using any UAV. Upload your JPEG or TIFF images — we accept DJI, Autel, Parrot, senseFly, and more. No special formats required.",
-    detail: "Supports 100GB+ per upload · Drag & drop or folder sync",
+    detail: "Drag & drop or folder upload · JPEG, TIFF, DNG",
     color: "text-primary",
     accent: "bg-primary",
   },
@@ -16,7 +16,7 @@ const steps = [
     step: "02",
     title: "Cloud Processing",
     desc: "Our photogrammetry engine runs SfM (Structure from Motion) and MVS (Multi-View Stereo) algorithms on your imagery. Track progress in real time.",
-    detail: "GPU-accelerated · Typical job < 2 hours",
+    detail: "Automated pipeline · Real-time progress tracking",
     color: "text-accent",
     accent: "bg-accent",
   },
@@ -81,7 +81,7 @@ export default function HowItWorksSection() {
             From raw flight to<br />finished deliverables
           </h2>
           <p className="mt-4 text-muted-foreground leading-relaxed">
-            A streamlined four-step process trusted by surveyors, agronomists, engineers, and real estate developers worldwide.
+            A streamlined four-step process designed for surveyors, agronomists, engineers, and real estate developers.
           </p>
         </div>
 

@@ -36,10 +36,10 @@ const plans = [
       "Priority processing",
       "Share links",
     ],
-    cta: "Start Free Trial",
-    ctaAction: "auth",
+    cta: "Coming Soon",
+    ctaAction: "none",
     highlight: true,
-    badge: "Most Popular",
+    badge: "Coming Soon",
   },
   {
     name: "Enterprise",
@@ -96,8 +96,9 @@ export default function PricingSection() {
     if (action === "auth") {
       navigate("/auth");
     } else if (action === "contact") {
-      window.location.href = "mailto:sales@mapforge.io?subject=Enterprise%20Inquiry";
+      window.location.href = "mailto:sales@dronie.com?subject=Enterprise%20Inquiry";
     }
+    // "none" action = no-op (coming soon)
   }
 
   return (
@@ -191,8 +192,7 @@ export default function PricingSection() {
         </div>
 
         <p className="text-center text-sm text-muted-foreground mt-8">
-          All plans include SSL, automated backups, and our processing SLA.
-          <a href="#" className="text-primary font-medium hover:underline ml-1">Compare full features →</a>
+          All plans include SSL and automated backups. Paid plans coming soon — enjoy full access during beta.
         </p>
       </div>
     </section>

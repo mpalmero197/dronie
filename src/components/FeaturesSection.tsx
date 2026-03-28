@@ -42,7 +42,7 @@ const features = [
   {
     icon: Zap,
     title: "Cloud Processing",
-    desc: "No local compute required. Your images are processed on powerful cloud servers — results in under 2 hours.",
+    desc: "No local compute required. Upload your images and track processing progress in real time from any browser.",
     color: "text-accent",
     bg: "bg-accent/10",
   },
@@ -55,8 +55,8 @@ const features = [
   },
   {
     icon: Share2,
-    title: "Team Collaboration",
-    desc: "Invite team members, assign roles, and comment on projects. Built for survey crews and GIS professionals.",
+    title: "Share & Embed",
+    desc: "Share interactive map links with clients. Embed your maps on any website with a single code snippet.",
     color: "text-primary",
     bg: "bg-secondary",
   },

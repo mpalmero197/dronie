@@ -7,10 +7,10 @@ import droneHero from "@/assets/drone-hero.jpg";
 import { useAuth } from "@/contexts/AuthContext";
 
 const stats = [
-  { value: "2.3M+", label: "Maps processed" },
-  { value: "47K+", label: "Active pilots" },
-  { value: "99.4%", label: "Accuracy rate" },
-  { value: "< 2hrs", label: "Avg. processing" },
+  { value: "GeoTIFF", label: "Ortho export" },
+  { value: "LAS/LAZ", label: "Point clouds" },
+  { value: "SHP/DXF", label: "Contour lines" },
+  { value: "Browser", label: "Map viewer" },
 ];
 
 export default function HeroSection() {
@@ -204,11 +204,11 @@ export default function HeroSection() {
             {/* Floating output badges */}
             <div className="absolute -top-3 -right-3 bg-card rounded-xl px-3 py-2 shadow-xl border border-border flex items-center gap-2">
               <Layers className="w-4 h-4 text-primary" />
-              <span className="text-xs font-semibold text-foreground">3D Model Ready</span>
+              <span className="text-xs font-semibold text-foreground">Open Standards</span>
             </div>
             <div className="absolute top-1/3 -left-4 bg-card rounded-xl px-3 py-2 shadow-xl border border-border flex items-center gap-2">
               <Download className="w-4 h-4 text-accent" />
-              <span className="text-xs font-semibold text-foreground">GeoTIFF Export</span>
+              <span className="text-xs font-semibold text-foreground">No Install Required</span>
             </div>
           </div>
         </div>
