@@ -168,9 +168,11 @@ const MapDrawingLayer = forwardRef<MapDrawingLayerRef, MapDrawingLayerProps>(
       dblclick(e) {
         if (activeTool === "polyline" && drawingPoints.length >= 2) {
           e.originalEvent.preventDefault();
+          const pts = [...drawingPoints];
           pushUndo(shapes);
-          setShapes(prev => [...prev, { id: crypto.randomUUID(), type: "polyline", positions: [...drawingPoints], note: "" }]);
+          setShapes(prev => [...prev, { id: crypto.randomUUID(), type: "polyline", positions: pts, note: "" }]);
           setDrawingPoints([]);
+          onPolylineComplete?.(pts);
         }
         if (activeTool === "polygon" && drawingPoints.length >= 3) {
           e.originalEvent.preventDefault();
