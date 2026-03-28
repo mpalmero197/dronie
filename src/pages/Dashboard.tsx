@@ -164,7 +164,7 @@ function StoragePanel({ projects }: { projects: Project[] }) {
 }
 
 export default function Dashboard() {
-  const { user, isAdmin, signOut, loading: authLoading, checkSubscription } = useAuth();
+  const { user, isAdmin, signOut, loading: authLoading, checkSubscription, subscriptionTier, isSubscribed } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
