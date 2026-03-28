@@ -3,7 +3,7 @@ import { useMap, Polyline, Marker, Polygon as LeafletPolygon, CircleMarker } fro
 import L from "leaflet";
 import {
   Plane, X, Download, RotateCcw, Battery, MapPin, Grid3X3,
-  Mountain, Save, FolderOpen, Trash2, Loader2,
+  Mountain, Save, FolderOpen, Trash2, Loader2, FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
