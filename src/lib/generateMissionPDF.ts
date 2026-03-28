@@ -30,6 +30,16 @@ interface TerrainData {
   maxElev: number;
 }
 
+interface LaancData {
+  authorization: "authorized" | "requires_auth" | "prohibited" | "uncontrolled";
+  maxAutoAltFt: number;
+  message: string;
+  details: string[];
+  lat: number;
+  lng: number;
+  zones: { name: string; classLabel: string }[];
+}
+
 interface GenerateMissionPDFOptions {
   stats: MissionStats;
   params: FlightParams;
@@ -38,6 +48,7 @@ interface GenerateMissionPDFOptions {
   projectName: string;
   terrainData: TerrainData | null;
   perWpAltitudes?: number[];
+  laancData?: LaancData;
 }
 
 function formatTime(seconds: number): string {

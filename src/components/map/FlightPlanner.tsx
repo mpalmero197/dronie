@@ -359,7 +359,7 @@ export default function FlightPlanner({
     } catch {
       toast({ title: "PDF export failed", variant: "destructive" });
     }
-  }, [result, stats, params, mapContainerRef, projectId, terrainData, perWpAltitudes, toast]);
+  }, [result, stats, params, mapContainerRef, projectId, terrainData, perWpAltitudes, laancResult, toast]);
 
   const resetParams = () => {
     setParams(DEFAULT_PARAMS);
