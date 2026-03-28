@@ -472,11 +472,14 @@ export default function Dashboard() {
           <div className="flex items-center gap-2">
             {sidebarView === "projects" && (
               <Button
-                onClick={() => setNewProjectOpen(true)}
+                onClick={handleNewProject}
                 className="bg-primary text-primary-foreground hover:bg-primary/90 gap-2 shadow-sm hover:shadow-md transition-all active:scale-[0.97]"
               >
                 <Plus className="w-4 h-4" />
                 New Project
+                {projectsRemaining !== Infinity && (
+                  <span className="ml-1 text-[10px] opacity-70">({projectsRemaining} left)</span>
+                )}
               </Button>
             )}
           </div>
