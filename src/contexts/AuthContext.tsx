@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase, AppRole } from '@/lib/supabase';
+import { SubscriptionTier, getTierByProductId } from '@/lib/stripe-config';
 
 interface AuthContextType {
   session: Session | null;
@@ -9,6 +10,10 @@ interface AuthContextType {
   isAdmin: boolean;
   loading: boolean;
   signOut: () => Promise<void>;
+  subscriptionTier: SubscriptionTier;
+  isSubscribed: boolean;
+  subscriptionEnd: string | null;
+  checkSubscription: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -18,6 +23,10 @@ const AuthContext = createContext<AuthContextType>({
   isAdmin: false,
   loading: true,
   signOut: async () => {},
+  subscriptionTier: null,
+  isSubscribed: false,
+  subscriptionEnd: null,
+  checkSubscription: async () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -25,6 +34,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [loading, setLoading] = useState(true);
+  const [subscriptionTier, setSubscriptionTier] = useState<SubscriptionTier>(null);
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [subscriptionEnd, setSubscriptionEnd] = useState<string | null>(null);
 
   async function fetchRoles(userId: string) {
     const { data } = await supabase
@@ -34,16 +46,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (data) setRoles(data.map((r) => r.role as AppRole));
   }
 
+  async function checkSubscription() {
+    try {
+      const { data, error } = await supabase.functions.invoke('check-subscription');
+      if (error) {
+        console.error('Error checking subscription:', error);
+        return;
+      }
+      setIsSubscribed(data?.subscribed ?? false);
+      setSubscriptionTier(getTierByProductId(data?.product_id));
+      setSubscriptionEnd(data?.subscription_end ?? null);
+    } catch (err) {
+      console.error('Subscription check failed:', err);
+    }
+  }
+
   useEffect(() => {
-    // Set up listener BEFORE getSession
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
           await fetchRoles(session.user.id);
+          // Defer subscription check to avoid blocking auth
+          setTimeout(() => checkSubscription(), 0);
         } else {
           setRoles([]);
+          setSubscriptionTier(null);
+          setIsSubscribed(false);
+          setSubscriptionEnd(null);
         }
         setLoading(false);
       }
@@ -54,6 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchRoles(session.user.id).finally(() => setLoading(false));
+        setTimeout(() => checkSubscription(), 0);
       } else {
         setLoading(false);
       }
@@ -61,6 +93,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Auto-refresh subscription status every 60 seconds
+  useEffect(() => {
+    if (!user) return;
+    const interval = setInterval(checkSubscription, 60_000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   const signOut = async () => {
     await supabase.auth.signOut();
@@ -75,6 +114,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAdmin: roles.includes('admin'),
         loading,
         signOut,
+        subscriptionTier,
+        isSubscribed,
+        subscriptionEnd,
+        checkSubscription,
       }}
     >
       {children}
