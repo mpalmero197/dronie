@@ -840,8 +840,8 @@ export default function FlightPlanner({ active, surveyPolygon, onClose, projectI
 
               {/* Actions */}
               <div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={resetParams} className="flex-1 h-8 text-xs gap-1.5">
-                  <RotateCcw className="w-3 h-3" /> Reset
+                <Button size="sm" variant="outline" onClick={resetParams} className="h-8 text-xs gap-1.5 px-2">
+                  <RotateCcw className="w-3 h-3" />
                 </Button>
                 <Button size="sm" variant="outline" onClick={downloadCSV} className="flex-1 h-8 text-xs gap-1.5">
                   <Download className="w-3 h-3" /> CSV
@@ -850,6 +850,9 @@ export default function FlightPlanner({ active, surveyPolygon, onClose, projectI
                   <Download className="w-3 h-3" /> KML
                 </Button>
               </div>
+              <Button size="sm" variant="outline" onClick={downloadPDF} className="w-full h-8 text-xs gap-1.5">
+                <FileText className="w-3 h-3" /> Export PDF Report
+              </Button>
 
               {/* Save plan */}
               {showSaveInput ? (
