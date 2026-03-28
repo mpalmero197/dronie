@@ -78,6 +78,8 @@ export default function MapViewer() {
   const [activeOverlay, setActiveOverlay] = useState<string | null>(null);
   const [showEmbed, setShowEmbed] = useState(false);
   const [measurement, setMeasurement] = useState<string | null>(null);
+  const [surveyPolygon, setSurveyPolygon] = useState<[number, number][] | null>(null);
+  const [flightPlannerOpen, setFlightPlannerOpen] = useState(false);
 
   const isDemo = projectId === "demo";
 
