@@ -525,14 +525,20 @@ export default function ProjectDetail() {
                   </h2>
                   <span className="text-xs text-muted-foreground">{project.outputs.length} files</span>
                 </div>
-                <div className="rounded-xl bg-accent/10 border border-accent/20 p-3 mb-2">
-                  <p className="text-xs text-accent font-medium">
-                    🚧 Processing is currently in demo mode. Output files listed below represent what a completed project would produce. Full photogrammetry processing is coming soon.
-                  </p>
-                </div>
+                {(!project.outputs_urls || Object.keys(project.outputs_urls).length === 0 || project.outputs_urls.error) && (
+                  <div className="rounded-xl bg-accent/10 border border-accent/20 p-3 mb-2">
+                    <p className="text-xs text-accent font-medium">
+                      {project.outputs_urls?.error
+                        ? `⚠️ Processing error: ${project.outputs_urls.error}`
+                        : "🚧 Output files are not yet available for download."}
+                    </p>
+                  </div>
+                )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {project.outputs.map((name) => {
-                    const meta = OUTPUT_META[name] || { ext: "", desc: name };
+                    const meta = OUTPUT_META[name] || { ext: "", desc: name, key: "" };
+                    const downloadUrl = project.outputs_urls?.[meta.key];
+                    const hasDownload = !!downloadUrl && !project.outputs_urls?.error;
                     return (
                       <div key={name} className="flex items-center gap-3 bg-secondary/50 border border-border rounded-xl px-4 py-3">
                         <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -542,7 +548,19 @@ export default function ProjectDetail() {
                           <p className="text-sm font-semibold text-foreground truncate">{name}</p>
                           <p className="text-xs text-muted-foreground">{meta.desc}</p>
                         </div>
-                        <span className="text-xs text-muted-foreground italic flex-shrink-0">Demo</span>
+                        {hasDownload ? (
+                          <a
+                            href={downloadUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            download
+                            className="flex items-center gap-1 text-xs font-semibold text-primary hover:text-primary/80 transition-colors flex-shrink-0"
+                          >
+                            <Download className="w-3.5 h-3.5" /> Download
+                          </a>
+                        ) : (
+                          <span className="text-xs text-muted-foreground italic flex-shrink-0">—</span>
+                        )}
                       </div>
                     );
                   })}
