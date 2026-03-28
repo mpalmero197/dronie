@@ -425,6 +425,23 @@ export default function Dashboard() {
               <span className="ml-auto text-[9px] px-1.5 py-0.5 rounded-full bg-accent/20 text-accent font-bold uppercase">Priority</span>
             )}
           </div>
+          {isSubscribed && (
+            <button
+              onClick={async () => {
+                try {
+                  const { data, error } = await supabase.functions.invoke('customer-portal');
+                  if (error) throw error;
+                  if (data?.url) window.open(data.url, '_blank');
+                } catch {
+                  toast({ title: 'Unable to open subscription portal', variant: 'destructive' });
+                }
+              }}
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
+            >
+              <CreditCard className="w-3.5 h-3.5" />
+              Manage Subscription
+            </button>
+          )}
           {isAdmin && (
             <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-accent/15 border border-accent/20">
               <Shield className="w-3.5 h-3.5 text-accent flex-shrink-0" />
