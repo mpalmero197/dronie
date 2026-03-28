@@ -42,7 +42,7 @@ const features = [
   {
     icon: Zap,
     title: "Cloud Processing",
-    desc: "No local compute required. Your images are processed on powerful cloud servers — results in under 2 hours.",
+    desc: "No local compute required. Upload your images and track processing progress in real time from any browser.",
     color: "text-accent",
     bg: "bg-accent/10",
   },
