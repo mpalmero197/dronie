@@ -11,6 +11,8 @@ import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import html2canvas from "html2canvas";
+import { generateMissionPDF } from "@/lib/generateMissionPDF";
 
 interface FlightPlannerProps {
   active: boolean;
