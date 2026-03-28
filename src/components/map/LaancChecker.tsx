@@ -210,39 +210,96 @@ export default function LaancChecker({ active, onResult }: Props) {
       setLoading(true);
       setResult(null);
 
-      try {
-        const offset = 0.015;
-        const bbox = `${lng - offset},${lat - offset},${lng + offset},${lat + offset}`;
-        const res = await fetch(
-          `https://api.tiles.openaip.net/api/data/airspaces?bbox=${bbox}&limit=15`,
-          { headers: { Accept: "application/json" } }
-        );
+      const offset = 0.015;
+      const bbox = `${lng - offset},${lat - offset},${lng + offset},${lat + offset}`;
+      const url = `https://api.tiles.openaip.net/api/data/airspaces?bbox=${bbox}&limit=15`;
 
-        let zones: AirspaceZone[] = [];
-        if (res.ok) {
-          const data = await res.json();
-          const items = data?.items || data || [];
-          if (Array.isArray(items)) {
-            zones = items.map((a: any) => ({
-              name: a.name,
-              icaoClass: a.icaoClass,
-              type: a.type,
-              lowerLimit: a.lowerLimit,
-              upperLimit: a.upperLimit,
-            }));
+      const makeErrorResult = (message: string, details: string[]): LaancResult => ({
+        lat, lng, zones: [],
+        authorization: "error",
+        maxAutoAltFt: 0,
+        message,
+        details,
+      });
+
+      const attemptFetch = async (): Promise<LaancResult> => {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 10000);
+
+        try {
+          const res = await fetch(url, {
+            headers: { Accept: "application/json" },
+            signal: controller.signal,
+          });
+          clearTimeout(timeout);
+
+          if (!res.ok) {
+            if (res.status === 429) {
+              return makeErrorResult("Rate limited by airspace API", [
+                "Too many requests. Please wait a moment and try again.",
+                "Do NOT fly without verifying airspace status via an approved LAANC app.",
+              ]);
+            }
+            throw new Error(`API returned ${res.status}`);
           }
-        }
 
-        const analysis = analyzeLaanc(zones);
-        setResult({ lat, lng, zones, ...analysis });
+          let data: any;
+          try {
+            data = await res.json();
+          } catch {
+            return makeErrorResult("Unexpected response from airspace API", [
+              "The API returned data in an unexpected format.",
+              "Do NOT fly without verifying airspace status via an approved LAANC app.",
+            ]);
+          }
+
+          const items = data?.items || data || [];
+          const zones: AirspaceZone[] = Array.isArray(items)
+            ? items.map((a: any) => ({
+                name: a.name,
+                icaoClass: a.icaoClass,
+                type: a.type,
+                lowerLimit: a.lowerLimit,
+                upperLimit: a.upperLimit,
+              }))
+            : [];
+
+          const analysis = analyzeLaanc(zones);
+          return { lat, lng, zones, ...analysis };
+        } catch (err: any) {
+          clearTimeout(timeout);
+          if (err?.name === "AbortError") {
+            return makeErrorResult("Airspace API request timed out", [
+              "The request took too long and was cancelled.",
+              "Check your internet connection and try again.",
+              "Do NOT fly without verifying airspace status via an approved LAANC app.",
+            ]);
+          }
+          throw err; // let retry logic handle network/5xx errors
+        }
+      };
+
+      try {
+        const r = await attemptFetch();
+        setResult(r);
       } catch {
-        setResult({
-          lat, lng, zones: [],
-          authorization: "uncontrolled",
-          maxAutoAltFt: 400,
-          message: "Unable to query airspace — assume uncontrolled",
-          details: ["Could not reach airspace API. Check your connection and try again."],
-        });
+        // Retry once after 1 second for transient failures
+        try {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          const r = await attemptFetch();
+          setResult(r);
+        } catch {
+          const errorResult = makeErrorResult("Unable to reach airspace API", [
+            "Could not connect after retrying. Check your internet connection.",
+            "Do NOT fly without verifying airspace status via an approved LAANC app.",
+          ]);
+          setResult(errorResult);
+          toast({
+            title: "Airspace check failed",
+            description: "Could not reach the airspace API. Results may be unreliable.",
+            variant: "destructive",
+          });
+        }
       } finally {
         setLoading(false);
       }
