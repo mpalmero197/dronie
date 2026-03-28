@@ -91,13 +91,16 @@ const PIPELINE_STEPS = [
   { key: "export", label: "Final Export", desc: "Package deliverables", threshold: 100, icon: Package },
 ];
 
-const OUTPUT_META: Record<string, { ext: string; desc: string }> = {
-  "GeoTIFF": { ext: ".tif", desc: "Georeferenced orthomosaic" },
-  "LAZ Point Cloud": { ext: ".laz", desc: "3D dense point cloud" },
-  "DSM": { ext: ".tif", desc: "Digital Surface Model" },
-  "DTM": { ext: ".tif", desc: "Digital Terrain Model" },
-  "Contours SHP": { ext: ".shp", desc: "Contour lines shapefile" },
-  "Flight Report PDF": { ext: ".pdf", desc: "Processing report & accuracy" },
+const OUTPUT_META: Record<string, { ext: string; desc: string; key: string }> = {
+  "Orthomosaic": { ext: ".png", desc: "Georeferenced composite image", key: "orthomosaic" },
+  "GeoTIFF": { ext: ".tif", desc: "Georeferenced orthomosaic", key: "orthomosaic" },
+  "LAZ Point Cloud": { ext: ".laz", desc: "3D dense point cloud", key: "pointcloud" },
+  "DSM": { ext: ".asc", desc: "Digital Surface Model", key: "dsm" },
+  "DTM": { ext: ".asc", desc: "Digital Terrain Model", key: "dtm" },
+  "Contours GeoJSON": { ext: ".geojson", desc: "Elevation contour lines", key: "contours" },
+  "Contours SHP": { ext: ".shp", desc: "Contour lines shapefile", key: "contours" },
+  "Flight Report PDF": { ext: ".pdf", desc: "Processing report & accuracy", key: "report" },
+  "All Assets (ZIP)": { ext: ".zip", desc: "Complete output archive", key: "all_assets" },
 };
 
 /* ────── Helpers ────── */
