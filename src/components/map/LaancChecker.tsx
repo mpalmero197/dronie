@@ -179,7 +179,7 @@ interface Props {
   onResult?: (result: LaancResult | null) => void;
 }
 
-export default function LaancChecker({ active }: Props) {
+export default function LaancChecker({ active, onResult }: Props) {
   const map = useMap();
   const [result, setResult] = useState<LaancResult | null>(null);
   const [loading, setLoading] = useState(false);
