@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   MapPin, Ruler, Pentagon, Minus, Circle, Square,
-  Layers, Code2, Camera, Leaf, Mountain,
+  Layers, Code2, Camera, Leaf, Mountain, MousePointerClick, Plane,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
