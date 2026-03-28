@@ -7,10 +7,10 @@ import droneHero from "@/assets/drone-hero.jpg";
 import { useAuth } from "@/contexts/AuthContext";
 
 const stats = [
-  { value: "2.3M+", label: "Maps processed" },
-  { value: "47K+", label: "Active pilots" },
-  { value: "99.4%", label: "Accuracy rate" },
-  { value: "< 2hrs", label: "Avg. processing" },
+  { value: "GeoTIFF", label: "Ortho export" },
+  { value: "LAS/LAZ", label: "Point clouds" },
+  { value: "SHP/DXF", label: "Contour lines" },
+  { value: "Browser", label: "Map viewer" },
 ];
 
 export default function HeroSection() {
