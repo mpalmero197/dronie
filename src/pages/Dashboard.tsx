@@ -526,7 +526,7 @@ export default function Dashboard() {
                 className={`border-2 border-dashed rounded-2xl p-8 text-center transition-all cursor-pointer ${
                   dragging ? "border-accent bg-accent/5" : "border-border hover:border-primary/40 hover:bg-secondary/50"
                 }`}
-                onClick={() => setNewProjectOpen(true)}
+                onClick={handleNewProject}
               >
                 <UploadCloud className={`w-10 h-10 mx-auto mb-3 transition-colors ${dragging ? "text-accent" : "text-muted-foreground"}`} />
                 <p className="font-semibold text-foreground text-sm">
