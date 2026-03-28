@@ -402,6 +402,24 @@ export default function Dashboard() {
             Sample Gallery
           </button>
 
+          {/* Fleet Management link */}
+          <button
+            onClick={() => navigate('/fleet')}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+          >
+            <Plane className="w-4 h-4 flex-shrink-0" />
+            Fleet
+          </button>
+
+          {/* Active Jobs link */}
+          <button
+            onClick={() => navigate('/jobs')}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+          >
+            <Briefcase className="w-4 h-4 flex-shrink-0" />
+            Active Jobs
+          </button>
+
           {isAdmin && (
             <button
               onClick={() => navigate('/admin')}
