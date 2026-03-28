@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { MapContainer, TileLayer } from "react-leaflet";
+import { MapContainer, TileLayer, ScaleControl } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import html2canvas from "html2canvas";
@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { supabase, Project } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import MapToolbar, { DrawTool } from "@/components/map/MapToolbar";
-import MapDrawingLayer from "@/components/map/MapDrawingLayer";
+import MapDrawingLayer, { MapDrawingLayerRef } from "@/components/map/MapDrawingLayer";
 import MapInfoPanel from "@/components/map/MapInfoPanel";
 import LayerSwitcher, { BaseLayer } from "@/components/map/LayerSwitcher";
 import EmbedModal from "@/components/map/EmbedModal";
@@ -22,6 +22,11 @@ import ParcelFetcher from "@/components/map/ParcelFetcher";
 import FlightPlanner from "@/components/map/FlightPlanner";
 import AirspaceOverlay from "@/components/map/AirspaceOverlay";
 import LaancChecker from "@/components/map/LaancChecker";
+import MousePositionDisplay from "@/components/map/MousePositionDisplay";
+import MapContextMenu from "@/components/map/MapContextMenu";
+import WeatherWidget from "@/components/map/WeatherWidget";
+import SunPositionWidget from "@/components/map/SunPosition";
+import GeolocationButton from "@/components/map/GeolocationButton";
 
 // Fix Leaflet default marker icon issue with Vite
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -66,11 +71,20 @@ const TILE_URLS: Record<BaseLayer, { url: string; attribution: string }> = {
   },
 };
 
+// Inject geolocation pulse animation
+const style = document.createElement("style");
+style.textContent = `@keyframes pulse-geo{0%,100%{box-shadow:0 0 0 0 rgba(59,130,246,0.5)}70%{box-shadow:0 0 0 12px rgba(59,130,246,0)}}`;
+if (!document.head.querySelector("[data-geo-pulse]")) {
+  style.setAttribute("data-geo-pulse", "");
+  document.head.appendChild(style);
+}
+
 export default function MapViewer() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
   const mapContainerRef = useRef<HTMLDivElement>(null);
+  const drawingLayerRef = useRef<MapDrawingLayerRef>(null);
 
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
@@ -82,6 +96,8 @@ export default function MapViewer() {
   const [measurement, setMeasurement] = useState<string | null>(null);
   const [surveyPolygon, setSurveyPolygon] = useState<[number, number][] | null>(null);
   const [flightPlannerOpen, setFlightPlannerOpen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [undoRedoTick, setUndoRedoTick] = useState(0);
 
   const isDemo = projectId === "demo";
 
@@ -100,6 +116,22 @@ export default function MapViewer() {
     }
     fetchProject();
   }, [projectId, isDemo]);
+
+  // Fullscreen listeners
+  useEffect(() => {
+    const handler = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", handler);
+    return () => document.removeEventListener("fullscreenchange", handler);
+  }, []);
+
+  const toggleFullscreen = useCallback(() => {
+    if (!mapContainerRef.current) return;
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      mapContainerRef.current.requestFullscreen();
+    }
+  }, []);
 
   const shareLink = useCallback(() => {
     navigator.clipboard.writeText(window.location.href);
@@ -120,6 +152,20 @@ export default function MapViewer() {
       toast({ title: "Export failed", variant: "destructive" });
     }
   }, [project, toast]);
+
+  const handleUndo = useCallback(() => {
+    drawingLayerRef.current?.undo();
+    setUndoRedoTick(t => t + 1);
+  }, []);
+
+  const handleRedo = useCallback(() => {
+    drawingLayerRef.current?.redo();
+    setUndoRedoTick(t => t + 1);
+  }, []);
+
+  const handleDropPin = useCallback((pos: [number, number]) => {
+    drawingLayerRef.current?.addMarkerAt(pos);
+  }, []);
 
   const center: [number, number] = isDemo ? DEMO_CENTER : [37.7749, -122.4194];
   const tile = TILE_URLS[baseLayer];
@@ -217,7 +263,9 @@ export default function MapViewer() {
               opacity={0.25}
             />
           )}
+          <ScaleControl position="bottomleft" imperial metric />
           <MapDrawingLayer
+            ref={drawingLayerRef}
             activeTool={activeTool}
             onMeasurement={setMeasurement}
             onPolygonComplete={flightPlannerOpen ? (pts) => setSurveyPolygon(pts) : undefined}
@@ -238,6 +286,9 @@ export default function MapViewer() {
               setActiveTool(null);
             }}
           />
+          <MousePositionDisplay />
+          <MapContextMenu onDropPin={handleDropPin} />
+          <GeolocationButton />
         </MapContainer>
 
         {/* Toolbar */}
@@ -255,6 +306,12 @@ export default function MapViewer() {
           onEmbedCode={() => setShowEmbed(true)}
           activeOverlay={activeOverlay}
           onOverlayChange={setActiveOverlay}
+          onUndo={handleUndo}
+          onRedo={handleRedo}
+          canUndo={drawingLayerRef.current?.canUndo ?? false}
+          canRedo={drawingLayerRef.current?.canRedo ?? false}
+          onFullscreen={toggleFullscreen}
+          isFullscreen={isFullscreen}
         />
 
         {/* Layer Switcher */}
@@ -265,6 +322,10 @@ export default function MapViewer() {
 
         {/* Overlay Legend */}
         {activeOverlay && <OverlayLegend type={activeOverlay as "elevation" | "ndvi" | "airspace"} />}
+
+        {/* Weather & Sun widgets */}
+        <WeatherWidget />
+        <SunPositionWidget />
 
         {/* Hint */}
         <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-[900] pointer-events-none">
@@ -279,7 +340,7 @@ export default function MapViewer() {
                   activeTool === "fetch-parcels" ? "Click on the map to fetch parcel boundaries" :
                   activeTool === "laanc-check" ? "Click anywhere to check LAANC authorization status" :
                   "Click on the map to place a pin"}`
-              : "Select a tool from the left toolbar to start drawing"}
+              : "Select a tool or right-click for quick actions"}
           </div>
         </div>
 

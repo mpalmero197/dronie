@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useImperativeHandle, forwardRef } from "react";
 import { useMap, useMapEvents, Marker, Popup, Polyline, Polygon, Circle, Rectangle } from "react-leaflet";
 import L from "leaflet";
 import { Trash2 } from "lucide-react";
@@ -10,20 +10,20 @@ interface DrawnShape {
   positions: [number, number][];
   radius?: number;
   note: string;
-  measurement?: string;
-}
-
-interface MeasurementResult {
-  id: string;
-  type: "distance" | "area";
-  points: [number, number][];
-  value: string;
 }
 
 interface MapDrawingLayerProps {
   activeTool: DrawTool;
   onMeasurement?: (result: string) => void;
   onPolygonComplete?: (positions: [number, number][]) => void;
+}
+
+export interface MapDrawingLayerRef {
+  undo: () => void;
+  redo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  addMarkerAt: (pos: [number, number]) => void;
 }
 
 function haversineDistance(p1: [number, number], p2: [number, number]): number {
@@ -57,195 +57,230 @@ function polygonArea(pts: [number, number][]): number {
   return Math.abs((area * R * R) / 2);
 }
 
-export default function MapDrawingLayer({ activeTool, onMeasurement, onPolygonComplete }: MapDrawingLayerProps) {
-  const [shapes, setShapes] = useState<DrawnShape[]>([]);
-  const [measurements, setMeasurements] = useState<MeasurementResult[]>([]);
-  const [drawingPoints, setDrawingPoints] = useState<[number, number][]>([]);
-  const map = useMap();
+const MapDrawingLayer = forwardRef<MapDrawingLayerRef, MapDrawingLayerProps>(
+  ({ activeTool, onMeasurement, onPolygonComplete }, ref) => {
+    const [shapes, setShapes] = useState<DrawnShape[]>([]);
+    const [undoStack, setUndoStack] = useState<DrawnShape[][]>([]);
+    const [redoStack, setRedoStack] = useState<DrawnShape[][]>([]);
+    const [drawingPoints, setDrawingPoints] = useState<[number, number][]>([]);
+    const map = useMap();
 
-  // Reset drawing points when tool changes
-  useEffect(() => {
-    setDrawingPoints([]);
-  }, [activeTool]);
+    const pushUndo = useCallback((currentShapes: DrawnShape[]) => {
+      setUndoStack(prev => [...prev.slice(-30), currentShapes]);
+      setRedoStack([]);
+    }, []);
 
-  useMapEvents({
-    click(e) {
-      if (!activeTool) return;
-      const pt: [number, number] = [e.latlng.lat, e.latlng.lng];
+    const undo = useCallback(() => {
+      if (undoStack.length === 0) return;
+      const prev = undoStack[undoStack.length - 1];
+      setRedoStack(r => [...r, shapes]);
+      setShapes(prev);
+      setUndoStack(u => u.slice(0, -1));
+    }, [undoStack, shapes]);
 
-      if (activeTool === "marker") {
-        setShapes(prev => [...prev, {
-          id: crypto.randomUUID(), type: "marker", positions: [pt], note: "",
-        }]);
-        return;
-      }
+    const redo = useCallback(() => {
+      if (redoStack.length === 0) return;
+      const next = redoStack[redoStack.length - 1];
+      setUndoStack(u => [...u, shapes]);
+      setShapes(next);
+      setRedoStack(r => r.slice(0, -1));
+    }, [redoStack, shapes]);
 
-      if (activeTool === "measure-distance") {
-        const newPts = [...drawingPoints, pt];
-        setDrawingPoints(newPts);
-        if (newPts.length >= 2) {
-          let total = 0;
-          for (let i = 1; i < newPts.length; i++) total += haversineDistance(newPts[i - 1], newPts[i]);
-          onMeasurement?.(formatDistance(total));
+    const addMarkerAt = useCallback((pos: [number, number]) => {
+      pushUndo(shapes);
+      setShapes(prev => [...prev, { id: crypto.randomUUID(), type: "marker", positions: [pos], note: "" }]);
+    }, [shapes, pushUndo]);
+
+    useImperativeHandle(ref, () => ({
+      undo,
+      redo,
+      canUndo: undoStack.length > 0,
+      canRedo: redoStack.length > 0,
+      addMarkerAt,
+    }), [undo, redo, undoStack.length, redoStack.length, addMarkerAt]);
+
+    // Keyboard shortcuts
+    useEffect(() => {
+      const handler = (e: KeyboardEvent) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) { e.preventDefault(); undo(); }
+        if ((e.ctrlKey || e.metaKey) && e.key === "z" && e.shiftKey) { e.preventDefault(); redo(); }
+        if ((e.ctrlKey || e.metaKey) && e.key === "y") { e.preventDefault(); redo(); }
+      };
+      window.addEventListener("keydown", handler);
+      return () => window.removeEventListener("keydown", handler);
+    }, [undo, redo]);
+
+    useEffect(() => { setDrawingPoints([]); }, [activeTool]);
+
+    useMapEvents({
+      click(e) {
+        if (!activeTool) return;
+        const pt: [number, number] = [e.latlng.lat, e.latlng.lng];
+
+        if (activeTool === "marker") {
+          pushUndo(shapes);
+          setShapes(prev => [...prev, { id: crypto.randomUUID(), type: "marker", positions: [pt], note: "" }]);
+          return;
         }
-        return;
-      }
-
-      if (activeTool === "measure-area") {
-        const newPts = [...drawingPoints, pt];
-        setDrawingPoints(newPts);
-        if (newPts.length >= 3) {
-          onMeasurement?.(formatArea(polygonArea(newPts)));
+        if (activeTool === "measure-distance") {
+          const newPts = [...drawingPoints, pt];
+          setDrawingPoints(newPts);
+          if (newPts.length >= 2) {
+            let total = 0;
+            for (let i = 1; i < newPts.length; i++) total += haversineDistance(newPts[i - 1], newPts[i]);
+            onMeasurement?.(formatDistance(total));
+          }
+          return;
         }
-        return;
-      }
-
-      if (activeTool === "polyline" || activeTool === "polygon") {
-        setDrawingPoints(prev => [...prev, pt]);
-        return;
-      }
-
-      if (activeTool === "rectangle") {
-        const newPts = [...drawingPoints, pt];
-        setDrawingPoints(newPts);
-        if (newPts.length === 2) {
-          setShapes(prev => [...prev, {
-            id: crypto.randomUUID(), type: "rectangle", positions: newPts, note: "",
-          }]);
+        if (activeTool === "measure-area") {
+          const newPts = [...drawingPoints, pt];
+          setDrawingPoints(newPts);
+          if (newPts.length >= 3) onMeasurement?.(formatArea(polygonArea(newPts)));
+          return;
+        }
+        if (activeTool === "polyline" || activeTool === "polygon") {
+          setDrawingPoints(prev => [...prev, pt]);
+          return;
+        }
+        if (activeTool === "rectangle") {
+          const newPts = [...drawingPoints, pt];
+          setDrawingPoints(newPts);
+          if (newPts.length === 2) {
+            pushUndo(shapes);
+            setShapes(prev => [...prev, { id: crypto.randomUUID(), type: "rectangle", positions: newPts, note: "" }]);
+            setDrawingPoints([]);
+          }
+          return;
+        }
+        if (activeTool === "circle") {
+          const newPts = [...drawingPoints, pt];
+          setDrawingPoints(newPts);
+          if (newPts.length === 2) {
+            const radius = haversineDistance(newPts[0], newPts[1]);
+            pushUndo(shapes);
+            setShapes(prev => [...prev, { id: crypto.randomUUID(), type: "circle", positions: [newPts[0]], radius, note: "" }]);
+            setDrawingPoints([]);
+          }
+          return;
+        }
+      },
+      dblclick(e) {
+        if (activeTool === "polyline" && drawingPoints.length >= 2) {
+          e.originalEvent.preventDefault();
+          pushUndo(shapes);
+          setShapes(prev => [...prev, { id: crypto.randomUUID(), type: "polyline", positions: [...drawingPoints], note: "" }]);
           setDrawingPoints([]);
         }
-        return;
-      }
-
-      if (activeTool === "circle") {
-        const newPts = [...drawingPoints, pt];
-        setDrawingPoints(newPts);
-        if (newPts.length === 2) {
-          const radius = haversineDistance(newPts[0], newPts[1]);
-          setShapes(prev => [...prev, {
-            id: crypto.randomUUID(), type: "circle", positions: [newPts[0]], radius, note: "",
-          }]);
+        if (activeTool === "polygon" && drawingPoints.length >= 3) {
+          e.originalEvent.preventDefault();
+          const pts = [...drawingPoints];
+          pushUndo(shapes);
+          setShapes(prev => [...prev, { id: crypto.randomUUID(), type: "polygon", positions: pts, note: "" }]);
+          setDrawingPoints([]);
+          onPolygonComplete?.(pts);
+        }
+        if (activeTool === "measure-distance" || activeTool === "measure-area") {
+          e.originalEvent.preventDefault();
           setDrawingPoints([]);
         }
-        return;
-      }
-    },
-    dblclick(e) {
-      if (activeTool === "polyline" && drawingPoints.length >= 2) {
-        e.originalEvent.preventDefault();
-        setShapes(prev => [...prev, {
-          id: crypto.randomUUID(), type: "polyline", positions: [...drawingPoints], note: "",
-        }]);
-        setDrawingPoints([]);
-      }
-      if (activeTool === "polygon" && drawingPoints.length >= 3) {
-        e.originalEvent.preventDefault();
-        const pts = [...drawingPoints];
-        setShapes(prev => [...prev, {
-          id: crypto.randomUUID(), type: "polygon", positions: pts, note: "",
-        }]);
-        setDrawingPoints([]);
-        onPolygonComplete?.(pts);
-      }
-      if (activeTool === "measure-distance" || activeTool === "measure-area") {
-        e.originalEvent.preventDefault();
-        setDrawingPoints([]);
-      }
-    },
-  });
+      },
+    });
 
-  function deleteShape(id: string) {
-    setShapes(prev => prev.filter(s => s.id !== id));
+    function deleteShape(id: string) {
+      pushUndo(shapes);
+      setShapes(prev => prev.filter(s => s.id !== id));
+    }
+
+    return (
+      <>
+        {drawingPoints.length >= 2 && (activeTool === "polyline" || activeTool === "measure-distance") && (
+          <Polyline positions={drawingPoints} pathOptions={{ color: activeTool === "measure-distance" ? "#e97316" : "#166534", dashArray: "8 4", weight: 3 }} />
+        )}
+        {drawingPoints.length >= 3 && (activeTool === "polygon" || activeTool === "measure-area") && (
+          <Polygon positions={drawingPoints} pathOptions={{ color: activeTool === "measure-area" ? "#e97316" : "#166534", fillOpacity: 0.15, dashArray: "8 4", weight: 2 }} />
+        )}
+
+        {shapes.map((shape) => {
+          if (shape.type === "marker") {
+            return (
+              <Marker key={shape.id} position={shape.positions[0]}>
+                <Popup>
+                  <div className="min-w-[140px]">
+                    <p className="font-semibold text-xs mb-1">Annotation Pin</p>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      {shape.positions[0][0].toFixed(5)}, {shape.positions[0][1].toFixed(5)}
+                    </p>
+                    <button onClick={() => deleteShape(shape.id)} className="text-xs text-destructive hover:text-destructive/80 flex items-center gap-1">
+                      <Trash2 className="w-3 h-3" /> Remove
+                    </button>
+                  </div>
+                </Popup>
+              </Marker>
+            );
+          }
+          if (shape.type === "polyline") {
+            let dist = 0;
+            for (let i = 1; i < shape.positions.length; i++) dist += haversineDistance(shape.positions[i - 1], shape.positions[i]);
+            return (
+              <Polyline key={shape.id} positions={shape.positions} pathOptions={{ color: "#166534", weight: 3 }}>
+                <Popup>
+                  <div className="min-w-[120px]">
+                    <p className="font-semibold text-xs mb-1">Line: {formatDistance(dist)}</p>
+                    <button onClick={() => deleteShape(shape.id)} className="text-xs text-destructive hover:text-destructive/80 flex items-center gap-1">
+                      <Trash2 className="w-3 h-3" /> Remove
+                    </button>
+                  </div>
+                </Popup>
+              </Polyline>
+            );
+          }
+          if (shape.type === "polygon") {
+            const area = polygonArea(shape.positions);
+            return (
+              <Polygon key={shape.id} positions={shape.positions} pathOptions={{ color: "#166534", fillOpacity: 0.2, weight: 2 }}>
+                <Popup>
+                  <div className="min-w-[120px]">
+                    <p className="font-semibold text-xs mb-1">Area: {formatArea(area)}</p>
+                    <button onClick={() => deleteShape(shape.id)} className="text-xs text-destructive hover:text-destructive/80 flex items-center gap-1">
+                      <Trash2 className="w-3 h-3" /> Remove
+                    </button>
+                  </div>
+                </Popup>
+              </Polygon>
+            );
+          }
+          if (shape.type === "rectangle") {
+            const bounds: L.LatLngBoundsExpression = [shape.positions[0], shape.positions[1]];
+            return (
+              <Rectangle key={shape.id} bounds={bounds} pathOptions={{ color: "#166534", fillOpacity: 0.15, weight: 2 }}>
+                <Popup>
+                  <button onClick={() => deleteShape(shape.id)} className="text-xs text-destructive hover:text-destructive/80 flex items-center gap-1">
+                    <Trash2 className="w-3 h-3" /> Remove
+                  </button>
+                </Popup>
+              </Rectangle>
+            );
+          }
+          if (shape.type === "circle" && shape.radius) {
+            return (
+              <Circle key={shape.id} center={shape.positions[0]} radius={shape.radius} pathOptions={{ color: "#166534", fillOpacity: 0.15, weight: 2 }}>
+                <Popup>
+                  <div className="min-w-[120px]">
+                    <p className="font-semibold text-xs mb-1">Radius: {formatDistance(shape.radius)}</p>
+                    <button onClick={() => deleteShape(shape.id)} className="text-xs text-destructive hover:text-destructive/80 flex items-center gap-1">
+                      <Trash2 className="w-3 h-3" /> Remove
+                    </button>
+                  </div>
+                </Popup>
+              </Circle>
+            );
+          }
+          return null;
+        })}
+      </>
+    );
   }
+);
 
-  return (
-    <>
-      {/* Drawing preview */}
-      {drawingPoints.length >= 2 && (activeTool === "polyline" || activeTool === "measure-distance") && (
-        <Polyline positions={drawingPoints} pathOptions={{ color: activeTool === "measure-distance" ? "#e97316" : "#166534", dashArray: "8 4", weight: 3 }} />
-      )}
-      {drawingPoints.length >= 3 && (activeTool === "polygon" || activeTool === "measure-area") && (
-        <Polygon positions={drawingPoints} pathOptions={{ color: activeTool === "measure-area" ? "#e97316" : "#166534", fillOpacity: 0.15, dashArray: "8 4", weight: 2 }} />
-      )}
-
-      {/* Rendered shapes */}
-      {shapes.map((shape) => {
-        if (shape.type === "marker") {
-          return (
-            <Marker key={shape.id} position={shape.positions[0]}>
-              <Popup>
-                <div className="min-w-[140px]">
-                  <p className="font-semibold text-xs mb-1">Annotation Pin</p>
-                  <p className="text-xs text-gray-500 mb-2">
-                    {shape.positions[0][0].toFixed(5)}, {shape.positions[0][1].toFixed(5)}
-                  </p>
-                  <button onClick={() => deleteShape(shape.id)} className="text-xs text-red-500 hover:text-red-700 flex items-center gap-1">
-                    <Trash2 className="w-3 h-3" /> Remove
-                  </button>
-                </div>
-              </Popup>
-            </Marker>
-          );
-        }
-        if (shape.type === "polyline") {
-          let dist = 0;
-          for (let i = 1; i < shape.positions.length; i++) dist += haversineDistance(shape.positions[i - 1], shape.positions[i]);
-          return (
-            <Polyline key={shape.id} positions={shape.positions} pathOptions={{ color: "#166534", weight: 3 }}>
-              <Popup>
-                <div className="min-w-[120px]">
-                  <p className="font-semibold text-xs mb-1">Line: {formatDistance(dist)}</p>
-                  <button onClick={() => deleteShape(shape.id)} className="text-xs text-red-500 hover:text-red-700 flex items-center gap-1">
-                    <Trash2 className="w-3 h-3" /> Remove
-                  </button>
-                </div>
-              </Popup>
-            </Polyline>
-          );
-        }
-        if (shape.type === "polygon") {
-          const area = polygonArea(shape.positions);
-          return (
-            <Polygon key={shape.id} positions={shape.positions} pathOptions={{ color: "#166534", fillOpacity: 0.2, weight: 2 }}>
-              <Popup>
-                <div className="min-w-[120px]">
-                  <p className="font-semibold text-xs mb-1">Area: {formatArea(area)}</p>
-                  <button onClick={() => deleteShape(shape.id)} className="text-xs text-red-500 hover:text-red-700 flex items-center gap-1">
-                    <Trash2 className="w-3 h-3" /> Remove
-                  </button>
-                </div>
-              </Popup>
-            </Polygon>
-          );
-        }
-        if (shape.type === "rectangle") {
-          const bounds: L.LatLngBoundsExpression = [shape.positions[0], shape.positions[1]];
-          return (
-            <Rectangle key={shape.id} bounds={bounds} pathOptions={{ color: "#166534", fillOpacity: 0.15, weight: 2 }}>
-              <Popup>
-                <button onClick={() => deleteShape(shape.id)} className="text-xs text-red-500 hover:text-red-700 flex items-center gap-1">
-                  <Trash2 className="w-3 h-3" /> Remove
-                </button>
-              </Popup>
-            </Rectangle>
-          );
-        }
-        if (shape.type === "circle" && shape.radius) {
-          return (
-            <Circle key={shape.id} center={shape.positions[0]} radius={shape.radius} pathOptions={{ color: "#166534", fillOpacity: 0.15, weight: 2 }}>
-              <Popup>
-                <div className="min-w-[120px]">
-                  <p className="font-semibold text-xs mb-1">Radius: {formatDistance(shape.radius)}</p>
-                  <button onClick={() => deleteShape(shape.id)} className="text-xs text-red-500 hover:text-red-700 flex items-center gap-1">
-                    <Trash2 className="w-3 h-3" /> Remove
-                  </button>
-                </div>
-              </Popup>
-            </Circle>
-          );
-        }
-        return null;
-      })}
-    </>
-  );
-}
+MapDrawingLayer.displayName = "MapDrawingLayer";
+export default MapDrawingLayer;
