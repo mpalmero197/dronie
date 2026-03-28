@@ -17,6 +17,7 @@ interface FlightPlannerProps {
   surveyPolygon: [number, number][] | null;
   onClose: () => void;
   projectId?: string;
+  mapContainerRef?: React.RefObject<HTMLDivElement>;
 }
 
 type FlightPattern = "single" | "crosshatch";
