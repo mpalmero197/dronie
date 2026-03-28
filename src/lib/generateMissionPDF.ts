@@ -31,7 +31,7 @@ interface TerrainData {
 }
 
 interface LaancData {
-  authorization: "authorized" | "requires_auth" | "prohibited" | "uncontrolled";
+  authorization: "authorized" | "requires_auth" | "prohibited" | "uncontrolled" | "error";
   maxAutoAltFt: number;
   message: string;
   details: string[];
