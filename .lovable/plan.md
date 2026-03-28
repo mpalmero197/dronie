@@ -1,45 +1,42 @@
 
 
-# Include LAANC Check Results in PDF Mission Report
+# Improve LAANC Checker Error Handling
 
-## What changes
+## Current State
 
-Add LAANC airspace authorization data to the mission PDF report so pilots have a complete pre-flight document with airspace clearance status.
+The LAANC checker has basic error handling: a `try/catch` that silently falls back to "uncontrolled" on any failure, and ignores non-OK HTTP responses (just proceeds with empty zones). Problems:
+
+1. **Non-OK responses are silent** — 401, 403, 429, 500 all treated as "no zones found" (misleading)
+2. **Malformed JSON not handled** — `res.json()` could throw inside the `try` but the catch gives a generic message
+3. **No timeout** — request could hang indefinitely
+4. **No retry mechanism** — transient failures immediately show error
+5. **Error result masquerades as "uncontrolled"** — user can't distinguish API failure from genuinely uncontrolled airspace (dangerous for safety)
 
 ## Implementation
 
-### 1. Export `LaancResult` interface and expose result via callback
+**Single file change: `src/components/map/LaancChecker.tsx`**
 
-**File: `src/components/map/LaancChecker.tsx`**
-- Export the `LaancResult` interface so it can be used by other components
-- Add an `onResult` callback prop to `LaancChecker` that fires whenever a new LAANC result is set, allowing parent components to capture the data
+### Add an "error" authorization status
+- Add `"error"` to the `LaancResult.authorization` union type
+- Add an `error` entry to `statusConfig` with a distinct icon (`AlertTriangle`), orange/gray styling, and "API Error" label
+- This lets the UI and PDF clearly distinguish errors from real results
 
-### 2. Wire LAANC result state through MapViewer to FlightPlanner
+### Add fetch timeout
+- Use `AbortController` with a 10-second timeout so requests don't hang
 
-**File: `src/pages/MapViewer.tsx`**
-- Add `laancResult` state using `useState`
-- Pass `onResult` callback to `<LaancChecker>` to capture the result
-- Pass `laancResult` as a new prop to `<FlightPlanner>`
+### Handle non-OK HTTP responses explicitly
+- Check `res.ok`; if false, throw with status code info (e.g., "API returned 429")
+- Handle rate limiting (429) with a specific user-friendly message
 
-### 3. Accept LAANC data in FlightPlanner and pass to PDF generator
+### Handle malformed JSON
+- Wrap `res.json()` in its own try/catch to give a clear "unexpected response format" message
 
-**File: `src/components/map/FlightPlanner.tsx`**
-- Add `laancResult` to `FlightPlannerProps`
-- Pass it through to `generateMissionPDF()` in the `downloadPDF` callback
+### Add single retry for transient failures
+- On network error or 5xx, retry once after a 1-second delay before showing the error
 
-### 4. Add LAANC section to PDF report
+### Show toast on error
+- Import `toast` from hooks and show a warning toast so the error is noticed even if the panel is off-screen
 
-**File: `src/lib/generateMissionPDF.ts`**
-- Add `LaancData` interface to options (authorization status, max altitude, message, details, zone names, coordinates)
-- Render a new **"Airspace Authorization (LAANC)"** section between Flight Statistics and Waypoint Table:
-  - Color-coded status badge (green/amber/red) matching the UI
-  - Max auto-approval altitude
-  - Check location coordinates
-  - Advisory message and detail bullet points
-  - List of detected airspace zones (name + class)
-  - Disclaimer text
-
-## Technical Details
-
-The LAANC data is optional — when no check has been performed, the section is simply omitted from the PDF. The color coding uses the same green (#16a34a) / amber (#d97706) / red (#dc2626) scheme as the map UI panel.
+### Update error result to use `"error"` status
+- Instead of pretending the result is `"uncontrolled"`, set `authorization: "error"` with `maxAutoAltFt: 0` — this prevents pilots from mistakenly thinking they're cleared to fly
 
