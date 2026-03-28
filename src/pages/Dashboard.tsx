@@ -712,6 +712,14 @@ export default function Dashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Upgrade Prompt */}
+      <UpgradePrompt
+        open={upgradeOpen}
+        onClose={() => setUpgradeOpen(false)}
+        feature={upgradeFeature.feature}
+        description={upgradeFeature.description}
+      />
     </div>
   );
 }
