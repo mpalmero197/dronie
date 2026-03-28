@@ -59,7 +59,7 @@ function polygonArea(pts: [number, number][]): number {
 }
 
 const MapDrawingLayer = forwardRef<MapDrawingLayerRef, MapDrawingLayerProps>(
-  ({ activeTool, onMeasurement, onPolygonComplete }, ref) => {
+  ({ activeTool, onMeasurement, onPolygonComplete, onPolylineComplete }, ref) => {
     const [shapes, setShapes] = useState<DrawnShape[]>([]);
     const [undoStack, setUndoStack] = useState<DrawnShape[][]>([]);
     const [redoStack, setRedoStack] = useState<DrawnShape[][]>([]);
