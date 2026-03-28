@@ -3,7 +3,7 @@ import { useMap, Polyline, Marker, Polygon as LeafletPolygon, CircleMarker } fro
 import L from "leaflet";
 import {
   Plane, X, Download, RotateCcw, Battery, MapPin, Grid3X3,
-  Mountain, Save, FolderOpen, Trash2, Loader2,
+  Mountain, Save, FolderOpen, Trash2, Loader2, FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -11,12 +11,15 @@ import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import html2canvas from "html2canvas";
+import { generateMissionPDF } from "@/lib/generateMissionPDF";
 
 interface FlightPlannerProps {
   active: boolean;
   surveyPolygon: [number, number][] | null;
   onClose: () => void;
   projectId?: string;
+  mapContainerRef?: React.RefObject<HTMLDivElement>;
 }
 
 type FlightPattern = "single" | "crosshatch";
@@ -283,7 +286,7 @@ const homeIcon = new L.DivIcon({
   iconAnchor: [12, 12],
 });
 
-export default function FlightPlanner({ active, surveyPolygon, onClose, projectId }: FlightPlannerProps) {
+export default function FlightPlanner({ active, surveyPolygon, onClose, projectId, mapContainerRef }: FlightPlannerProps) {
   const map = useMap();
   const { toast } = useToast();
   const [params, setParams] = useState<FlightParams>(DEFAULT_PARAMS);
@@ -386,6 +389,40 @@ export default function FlightPlanner({ active, surveyPolygon, onClose, projectI
   }, [result, params.altitude, perWpAltitudes, toast]);
 
   const resetParams = () => { setParams(DEFAULT_PARAMS); setHomePosition(null); setTerrainData(null); };
+
+  const downloadPDF = useCallback(async () => {
+    if (!result || !stats) return;
+    toast({ title: "Generating PDF…", description: "Capturing map and building report" });
+    let mapScreenshot = "";
+    if (mapContainerRef?.current) {
+      try {
+        const canvas = await html2canvas(mapContainerRef.current, { useCORS: true, allowTaint: true });
+        mapScreenshot = canvas.toDataURL("image/png");
+      } catch {
+        // proceed without screenshot
+      }
+    }
+    try {
+      const blob = generateMissionPDF({
+        stats,
+        params,
+        waypoints: result.waypoints,
+        mapScreenshot,
+        projectName: projectId || "Flight Plan",
+        terrainData,
+        perWpAltitudes,
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "mission-summary.pdf";
+      a.click();
+      URL.revokeObjectURL(url);
+      toast({ title: "PDF exported!" });
+    } catch {
+      toast({ title: "PDF export failed", variant: "destructive" });
+    }
+  }, [result, stats, params, mapContainerRef, projectId, terrainData, perWpAltitudes, toast]);
 
   // Save/Load functions
   const loadSavedPlans = useCallback(async () => {
@@ -803,8 +840,8 @@ export default function FlightPlanner({ active, surveyPolygon, onClose, projectI
 
               {/* Actions */}
               <div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={resetParams} className="flex-1 h-8 text-xs gap-1.5">
-                  <RotateCcw className="w-3 h-3" /> Reset
+                <Button size="sm" variant="outline" onClick={resetParams} className="h-8 text-xs gap-1.5 px-2">
+                  <RotateCcw className="w-3 h-3" />
                 </Button>
                 <Button size="sm" variant="outline" onClick={downloadCSV} className="flex-1 h-8 text-xs gap-1.5">
                   <Download className="w-3 h-3" /> CSV
@@ -813,6 +850,9 @@ export default function FlightPlanner({ active, surveyPolygon, onClose, projectI
                   <Download className="w-3 h-3" /> KML
                 </Button>
               </div>
+              <Button size="sm" variant="outline" onClick={downloadPDF} className="w-full h-8 text-xs gap-1.5">
+                <FileText className="w-3 h-3" /> Export PDF Report
+              </Button>
 
               {/* Save plan */}
               {showSaveInput ? (
