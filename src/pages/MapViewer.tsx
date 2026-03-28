@@ -223,6 +223,7 @@ export default function MapViewer() {
             onPolygonComplete={flightPlannerOpen ? (pts) => setSurveyPolygon(pts) : undefined}
           />
           {activeOverlay === "airspace" && <AirspaceOverlay />}
+          <LaancChecker active={activeTool === "laanc-check"} />
           <AddressSearch />
           <PropertyLines />
           <ParcelFetcher active={activeTool === "fetch-parcels"} />
