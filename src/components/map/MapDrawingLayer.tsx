@@ -139,10 +139,12 @@ export default function MapDrawingLayer({ activeTool, onMeasurement }: MapDrawin
       }
       if (activeTool === "polygon" && drawingPoints.length >= 3) {
         e.originalEvent.preventDefault();
+        const pts = [...drawingPoints];
         setShapes(prev => [...prev, {
-          id: crypto.randomUUID(), type: "polygon", positions: [...drawingPoints], note: "",
+          id: crypto.randomUUID(), type: "polygon", positions: pts, note: "",
         }]);
         setDrawingPoints([]);
+        onPolygonComplete?.(pts);
       }
       if (activeTool === "measure-distance" || activeTool === "measure-area") {
         e.originalEvent.preventDefault();
