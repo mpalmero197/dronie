@@ -1,9 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = 'https://dcqjxdxjonvfalncywfd.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRjcWp4ZHhqb252ZmFsbmN5d2ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyMzYxODMsImV4cCI6MjA4OTgxMjE4M30.I9MSccAUtQhHewouzgU_7lIQhsyCwqjglujsrAlTPxM';
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Re-export the auto-generated client to avoid multiple GoTrueClient instances
+export { supabase } from '@/integrations/supabase/client';
 
 export type AppRole = 'admin' | 'pilot' | 'viewer';
 
