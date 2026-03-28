@@ -212,6 +212,8 @@ export default function MapViewer() {
             />
           )}
           <MapDrawingLayer activeTool={activeTool} onMeasurement={setMeasurement} />
+          <AddressSearch />
+          <PropertyLines />
         </MapContainer>
 
         {/* Toolbar */}
