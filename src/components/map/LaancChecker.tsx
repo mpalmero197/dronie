@@ -173,6 +173,13 @@ const statusConfig = {
     badge: "bg-emerald-100 text-emerald-700",
     label: "No Auth Needed",
   },
+  error: {
+    icon: AlertTriangle,
+    color: "text-orange-600",
+    bg: "bg-orange-50 border-orange-200",
+    badge: "bg-orange-100 text-orange-700",
+    label: "API Error",
+  },
 };
 
 interface Props {
