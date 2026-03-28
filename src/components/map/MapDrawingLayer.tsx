@@ -16,6 +16,7 @@ interface MapDrawingLayerProps {
   activeTool: DrawTool;
   onMeasurement?: (result: string) => void;
   onPolygonComplete?: (positions: [number, number][]) => void;
+  onPolylineComplete?: (positions: [number, number][]) => void;
 }
 
 export interface MapDrawingLayerRef {
