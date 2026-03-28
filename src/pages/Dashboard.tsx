@@ -533,7 +533,7 @@ export default function Dashboard() {
                   {dragging ? "Drop images to create a project" : "Drop drone images here to start a new project"}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  JPEG, TIFF, DNG accepted · Up to 5,000 images
+                  JPEG, TIFF, DNG accepted · Up to {tierLimits.imagesPerProject === Infinity ? "∞" : tierLimits.imagesPerProject.toLocaleString()} images
                 </p>
               </div>
 
