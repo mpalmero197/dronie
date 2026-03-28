@@ -8,7 +8,7 @@ import {
   Tooltip, TooltipContent, TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-export type DrawTool = "marker" | "polyline" | "polygon" | "rectangle" | "circle" | "measure-distance" | "measure-area" | "fetch-parcels" | "flight-plan" | null;
+export type DrawTool = "marker" | "polyline" | "polygon" | "rectangle" | "circle" | "measure-distance" | "measure-area" | "fetch-parcels" | "flight-plan" | "laanc-check" | null;
 
 interface MapToolbarProps {
   activeTool: DrawTool;
@@ -135,6 +135,19 @@ export default function MapToolbar({
           </button>
         </TooltipTrigger>
         <TooltipContent side="right">Flight Planner</TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            onClick={() => onToolChange(activeTool === "laanc-check" ? null : "laanc-check")}
+            className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${
+              activeTool === "laanc-check" ? "bg-amber-500 text-white" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+            }`}
+          >
+            <ShieldAlert className="w-4 h-4" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="right">LAANC Authorization Check</TooltipContent>
       </Tooltip>
 
       <div className="h-px bg-border my-1" />

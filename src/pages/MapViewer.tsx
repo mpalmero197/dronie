@@ -21,6 +21,7 @@ import PropertyLines from "@/components/map/PropertyLines";
 import ParcelFetcher from "@/components/map/ParcelFetcher";
 import FlightPlanner from "@/components/map/FlightPlanner";
 import AirspaceOverlay from "@/components/map/AirspaceOverlay";
+import LaancChecker from "@/components/map/LaancChecker";
 
 // Fix Leaflet default marker icon issue with Vite
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -222,6 +223,7 @@ export default function MapViewer() {
             onPolygonComplete={flightPlannerOpen ? (pts) => setSurveyPolygon(pts) : undefined}
           />
           {activeOverlay === "airspace" && <AirspaceOverlay />}
+          <LaancChecker active={activeTool === "laanc-check"} />
           <AddressSearch />
           <PropertyLines />
           <ParcelFetcher active={activeTool === "fetch-parcels"} />
@@ -275,6 +277,7 @@ export default function MapViewer() {
                   activeTool === "rectangle" ? "Click two corners" :
                   activeTool === "circle" ? "Click center, then edge" :
                   activeTool === "fetch-parcels" ? "Click on the map to fetch parcel boundaries" :
+                  activeTool === "laanc-check" ? "Click anywhere to check LAANC authorization status" :
                   "Click on the map to place a pin"}`
               : "Select a tool from the left toolbar to start drawing"}
           </div>
