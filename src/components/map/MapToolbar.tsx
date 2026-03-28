@@ -2,7 +2,7 @@ import { useState } from "react";
 import {
   MapPin, Ruler, Pentagon, Minus, Circle, Square,
   Layers, Code2, Camera, Leaf, Mountain, MousePointerClick, Plane, ShieldAlert,
-  ChevronDown, ChevronUp,
+  ChevronDown, ChevronUp, Undo2, Redo2, Maximize,
 } from "lucide-react";
 import {
   Tooltip, TooltipContent, TooltipTrigger,
@@ -17,6 +17,12 @@ interface MapToolbarProps {
   onEmbedCode: () => void;
   activeOverlay: string | null;
   onOverlayChange: (overlay: string | null) => void;
+  onUndo?: () => void;
+  onRedo?: () => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
+  onFullscreen?: () => void;
+  isFullscreen?: boolean;
 }
 
 type ToolDef = { id: DrawTool; icon: typeof MapPin; label: string };
@@ -72,16 +78,46 @@ function ToolButton({ tool, isActive, onClick, activeClass = "bg-primary text-pr
 
 export default function MapToolbar({
   activeTool, onToolChange, onExportPng, onEmbedCode, activeOverlay, onOverlayChange,
+  onUndo, onRedo, canUndo, canRedo, onFullscreen, isFullscreen,
 }: MapToolbarProps) {
   const [drawExpanded, setDrawExpanded] = useState(true);
   const [moreExpanded, setMoreExpanded] = useState(false);
 
   const hasActiveDrawTool = DRAW_TOOLS.some(t => t.id === activeTool);
-  const hasActiveMeasureTool = MEASURE_TOOLS.some(t => t.id === activeTool);
   const hasActiveSpecial = SPECIAL_TOOLS.some(t => t.id === activeTool);
 
   return (
     <div className="absolute top-3 left-3 z-[900] flex flex-col gap-0.5 bg-card/95 backdrop-blur rounded-xl border border-border shadow-xl p-1 max-h-[calc(100vh-7rem)] overflow-y-auto scrollbar-none">
+      {/* Undo / Redo */}
+      <div className="flex gap-0.5">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={onUndo}
+              disabled={!canUndo}
+              className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${canUndo ? "text-muted-foreground hover:bg-secondary hover:text-foreground" : "text-muted-foreground/30 cursor-not-allowed"}`}
+            >
+              <Undo2 className="w-3.5 h-3.5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right" className="text-xs">Undo (Ctrl+Z)</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={onRedo}
+              disabled={!canRedo}
+              className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${canRedo ? "text-muted-foreground hover:bg-secondary hover:text-foreground" : "text-muted-foreground/30 cursor-not-allowed"}`}
+            >
+              <Redo2 className="w-3.5 h-3.5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right" className="text-xs">Redo (Ctrl+Shift+Z)</TooltipContent>
+        </Tooltip>
+      </div>
+
+      <div className="h-px bg-border mx-1" />
+
       {/* Draw tools — collapsible */}
       <button
         onClick={() => setDrawExpanded(v => !v)}
@@ -160,6 +196,16 @@ export default function MapToolbar({
       )}
 
       <div className="h-px bg-border mx-1" />
+
+      {/* Fullscreen */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button onClick={onFullscreen} className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground transition-all">
+            <Maximize className="w-3.5 h-3.5" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="right" className="text-xs">{isFullscreen ? "Exit Fullscreen" : "Fullscreen"}</TooltipContent>
+      </Tooltip>
 
       {/* Export / Embed */}
       <Tooltip>
