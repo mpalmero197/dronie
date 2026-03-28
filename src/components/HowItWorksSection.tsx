@@ -7,7 +7,7 @@ const steps = [
     step: "01",
     title: "Fly & Upload",
     desc: "Complete your drone survey using any UAV. Upload your JPEG or TIFF images — we accept DJI, Autel, Parrot, senseFly, and more. No special formats required.",
-    detail: "Supports 100GB+ per upload · Drag & drop or folder sync",
+    detail: "Drag & drop or folder upload · JPEG, TIFF, DNG",
     color: "text-primary",
     accent: "bg-primary",
   },
