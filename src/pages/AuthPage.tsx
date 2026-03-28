@@ -94,7 +94,7 @@ export default function AuthPage() {
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
               {mode === 'login' ?
-              'Sign in to your MapForge dashboard' :
+              'Sign in to your Dronie dashboard' :
               'Start processing drone imagery for free'}
             </p>
           </div>
