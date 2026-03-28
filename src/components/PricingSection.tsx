@@ -36,10 +36,10 @@ const plans = [
       "Priority processing",
       "Share links",
     ],
-    cta: "Start Free Trial",
-    ctaAction: "auth",
+    cta: "Coming Soon",
+    ctaAction: "none",
     highlight: true,
-    badge: "Most Popular",
+    badge: "Coming Soon",
   },
   {
     name: "Enterprise",
