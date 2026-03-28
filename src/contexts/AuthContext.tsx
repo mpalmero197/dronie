@@ -67,9 +67,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
-          await fetchRoles(session.user.id);
-          // Defer subscription check to avoid blocking auth
-          setTimeout(() => checkSubscription(), 0);
+          // Don't block auth loading on roles or subscription
+          fetchRoles(session.user.id);
+          checkSubscription();
         } else {
           setRoles([]);
           setSubscriptionTier(null);
@@ -84,11 +84,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchRoles(session.user.id).finally(() => setLoading(false));
-        setTimeout(() => checkSubscription(), 0);
-      } else {
-        setLoading(false);
+        fetchRoles(session.user.id);
+        checkSubscription();
       }
+      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
