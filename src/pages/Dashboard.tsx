@@ -188,7 +188,7 @@ export default function Dashboard() {
     if (error) {
       toast({ title: 'Error loading projects', description: error.message, variant: 'destructive' });
     } else {
-      setProjects(data || []);
+      setProjects((data as Project[]) || []);
     }
     setLoadingProjects(false);
   }
