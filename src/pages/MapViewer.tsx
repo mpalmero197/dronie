@@ -226,6 +226,7 @@ export default function MapViewer() {
           <FlightPlanner
             active={flightPlannerOpen}
             surveyPolygon={surveyPolygon}
+            projectId={projectId}
             onClose={() => {
               setFlightPlannerOpen(false);
               setSurveyPolygon(null);
