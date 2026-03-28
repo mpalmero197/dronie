@@ -267,9 +267,10 @@ export default function MapViewer() {
               ? `${activeTool === "measure-distance" ? "Click to measure distance, double-click to finish" :
                   activeTool === "measure-area" ? "Click to draw area, double-click to finish" :
                   activeTool === "polyline" ? "Click to draw line, double-click to finish" :
-                  activeTool === "polygon" ? "Click to draw polygon, double-click to finish" :
+                  activeTool === "polygon" ? (flightPlannerOpen ? "Draw survey area polygon, double-click to finish" : "Click to draw polygon, double-click to finish") :
                   activeTool === "rectangle" ? "Click two corners" :
                   activeTool === "circle" ? "Click center, then edge" :
+                  activeTool === "fetch-parcels" ? "Click on the map to fetch parcel boundaries" :
                   "Click on the map to place a pin"}`
               : "Select a tool from the left toolbar to start drawing"}
           </div>
