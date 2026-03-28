@@ -1,8 +1,8 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useMap, Polyline, Marker, Polygon as LeafletPolygon, CircleMarker } from "react-leaflet";
 import L from "leaflet";
 import {
-  Plane, X, Download, RotateCcw, Play,
+  Plane, X, Download, RotateCcw, Battery, MapPin, Grid3X3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -14,12 +14,31 @@ interface FlightPlannerProps {
   onClose: () => void;
 }
 
+type FlightPattern = "single" | "crosshatch";
+
+interface DroneModel {
+  name: string;
+  batteryMinutes: number;
+  maxSpeed: number; // m/s
+}
+
+const DRONE_MODELS: DroneModel[] = [
+  { name: "DJI Mavic 3", batteryMinutes: 43, maxSpeed: 15 },
+  { name: "DJI Mavic Air 2S", batteryMinutes: 31, maxSpeed: 12 },
+  { name: "DJI Phantom 4 Pro", batteryMinutes: 30, maxSpeed: 14 },
+  { name: "DJI Mini 4 Pro", batteryMinutes: 34, maxSpeed: 10 },
+  { name: "DJI Matrice 300", batteryMinutes: 55, maxSpeed: 17 },
+];
+
 interface FlightParams {
-  altitude: number;       // meters
-  frontOverlap: number;   // 0-95 %
-  sideOverlap: number;    // 0-95 %
-  heading: number;        // degrees 0-360
-  speed: number;          // m/s
+  altitude: number;
+  frontOverlap: number;
+  sideOverlap: number;
+  heading: number;
+  speed: number;
+  pattern: FlightPattern;
+  crossHeadingOffset: number; // degrees offset for second grid
+  droneModelIdx: number;
 }
 
 const DEFAULT_PARAMS: FlightParams = {
@@ -28,17 +47,17 @@ const DEFAULT_PARAMS: FlightParams = {
   sideOverlap: 65,
   heading: 0,
   speed: 8,
+  pattern: "single",
+  crossHeadingOffset: 90,
+  droneModelIdx: 0,
 };
 
-// Common drone camera specs (DJI Phantom 4 Pro-like)
-const SENSOR_WIDTH = 13.2;  // mm
-const SENSOR_HEIGHT = 8.8;  // mm
-const FOCAL_LENGTH = 8.8;   // mm
-const IMAGE_WIDTH = 5472;   // px
-const IMAGE_HEIGHT = 3648;  // px
+const SENSOR_WIDTH = 13.2;
+const SENSOR_HEIGHT = 8.8;
+const FOCAL_LENGTH = 8.8;
+const IMAGE_WIDTH = 5472;
 
 function toRad(d: number) { return (d * Math.PI) / 180; }
-function toDeg(r: number) { return (r * 180) / Math.PI; }
 
 function haversineDistance(p1: [number, number], p2: [number, number]): number {
   const R = 6371000;
@@ -59,7 +78,6 @@ function polygonArea(pts: [number, number][]): number {
   return Math.abs((area * R * R) / 2);
 }
 
-// Rotate point around center
 function rotatePoint(p: [number, number], center: [number, number], angleDeg: number): [number, number] {
   const a = toRad(angleDeg);
   const dx = p[1] - center[1];
@@ -70,22 +88,6 @@ function rotatePoint(p: [number, number], center: [number, number], angleDeg: nu
   ];
 }
 
-// Line-segment intersection
-function lineIntersect(
-  a1: [number, number], a2: [number, number],
-  b1: [number, number], b2: [number, number]
-): [number, number] | null {
-  const d1x = a2[1] - a1[1], d1y = a2[0] - a1[0];
-  const d2x = b2[1] - b1[1], d2y = b2[0] - b1[0];
-  const denom = d1x * d2y - d1y * d2x;
-  if (Math.abs(denom) < 1e-12) return null;
-  const t = ((b1[1] - a1[1]) * d2y - (b1[0] - a1[0]) * d2x) / denom;
-  const u = ((b1[1] - a1[1]) * d1y - (b1[0] - a1[0]) * d1x) / denom;
-  if (t < 0 || t > 1 || u < 0 || u > 1) return null;
-  return [a1[0] + t * d1y, a1[1] + t * d1x];
-}
-
-// Clip a horizontal scan line to polygon edges, returning entry/exit pairs
 function clipLineToPolygon(
   y: number, xMin: number, xMax: number,
   poly: [number, number][]
@@ -102,36 +104,28 @@ function clipLineToPolygon(
   intersections.sort((a, b) => a - b);
   const segments: [number, number][][] = [];
   for (let i = 0; i < intersections.length - 1; i += 2) {
-    segments.push([
-      [y, intersections[i]],
-      [y, intersections[i + 1]],
-    ]);
+    segments.push([[y, intersections[i]], [y, intersections[i + 1]]]);
   }
   return segments;
 }
 
 function generateLawnmowerPath(
   polygon: [number, number][],
-  params: FlightParams
-): { waypoints: [number, number][]; lineSpacing: number; photoSpacing: number } {
-  const { altitude, frontOverlap, sideOverlap, heading } = params;
-
-  // Ground coverage per image
-  const gsdX = (altitude * SENSOR_WIDTH) / FOCAL_LENGTH; // meters covered horizontally
+  altitude: number,
+  frontOverlap: number,
+  sideOverlap: number,
+  heading: number,
+): [number, number][] {
+  const gsdX = (altitude * SENSOR_WIDTH) / FOCAL_LENGTH;
   const gsdY = (altitude * SENSOR_HEIGHT) / FOCAL_LENGTH;
-
   const lineSpacing = gsdX * (1 - sideOverlap / 100);
   const photoSpacing = gsdY * (1 - frontOverlap / 100);
 
-  // Center of polygon
   const cx = polygon.reduce((s, p) => s + p[0], 0) / polygon.length;
   const cy = polygon.reduce((s, p) => s + p[1], 0) / polygon.length;
   const center: [number, number] = [cx, cy];
 
-  // Rotate polygon to align with heading (so we sweep in lat direction)
   const rotated = polygon.map(p => rotatePoint(p, center, -heading));
-
-  // Bounding box in rotated space
   const lats = rotated.map(p => p[0]);
   const lngs = rotated.map(p => p[1]);
   const minLat = Math.min(...lats);
@@ -139,21 +133,16 @@ function generateLawnmowerPath(
   const minLng = Math.min(...lngs);
   const maxLng = Math.max(...lngs);
 
-  // Convert line spacing from meters to degrees (approximate)
   const latPerMeter = 1 / 111320;
   const lineSpacingDeg = lineSpacing * latPerMeter;
   const photoSpacingDeg = photoSpacing * (1 / (111320 * Math.cos(toRad(cx))));
 
-  // Generate scan lines
   const waypoints: [number, number][] = [];
   let lineIdx = 0;
   for (let lat = minLat; lat <= maxLat; lat += lineSpacingDeg) {
     const segments = clipLineToPolygon(lat, minLng, maxLng, rotated);
     for (const seg of segments) {
-      // Alternate direction (serpentine)
       const [start, end] = lineIdx % 2 === 0 ? [seg[0], seg[1]] : [seg[1], seg[0]];
-
-      // Place waypoints along this segment
       const segLen = Math.abs(end[1] - start[1]);
       const numPoints = Math.max(2, Math.ceil(segLen / photoSpacingDeg) + 1);
       for (let i = 0; i < numPoints; i++) {
@@ -162,22 +151,26 @@ function generateLawnmowerPath(
           start[0] + t * (end[0] - start[0]),
           start[1] + t * (end[1] - start[1]),
         ];
-        // Rotate back
         waypoints.push(rotatePoint(pt, center, heading));
       }
     }
     if (segments.length > 0) lineIdx++;
   }
-
-  return { waypoints, lineSpacing, photoSpacing };
+  return waypoints;
 }
 
-function generateKML(waypoints: [number, number][], altitude: number, name: string): string {
+function generateKML(waypoints: [number, number][], altitude: number, name: string, homePos?: [number, number]): string {
   const coords = waypoints.map(w => `${w[1]},${w[0]},${altitude}`).join("\n            ");
   return `<?xml version="1.0" encoding="UTF-8"?>
 <kml xmlns="http://www.opengis.net/kml/2.2">
   <Document>
-    <name>${name}</name>
+    <name>${name}</name>${homePos ? `
+    <Placemark>
+      <name>Home / Takeoff</name>
+      <Point>
+        <coordinates>${homePos[1]},${homePos[0]},0</coordinates>
+      </Point>
+    </Placemark>` : ""}
     <Placemark>
       <name>Flight Path</name>
       <LineString>
@@ -207,26 +200,71 @@ function generateCSV(waypoints: [number, number][], altitude: number): string {
   return csv;
 }
 
+const homeIcon = new L.DivIcon({
+  className: "home-marker",
+  html: `<div style="width:24px;height:24px;border-radius:50%;background:#22c55e;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+  </div>`,
+  iconSize: [24, 24],
+  iconAnchor: [12, 12],
+});
+
 export default function FlightPlanner({ active, surveyPolygon, onClose }: FlightPlannerProps) {
   const map = useMap();
   const { toast } = useToast();
   const [params, setParams] = useState<FlightParams>(DEFAULT_PARAMS);
+  const [homePosition, setHomePosition] = useState<[number, number] | null>(null);
+
+  // Set default home position when polygon is drawn
+  useEffect(() => {
+    if (surveyPolygon && surveyPolygon.length >= 3 && !homePosition) {
+      setHomePosition([surveyPolygon[0][0], surveyPolygon[0][1]]);
+    }
+  }, [surveyPolygon, homePosition]);
 
   const result = useMemo(() => {
     if (!surveyPolygon || surveyPolygon.length < 3) return null;
-    return generateLawnmowerPath(surveyPolygon, params);
+    const { altitude, frontOverlap, sideOverlap, heading, pattern, crossHeadingOffset } = params;
+
+    const primaryWps = generateLawnmowerPath(surveyPolygon, altitude, frontOverlap, sideOverlap, heading);
+
+    if (pattern === "crosshatch") {
+      const secondaryWps = generateLawnmowerPath(
+        surveyPolygon, altitude, frontOverlap, sideOverlap,
+        (heading + crossHeadingOffset) % 360
+      );
+      return {
+        waypoints: [...primaryWps, ...secondaryWps],
+        primaryWps,
+        secondaryWps,
+      };
+    }
+
+    return { waypoints: primaryWps, primaryWps, secondaryWps: [] as [number, number][] };
   }, [surveyPolygon, params]);
 
   const stats = useMemo(() => {
     if (!result || !surveyPolygon) return null;
-    const { waypoints } = result;
+    const { waypoints, primaryWps, secondaryWps } = result;
+
     let totalDist = 0;
-    for (let i = 1; i < waypoints.length; i++) {
-      totalDist += haversineDistance(waypoints[i - 1], waypoints[i]);
+    for (let i = 1; i < primaryWps.length; i++) totalDist += haversineDistance(primaryWps[i - 1], primaryWps[i]);
+    for (let i = 1; i < secondaryWps.length; i++) totalDist += haversineDistance(secondaryWps[i - 1], secondaryWps[i]);
+
+    // Add distance from home to first WP and last WP back to home
+    if (homePosition && waypoints.length > 0) {
+      totalDist += haversineDistance(homePosition, waypoints[0]);
+      totalDist += haversineDistance(waypoints[waypoints.length - 1], homePosition);
     }
+
     const area = polygonArea(surveyPolygon);
     const flightTime = totalDist / params.speed;
-    const gsd = (params.altitude * SENSOR_WIDTH) / (FOCAL_LENGTH * IMAGE_WIDTH) * 100; // cm/px
+    const gsd = (params.altitude * SENSOR_WIDTH) / (FOCAL_LENGTH * IMAGE_WIDTH) * 100;
+
+    const drone = DRONE_MODELS[params.droneModelIdx];
+    const usableBatterySeconds = drone.batteryMinutes * 60 * 0.85; // 85% usable
+    const batteriesNeeded = Math.ceil(flightTime / usableBatterySeconds);
+    const batteryPercent = Math.min(100, Math.round((flightTime / usableBatterySeconds) * 100));
 
     return {
       waypoints: waypoints.length,
@@ -235,21 +273,22 @@ export default function FlightPlanner({ active, surveyPolygon, onClose }: Flight
       flightTime,
       gsd,
       photos: waypoints.length,
+      batteriesNeeded,
+      batteryPercent,
+      droneName: drone.name,
     };
-  }, [result, surveyPolygon, params]);
+  }, [result, surveyPolygon, params, homePosition]);
 
   const downloadKML = useCallback(() => {
     if (!result) return;
-    const kml = generateKML(result.waypoints, params.altitude, "MapForge Flight Plan");
+    const kml = generateKML(result.waypoints, params.altitude, "Flight Plan", homePosition ?? undefined);
     const blob = new Blob([kml], { type: "application/vnd.google-earth.kml+xml" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url;
-    a.download = "flight-plan.kml";
-    a.click();
+    a.href = url; a.download = "flight-plan.kml"; a.click();
     URL.revokeObjectURL(url);
-    toast({ title: "KML exported", description: "Flight plan downloaded as KML" });
-  }, [result, params.altitude, toast]);
+    toast({ title: "KML exported" });
+  }, [result, params.altitude, homePosition, toast]);
 
   const downloadCSV = useCallback(() => {
     if (!result) return;
@@ -257,14 +296,12 @@ export default function FlightPlanner({ active, surveyPolygon, onClose }: Flight
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url;
-    a.download = "flight-plan-waypoints.csv";
-    a.click();
+    a.href = url; a.download = "flight-plan-waypoints.csv"; a.click();
     URL.revokeObjectURL(url);
-    toast({ title: "CSV exported", description: "Waypoints downloaded as CSV" });
+    toast({ title: "CSV exported" });
   }, [result, params.altitude, toast]);
 
-  const resetParams = () => setParams(DEFAULT_PARAMS);
+  const resetParams = () => { setParams(DEFAULT_PARAMS); setHomePosition(null); };
 
   if (!active) return null;
 
@@ -274,59 +311,71 @@ export default function FlightPlanner({ active, surveyPolygon, onClose }: Flight
     return `${m}m ${s}s`;
   };
 
-  const waypointIcon = new L.DivIcon({
-    className: "flight-wp-icon",
-    html: `<div style="width:8px;height:8px;border-radius:50%;background:hsl(var(--primary));border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.3)"></div>`,
-    iconSize: [8, 8],
-    iconAnchor: [4, 4],
-  });
+  const hasPoly = surveyPolygon && surveyPolygon.length >= 3;
 
   return (
     <>
-      {/* Render survey polygon */}
-      {surveyPolygon && surveyPolygon.length >= 3 && (
+      {/* Survey polygon */}
+      {hasPoly && (
         <LeafletPolygon
           positions={surveyPolygon}
-          pathOptions={{
-            color: "#2563eb",
-            weight: 2,
-            fillOpacity: 0.08,
-            dashArray: "6 4",
-          }}
+          pathOptions={{ color: "#2563eb", weight: 2, fillOpacity: 0.08, dashArray: "6 4" }}
         />
       )}
 
-      {/* Render flight path */}
-      {result && result.waypoints.length >= 2 && (
+      {/* Primary flight path */}
+      {result && result.primaryWps.length >= 2 && (
         <>
           <Polyline
-            positions={result.waypoints}
-            pathOptions={{
-              color: "#f59e0b",
-              weight: 2,
-              opacity: 0.9,
-            }}
+            positions={result.primaryWps}
+            pathOptions={{ color: "#f59e0b", weight: 2, opacity: 0.9 }}
           />
-          {/* Show every Nth waypoint marker to avoid clutter */}
-          {result.waypoints.filter((_, i) => i % Math.max(1, Math.floor(result.waypoints.length / 30)) === 0).map((wp, i) => (
+          {result.primaryWps.filter((_, i) => i % Math.max(1, Math.floor(result.primaryWps.length / 30)) === 0).map((wp, i) => (
             <CircleMarker
-              key={i}
+              key={`p-${i}`}
               center={wp}
               radius={3}
-              pathOptions={{
-                color: "#ffffff",
-                fillColor: "#f59e0b",
-                fillOpacity: 1,
-                weight: 1.5,
-              }}
+              pathOptions={{ color: "#ffffff", fillColor: "#f59e0b", fillOpacity: 1, weight: 1.5 }}
             />
           ))}
         </>
       )}
 
+      {/* Secondary (crosshatch) flight path */}
+      {result && result.secondaryWps.length >= 2 && (
+        <>
+          <Polyline
+            positions={result.secondaryWps}
+            pathOptions={{ color: "#8b5cf6", weight: 2, opacity: 0.8 }}
+          />
+          {result.secondaryWps.filter((_, i) => i % Math.max(1, Math.floor(result.secondaryWps.length / 30)) === 0).map((wp, i) => (
+            <CircleMarker
+              key={`s-${i}`}
+              center={wp}
+              radius={3}
+              pathOptions={{ color: "#ffffff", fillColor: "#8b5cf6", fillOpacity: 1, weight: 1.5 }}
+            />
+          ))}
+        </>
+      )}
+
+      {/* Home / Takeoff marker */}
+      {homePosition && (
+        <Marker
+          position={homePosition}
+          icon={homeIcon}
+          draggable
+          eventHandlers={{
+            dragend: (e) => {
+              const latlng = e.target.getLatLng();
+              setHomePosition([latlng.lat, latlng.lng]);
+            },
+          }}
+        />
+      )}
+
       {/* Control panel */}
       <div className="absolute top-4 right-4 z-[950] w-72 bg-card/95 backdrop-blur border border-border rounded-xl shadow-xl overflow-hidden">
-        {/* Header */}
         <div className="flex items-center justify-between px-3 py-2.5 border-b border-border bg-primary/5">
           <div className="flex items-center gap-2">
             <Plane className="w-4 h-4 text-primary" />
@@ -338,31 +387,63 @@ export default function FlightPlanner({ active, surveyPolygon, onClose }: Flight
         </div>
 
         <div className="p-3 space-y-3 max-h-[70vh] overflow-y-auto">
-          {!surveyPolygon || surveyPolygon.length < 3 ? (
+          {!hasPoly ? (
             <div className="text-center py-6 space-y-2">
               <Plane className="w-8 h-8 mx-auto text-muted-foreground/40" />
               <p className="text-xs text-muted-foreground">
-                Draw a polygon on the map to define your survey area, then the flight path will auto-generate.
-              </p>
-              <p className="text-[10px] text-muted-foreground/60">
-                Use the Polygon tool from the left toolbar
+                Draw a polygon on the map to define your survey area.
               </p>
             </div>
           ) : (
             <>
+              {/* Drone Model */}
+              <div className="space-y-1.5">
+                <span className="text-xs text-muted-foreground">Drone Model</span>
+                <select
+                  value={params.droneModelIdx}
+                  onChange={(e) => setParams(p => ({ ...p, droneModelIdx: Number(e.target.value) }))}
+                  className="w-full h-8 rounded-md border border-border bg-background px-2 text-xs text-foreground"
+                >
+                  {DRONE_MODELS.map((d, i) => (
+                    <option key={d.name} value={i}>{d.name} ({d.batteryMinutes}min)</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Flight Pattern */}
+              <div className="space-y-1.5">
+                <span className="text-xs text-muted-foreground">Flight Pattern</span>
+                <div className="flex gap-1.5">
+                  <button
+                    onClick={() => setParams(p => ({ ...p, pattern: "single" }))}
+                    className={`flex-1 h-8 rounded-md border text-xs font-medium transition-colors ${
+                      params.pattern === "single"
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background border-border text-foreground hover:bg-secondary"
+                    }`}
+                  >
+                    Single Grid
+                  </button>
+                  <button
+                    onClick={() => setParams(p => ({ ...p, pattern: "crosshatch" }))}
+                    className={`flex-1 h-8 rounded-md border text-xs font-medium transition-colors flex items-center justify-center gap-1 ${
+                      params.pattern === "crosshatch"
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background border-border text-foreground hover:bg-secondary"
+                    }`}
+                  >
+                    <Grid3X3 className="w-3 h-3" /> Crosshatch
+                  </button>
+                </div>
+              </div>
+
               {/* Altitude */}
               <div className="space-y-1.5">
                 <div className="flex justify-between text-xs">
                   <span className="text-muted-foreground">Altitude</span>
                   <span className="font-semibold text-foreground">{params.altitude}m</span>
                 </div>
-                <Slider
-                  value={[params.altitude]}
-                  onValueChange={([v]) => setParams(p => ({ ...p, altitude: v }))}
-                  min={20}
-                  max={150}
-                  step={5}
-                />
+                <Slider value={[params.altitude]} onValueChange={([v]) => setParams(p => ({ ...p, altitude: v }))} min={20} max={150} step={5} />
               </div>
 
               {/* Front Overlap */}
@@ -371,13 +452,7 @@ export default function FlightPlanner({ active, surveyPolygon, onClose }: Flight
                   <span className="text-muted-foreground">Front Overlap</span>
                   <span className="font-semibold text-foreground">{params.frontOverlap}%</span>
                 </div>
-                <Slider
-                  value={[params.frontOverlap]}
-                  onValueChange={([v]) => setParams(p => ({ ...p, frontOverlap: v }))}
-                  min={50}
-                  max={95}
-                  step={5}
-                />
+                <Slider value={[params.frontOverlap]} onValueChange={([v]) => setParams(p => ({ ...p, frontOverlap: v }))} min={50} max={95} step={5} />
               </div>
 
               {/* Side Overlap */}
@@ -386,13 +461,7 @@ export default function FlightPlanner({ active, surveyPolygon, onClose }: Flight
                   <span className="text-muted-foreground">Side Overlap</span>
                   <span className="font-semibold text-foreground">{params.sideOverlap}%</span>
                 </div>
-                <Slider
-                  value={[params.sideOverlap]}
-                  onValueChange={([v]) => setParams(p => ({ ...p, sideOverlap: v }))}
-                  min={50}
-                  max={95}
-                  step={5}
-                />
+                <Slider value={[params.sideOverlap]} onValueChange={([v]) => setParams(p => ({ ...p, sideOverlap: v }))} min={50} max={95} step={5} />
               </div>
 
               {/* Heading */}
@@ -401,14 +470,19 @@ export default function FlightPlanner({ active, surveyPolygon, onClose }: Flight
                   <span className="text-muted-foreground">Heading</span>
                   <span className="font-semibold text-foreground">{params.heading}°</span>
                 </div>
-                <Slider
-                  value={[params.heading]}
-                  onValueChange={([v]) => setParams(p => ({ ...p, heading: v }))}
-                  min={0}
-                  max={355}
-                  step={5}
-                />
+                <Slider value={[params.heading]} onValueChange={([v]) => setParams(p => ({ ...p, heading: v }))} min={0} max={355} step={5} />
               </div>
+
+              {/* Cross heading offset (only for crosshatch) */}
+              {params.pattern === "crosshatch" && (
+                <div className="space-y-1.5">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Cross Angle</span>
+                    <span className="font-semibold text-foreground">{params.crossHeadingOffset}°</span>
+                  </div>
+                  <Slider value={[params.crossHeadingOffset]} onValueChange={([v]) => setParams(p => ({ ...p, crossHeadingOffset: v }))} min={45} max={90} step={5} />
+                </div>
+              )}
 
               {/* Speed */}
               <div className="space-y-1.5">
@@ -416,18 +490,20 @@ export default function FlightPlanner({ active, surveyPolygon, onClose }: Flight
                   <span className="text-muted-foreground">Speed</span>
                   <span className="font-semibold text-foreground">{params.speed} m/s</span>
                 </div>
-                <Slider
-                  value={[params.speed]}
-                  onValueChange={([v]) => setParams(p => ({ ...p, speed: v }))}
-                  min={2}
-                  max={15}
-                  step={1}
-                />
+                <Slider value={[params.speed]} onValueChange={([v]) => setParams(p => ({ ...p, speed: v }))} min={2} max={15} step={1} />
+              </div>
+
+              {/* Home position info */}
+              <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-green-500/10 border border-green-500/20">
+                <MapPin className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+                <p className="text-[10px] text-green-700 dark:text-green-400">
+                  Drag the green marker to set takeoff/landing point
+                </p>
               </div>
 
               {/* Stats */}
               {stats && (
-                <div className="bg-secondary/50 rounded-lg p-2.5 space-y-1.5">
+                <div className="bg-secondary/50 rounded-lg p-2.5 space-y-2">
                   <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Flight Stats</h4>
                   <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
                     <div className="flex justify-between">
@@ -455,8 +531,30 @@ export default function FlightPlanner({ active, surveyPolygon, onClose }: Flight
                       <span className="font-semibold text-foreground">{stats.photos}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Waypoints</span>
-                      <span className="font-semibold text-foreground">{stats.waypoints}</span>
+                      <span className="text-muted-foreground">Pattern</span>
+                      <span className="font-semibold text-foreground">{params.pattern === "crosshatch" ? "Crosshatch" : "Single"}</span>
+                    </div>
+                  </div>
+
+                  {/* Battery estimation */}
+                  <div className="mt-2 pt-2 border-t border-border/50 space-y-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <Battery className={`w-3.5 h-3.5 ${stats.batteryPercent > 100 ? "text-destructive" : stats.batteryPercent > 75 ? "text-yellow-500" : "text-green-500"}`} />
+                      <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Battery ({stats.droneName})</span>
+                    </div>
+                    <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${
+                          stats.batteryPercent > 100 ? "bg-destructive" : stats.batteryPercent > 75 ? "bg-yellow-500" : "bg-green-500"
+                        }`}
+                        style={{ width: `${Math.min(100, stats.batteryPercent)}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-[10px]">
+                      <span className="text-muted-foreground">{stats.batteryPercent}% of single battery</span>
+                      <span className="font-semibold text-foreground">
+                        {stats.batteriesNeeded} batter{stats.batteriesNeeded === 1 ? "y" : "ies"}
+                      </span>
                     </div>
                   </div>
                 </div>
