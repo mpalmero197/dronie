@@ -14,7 +14,7 @@ const AIRSPACE_CLASSES = [
 export default function OverlayLegend({ type }: OverlayLegendProps) {
   if (type === "airspace") {
     return (
-      <div className="absolute bottom-14 left-14 z-[900] bg-card/95 backdrop-blur rounded-xl border border-border shadow-xl p-2.5 w-40">
+      <div className="absolute bottom-14 left-3 sm:left-14 z-[900] bg-card/95 backdrop-blur rounded-xl border border-border shadow-xl p-2.5 w-40">
         <p className="text-[10px] font-semibold text-foreground mb-1.5">Airspace Classes</p>
         <div className="flex flex-col gap-1">
           {AIRSPACE_CLASSES.map((c) => (
