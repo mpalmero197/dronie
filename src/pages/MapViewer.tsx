@@ -215,9 +215,23 @@ export default function MapViewer() {
               opacity={0.25}
             />
           )}
-          <MapDrawingLayer activeTool={activeTool} onMeasurement={setMeasurement} />
+          <MapDrawingLayer
+            activeTool={activeTool}
+            onMeasurement={setMeasurement}
+            onPolygonComplete={flightPlannerOpen ? (pts) => setSurveyPolygon(pts) : undefined}
+          />
           <AddressSearch />
           <PropertyLines />
+          <ParcelFetcher active={activeTool === "fetch-parcels"} />
+          <FlightPlanner
+            active={flightPlannerOpen}
+            surveyPolygon={surveyPolygon}
+            onClose={() => {
+              setFlightPlannerOpen(false);
+              setSurveyPolygon(null);
+              setActiveTool(null);
+            }}
+          />
         </MapContainer>
 
         {/* Toolbar */}
