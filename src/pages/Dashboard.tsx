@@ -562,7 +562,7 @@ export default function Dashboard() {
                     <Map className="w-10 h-10 mx-auto mb-3 text-muted-foreground/40" />
                     <p className="font-semibold text-foreground text-sm">No projects yet</p>
                     <p className="text-xs text-muted-foreground mt-1 mb-4">Create your first project to start processing drone imagery</p>
-                    <Button size="sm" onClick={() => setNewProjectOpen(true)} className="bg-primary text-primary-foreground hover:bg-primary/90 gap-2">
+                    <Button size="sm" onClick={handleNewProject} className="bg-primary text-primary-foreground hover:bg-primary/90 gap-2">
                       <Plus className="w-3.5 h-3.5" /> New Project
                     </Button>
                   </div>
