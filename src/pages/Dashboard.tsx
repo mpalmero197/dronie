@@ -176,6 +176,20 @@ export default function Dashboard() {
   const [creating, setCreating] = useState(false);
   const [detailProject, setDetailProject] = useState<Project | null>(null);
   const [sidebarView, setSidebarView] = useState<SidebarView>("projects");
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [upgradeFeature, setUpgradeFeature] = useState({ feature: "", description: "" });
+
+  const tierLimits = getTierLimits(subscriptionTier);
+
+  // Count projects created this month
+  const monthlyProjectCount = useMemo(() => {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    return projects.filter((p) => new Date(p.created_at) >= startOfMonth).length;
+  }, [projects]);
+
+  const projectsRemaining = getProjectsRemaining(subscriptionTier, monthlyProjectCount);
+  const canCreate = canCreateProject(subscriptionTier, monthlyProjectCount);
 
   // Handle checkout redirect
   useEffect(() => {
