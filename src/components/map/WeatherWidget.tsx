@@ -56,7 +56,7 @@ export default function WeatherWidget() {
   if (!weather && !loading) return null;
 
   return (
-    <div className="absolute top-3 right-3 z-[900]">
+    <div className="absolute top-3 right-14 sm:right-3 z-[900]">
       <div className="bg-card/90 backdrop-blur border border-border rounded-xl shadow-lg overflow-hidden min-w-[160px]">
         {/* Header — always visible */}
         <button

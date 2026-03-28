@@ -59,7 +59,7 @@ export default function MousePositionDisplay() {
   if (!pos) return null;
 
   return (
-    <div className="absolute bottom-3 right-3 z-[900] flex items-center gap-1">
+    <div className="absolute bottom-3 right-3 z-[900] hidden sm:flex items-center gap-1">
       <button
         onClick={cycleFormat}
         className="bg-card/90 backdrop-blur rounded-l-lg border border-border border-r-0 px-2 py-1 text-[10px] font-mono text-muted-foreground hover:text-foreground transition-colors cursor-pointer select-none"

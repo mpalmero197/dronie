@@ -44,7 +44,7 @@ export default function OverlayLegend({ type }: OverlayLegendProps) {
   }
 
   return (
-    <div className="absolute bottom-14 left-14 z-[900] bg-card/95 backdrop-blur rounded-xl border border-border shadow-xl p-2.5 w-32">
+    <div className="absolute bottom-14 left-3 sm:left-14 z-[900] bg-card/95 backdrop-blur rounded-xl border border-border shadow-xl p-2.5 w-32">
       <p className="text-[10px] font-semibold text-foreground mb-1.5">NDVI Index</p>
       <div className="h-24 w-4 rounded-lg mx-auto" style={{
         background: "linear-gradient(to top, hsl(0, 70%, 45%), hsl(40, 90%, 50%), hsl(60, 80%, 50%), hsl(90, 60%, 45%), hsl(130, 65%, 35%))"
