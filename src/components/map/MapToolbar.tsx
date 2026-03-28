@@ -108,6 +108,36 @@ export default function MapToolbar({
 
       <div className="h-px bg-border my-1" />
 
+      {/* Parcel + Flight Plan */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            onClick={() => onToolChange(activeTool === "fetch-parcels" ? null : "fetch-parcels")}
+            className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${
+              activeTool === "fetch-parcels" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+            }`}
+          >
+            <MousePointerClick className="w-4 h-4" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="right">Fetch Parcels (click map)</TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            onClick={() => onToolChange(activeTool === "flight-plan" ? null : "flight-plan")}
+            className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${
+              activeTool === "flight-plan" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+            }`}
+          >
+            <Plane className="w-4 h-4" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="right">Flight Planner</TooltipContent>
+      </Tooltip>
+
+      <div className="h-px bg-border my-1" />
+
       {/* Export / Embed */}
       <Tooltip>
         <TooltipTrigger asChild>
