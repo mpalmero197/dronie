@@ -58,7 +58,7 @@ function formatTime(seconds: number): string {
 }
 
 export function generateMissionPDF(options: GenerateMissionPDFOptions): Blob {
-  const { stats, params, waypoints, mapScreenshot, projectName, terrainData, perWpAltitudes } = options;
+  const { stats, params, waypoints, mapScreenshot, projectName, terrainData, perWpAltitudes, laancData } = options;
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
