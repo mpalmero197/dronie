@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Map, Plus, UploadCloud, MoreVertical, Clock,
   CheckCircle2, AlertCircle, Loader2, FolderOpen,
   Eye, Trash2, BarChart3, HardDrive,
   ArrowLeft, LogOut, Shield, User as UserIcon, FileArchive, ImageIcon,
-  Play, Share2,
+  Play, Share2, Zap, Lock,
 } from "lucide-react";
 import ProjectDetailDialog from "@/components/ProjectDetailDialog";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase, Project } from "@/lib/supabase";
+import { getTierLimits, canCreateProject, getProjectsRemaining } from "@/lib/subscription-limits";
+import UpgradePrompt from "@/components/UpgradePrompt";
 import { useToast } from "@/hooks/use-toast";
 
 type Status = "complete" | "processing" | "queued" | "failed";
@@ -162,7 +164,7 @@ function StoragePanel({ projects }: { projects: Project[] }) {
 }
 
 export default function Dashboard() {
-  const { user, isAdmin, signOut, loading: authLoading, checkSubscription } = useAuth();
+  const { user, isAdmin, signOut, loading: authLoading, checkSubscription, subscriptionTier, isSubscribed } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
@@ -174,6 +176,20 @@ export default function Dashboard() {
   const [creating, setCreating] = useState(false);
   const [detailProject, setDetailProject] = useState<Project | null>(null);
   const [sidebarView, setSidebarView] = useState<SidebarView>("projects");
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [upgradeFeature, setUpgradeFeature] = useState({ feature: "", description: "" });
+
+  const tierLimits = getTierLimits(subscriptionTier);
+
+  // Count projects created this month
+  const monthlyProjectCount = useMemo(() => {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    return projects.filter((p) => new Date(p.created_at) >= startOfMonth).length;
+  }, [projects]);
+
+  const projectsRemaining = getProjectsRemaining(subscriptionTier, monthlyProjectCount);
+  const canCreate = canCreateProject(subscriptionTier, monthlyProjectCount);
 
   // Handle checkout redirect
   useEffect(() => {
@@ -238,6 +254,15 @@ export default function Dashboard() {
 
   async function createProject() {
     if (!user || !newProjectName.trim()) return;
+    if (!canCreate) {
+      setNewProjectOpen(false);
+      setUpgradeFeature({
+        feature: "Project Limit Reached",
+        description: `You've used all ${tierLimits.projectsPerMonth} projects this month on the ${tierLimits.tierLabel} plan. Upgrade to Professional for unlimited projects.`,
+      });
+      setUpgradeOpen(true);
+      return;
+    }
     setCreating(true);
     const { data, error } = await supabase
       .from('projects')
@@ -253,6 +278,30 @@ export default function Dashboard() {
       toast({ title: 'Project created', description: `"${data.name}" is ready for images.` });
     }
     setCreating(false);
+  }
+
+  function handleNewProject() {
+    if (!canCreate) {
+      setUpgradeFeature({
+        feature: "Project Limit Reached",
+        description: `You've used all ${tierLimits.projectsPerMonth} projects this month on the ${tierLimits.tierLabel} plan. Upgrade to Professional for unlimited projects.`,
+      });
+      setUpgradeOpen(true);
+      return;
+    }
+    setNewProjectOpen(true);
+  }
+
+  function handleShareProject(project: Project) {
+    if (!isSubscribed && subscriptionTier !== "professional" && subscriptionTier !== "enterprise") {
+      setUpgradeFeature({
+        feature: "Share Links",
+        description: "Shareable map links are available on the Professional plan and above. Upgrade to share your maps with clients and colleagues.",
+      });
+      setUpgradeOpen(true);
+      return;
+    }
+    shareProject(project);
   }
 
   async function deleteProject(id: string) {
@@ -366,6 +415,16 @@ export default function Dashboard() {
 
         {/* User info */}
         <div className="p-4 border-t border-sidebar-border space-y-3">
+          {/* Subscription tier badge */}
+          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${isSubscribed ? "bg-accent/15 border border-accent/20" : "bg-secondary border border-border"}`}>
+            <Zap className={`w-3.5 h-3.5 flex-shrink-0 ${isSubscribed ? "text-accent" : "text-muted-foreground"}`} />
+            <span className={`text-xs font-semibold ${isSubscribed ? "text-accent" : "text-muted-foreground"}`}>
+              {tierLimits.tierLabel}
+            </span>
+            {tierLimits.priorityProcessing && (
+              <span className="ml-auto text-[9px] px-1.5 py-0.5 rounded-full bg-accent/20 text-accent font-bold uppercase">Priority</span>
+            )}
+          </div>
           {isAdmin && (
             <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-accent/15 border border-accent/20">
               <Shield className="w-3.5 h-3.5 text-accent flex-shrink-0" />
@@ -423,11 +482,14 @@ export default function Dashboard() {
           <div className="flex items-center gap-2">
             {sidebarView === "projects" && (
               <Button
-                onClick={() => setNewProjectOpen(true)}
+                onClick={handleNewProject}
                 className="bg-primary text-primary-foreground hover:bg-primary/90 gap-2 shadow-sm hover:shadow-md transition-all active:scale-[0.97]"
               >
                 <Plus className="w-4 h-4" />
                 New Project
+                {projectsRemaining !== Infinity && (
+                  <span className="ml-1 text-[10px] opacity-70">({projectsRemaining} left)</span>
+                )}
               </Button>
             )}
           </div>
@@ -469,19 +531,19 @@ export default function Dashboard() {
                 onDrop={(e) => {
                   e.preventDefault();
                   setDragging(false);
-                  setNewProjectOpen(true);
+                  handleNewProject();
                 }}
                 className={`border-2 border-dashed rounded-2xl p-8 text-center transition-all cursor-pointer ${
                   dragging ? "border-accent bg-accent/5" : "border-border hover:border-primary/40 hover:bg-secondary/50"
                 }`}
-                onClick={() => setNewProjectOpen(true)}
+                onClick={handleNewProject}
               >
                 <UploadCloud className={`w-10 h-10 mx-auto mb-3 transition-colors ${dragging ? "text-accent" : "text-muted-foreground"}`} />
                 <p className="font-semibold text-foreground text-sm">
                   {dragging ? "Drop images to create a project" : "Drop drone images here to start a new project"}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  JPEG, TIFF, DNG accepted · Up to 5,000 images
+                  JPEG, TIFF, DNG accepted · Up to {tierLimits.imagesPerProject === Infinity ? "∞" : tierLimits.imagesPerProject.toLocaleString()} images
                 </p>
               </div>
 
@@ -500,7 +562,7 @@ export default function Dashboard() {
                     <Map className="w-10 h-10 mx-auto mb-3 text-muted-foreground/40" />
                     <p className="font-semibold text-foreground text-sm">No projects yet</p>
                     <p className="text-xs text-muted-foreground mt-1 mb-4">Create your first project to start processing drone imagery</p>
-                    <Button size="sm" onClick={() => setNewProjectOpen(true)} className="bg-primary text-primary-foreground hover:bg-primary/90 gap-2">
+                    <Button size="sm" onClick={handleNewProject} className="bg-primary text-primary-foreground hover:bg-primary/90 gap-2">
                       <Plus className="w-3.5 h-3.5" /> New Project
                     </Button>
                   </div>
@@ -579,8 +641,8 @@ export default function Dashboard() {
                                     <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => navigate(`/viewer/${project.id}`)}>
                                       <Eye className="w-3.5 h-3.5" /> View Map
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => shareProject(project)}>
-                                      <Share2 className="w-3.5 h-3.5" /> Copy Share Link
+                                    <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => handleShareProject(project)}>
+                                      <Share2 className="w-3.5 h-3.5" /> Copy Share Link {!tierLimits.shareLinks && <Lock className="w-3 h-3 text-muted-foreground ml-auto" />}
                                     </DropdownMenuItem>
                                   </>
                                 )}
@@ -650,6 +712,14 @@ export default function Dashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Upgrade Prompt */}
+      <UpgradePrompt
+        open={upgradeOpen}
+        onClose={() => setUpgradeOpen(false)}
+        feature={upgradeFeature.feature}
+        description={upgradeFeature.description}
+      />
     </div>
   );
 }
