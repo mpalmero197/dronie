@@ -102,6 +102,19 @@ export default function MapViewer() {
   const [undoRedoTick, setUndoRedoTick] = useState(0);
 
   const isDemo = projectId === "demo";
+  const prevOverlayRef = useRef<string | null>(null);
+
+  // Auto-enable airspace overlay when LAANC check is active
+  useEffect(() => {
+    if (activeTool === "laanc-check") {
+      prevOverlayRef.current = activeOverlay;
+      setActiveOverlay("airspace");
+    } else {
+      if (activeOverlay === "airspace" && prevOverlayRef.current !== "airspace") {
+        setActiveOverlay(prevOverlayRef.current);
+      }
+    }
+  }, [activeTool]);
 
   useEffect(() => {
     if (isDemo) {
