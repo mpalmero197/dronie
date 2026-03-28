@@ -1,5 +1,5 @@
 interface OverlayLegendProps {
-  type: "elevation" | "ndvi";
+  type: "elevation" | "ndvi" | "airspace";
 }
 
 export default function OverlayLegend({ type }: OverlayLegendProps) {
