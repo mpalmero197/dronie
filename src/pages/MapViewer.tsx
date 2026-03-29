@@ -28,6 +28,7 @@ import MapContextMenu from "@/components/map/MapContextMenu";
 import WeatherWidget from "@/components/map/WeatherWidget";
 import SunPositionWidget from "@/components/map/SunPosition";
 import GeolocationButton from "@/components/map/GeolocationButton";
+import BookmarksPanel from "@/components/map/BookmarksPanel";
 
 // Fix Leaflet default marker icon issue with Vite
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -102,6 +103,7 @@ export default function MapViewer() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [undoRedoTick, setUndoRedoTick] = useState(0);
   const [laancResult, setLaancResult] = useState<LaancResult | null>(null);
+  const [bookmarksOpen, setBookmarksOpen] = useState(false);
 
   const isDemo = projectId === "demo";
   const prevOverlayRef = useRef<string | null>(null);
@@ -144,6 +146,11 @@ export default function MapViewer() {
       const key = e.key.toLowerCase();
       if (key === "escape") {
         setActiveTool(null);
+        setBookmarksOpen(false);
+        return;
+      }
+      if (key === "b") {
+        setBookmarksOpen(prev => !prev);
         return;
       }
       const tool = KEYBOARD_SHORTCUT_MAP[key];
@@ -333,6 +340,7 @@ export default function MapViewer() {
           <GeolocationButton />
           <WeatherWidget />
           <SunPositionWidget />
+          <BookmarksPanel projectId={projectId} open={bookmarksOpen} onClose={() => setBookmarksOpen(false)} />
         </MapContainer>
 
         {/* Toolbar */}
@@ -356,6 +364,8 @@ export default function MapViewer() {
           canRedo={drawingLayerRef.current?.canRedo ?? false}
           onFullscreen={toggleFullscreen}
           isFullscreen={isFullscreen}
+          onToggleBookmarks={() => setBookmarksOpen(v => !v)}
+          bookmarksOpen={bookmarksOpen}
         />
 
         {/* Layer Switcher */}
