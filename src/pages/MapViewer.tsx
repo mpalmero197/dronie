@@ -340,6 +340,7 @@ export default function MapViewer() {
           <GeolocationButton />
           <WeatherWidget />
           <SunPositionWidget />
+          <BookmarksPanel projectId={projectId} open={bookmarksOpen} onClose={() => setBookmarksOpen(false)} />
         </MapContainer>
 
         {/* Toolbar */}
