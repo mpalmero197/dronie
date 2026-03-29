@@ -103,6 +103,7 @@ export default function MapViewer() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [undoRedoTick, setUndoRedoTick] = useState(0);
   const [laancResult, setLaancResult] = useState<LaancResult | null>(null);
+  const [bookmarksOpen, setBookmarksOpen] = useState(false);
 
   const isDemo = projectId === "demo";
   const prevOverlayRef = useRef<string | null>(null);
