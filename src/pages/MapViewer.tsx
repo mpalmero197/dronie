@@ -28,6 +28,7 @@ import MapContextMenu from "@/components/map/MapContextMenu";
 import WeatherWidget from "@/components/map/WeatherWidget";
 import SunPositionWidget from "@/components/map/SunPosition";
 import GeolocationButton from "@/components/map/GeolocationButton";
+import BookmarksPanel from "@/components/map/BookmarksPanel";
 
 // Fix Leaflet default marker icon issue with Vite
 delete (L.Icon.Default.prototype as any)._getIconUrl;
