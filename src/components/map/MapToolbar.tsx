@@ -209,6 +209,21 @@ export default function MapToolbar({
         </>
       )}
 
+      {/* Bookmarks */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            onClick={onToggleBookmarks}
+            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${bookmarksOpen ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-secondary hover:text-foreground"}`}
+          >
+            <Bookmark className="w-3.5 h-3.5" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="right" className="text-xs">
+          Bookmarks <kbd className="ml-1.5 px-1 py-0.5 rounded bg-muted text-[10px] font-mono">B</kbd>
+        </TooltipContent>
+      </Tooltip>
+
       <div className="h-px bg-border mx-1" />
 
       {/* Fullscreen */}
