@@ -364,6 +364,8 @@ export default function MapViewer() {
           canRedo={drawingLayerRef.current?.canRedo ?? false}
           onFullscreen={toggleFullscreen}
           isFullscreen={isFullscreen}
+          onToggleBookmarks={() => setBookmarksOpen(v => !v)}
+          bookmarksOpen={bookmarksOpen}
         />
 
         {/* Layer Switcher */}
