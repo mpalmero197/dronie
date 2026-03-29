@@ -210,6 +210,42 @@ export type Database = {
           },
         ]
       }
+      map_bookmarks: {
+        Row: {
+          color: string | null
+          created_at: string
+          id: string
+          latitude: number
+          longitude: number
+          name: string
+          project_id: string | null
+          user_id: string
+          zoom: number
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          latitude: number
+          longitude: number
+          name: string
+          project_id?: string | null
+          user_id: string
+          zoom?: number
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          latitude?: number
+          longitude?: number
+          name?: string
+          project_id?: string | null
+          user_id?: string
+          zoom?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
