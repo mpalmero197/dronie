@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { supabase, Project } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
-import MapToolbar, { DrawTool } from "@/components/map/MapToolbar";
+import MapToolbar, { DrawTool, KEYBOARD_SHORTCUT_MAP } from "@/components/map/MapToolbar";
 import MapDrawingLayer, { MapDrawingLayerRef } from "@/components/map/MapDrawingLayer";
 import MapInfoPanel from "@/components/map/MapInfoPanel";
 import LayerSwitcher, { BaseLayer } from "@/components/map/LayerSwitcher";
