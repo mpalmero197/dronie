@@ -28,16 +28,16 @@ interface MapToolbarProps {
 type ToolDef = { id: DrawTool; icon: typeof MapPin; label: string };
 
 const DRAW_TOOLS: ToolDef[] = [
-  { id: "marker", icon: MapPin, label: "Drop Pin" },
-  { id: "polyline", icon: Minus, label: "Draw Line" },
-  { id: "polygon", icon: Pentagon, label: "Draw Polygon" },
-  { id: "rectangle", icon: Square, label: "Draw Rectangle" },
-  { id: "circle", icon: Circle, label: "Draw Circle" },
+  { id: "marker", icon: MapPin, label: "Drop Pin", shortcut: "M" },
+  { id: "polyline", icon: Minus, label: "Draw Line", shortcut: "L" },
+  { id: "polygon", icon: Pentagon, label: "Draw Polygon", shortcut: "P" },
+  { id: "rectangle", icon: Square, label: "Draw Rectangle", shortcut: "R" },
+  { id: "circle", icon: Circle, label: "Draw Circle", shortcut: "C" },
 ];
 
 const MEASURE_TOOLS: ToolDef[] = [
-  { id: "measure-distance", icon: Ruler, label: "Measure Distance" },
-  { id: "measure-area", icon: Pentagon, label: "Measure Area" },
+  { id: "measure-distance", icon: Ruler, label: "Measure Distance", shortcut: "D" },
+  { id: "measure-area", icon: Pentagon, label: "Measure Area", shortcut: "A" },
 ];
 
 const OVERLAYS = [
