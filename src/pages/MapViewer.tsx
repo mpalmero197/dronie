@@ -134,6 +134,27 @@ export default function MapViewer() {
     fetchProject();
   }, [projectId, isDemo]);
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      // Ignore when typing in inputs
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+      const key = e.key.toLowerCase();
+      if (key === "escape") {
+        setActiveTool(null);
+        return;
+      }
+      const tool = KEYBOARD_SHORTCUT_MAP[key];
+      if (tool) {
+        setActiveTool(prev => prev === tool ? null : tool);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
   // Fullscreen listeners
   useEffect(() => {
     const handler = () => setIsFullscreen(!!document.fullscreenElement);

@@ -81,7 +81,9 @@ function ToolButton({ tool, isActive, onClick, activeClass = "bg-primary text-pr
           <Icon className="w-3.5 h-3.5" />
         </button>
       </TooltipTrigger>
-      <TooltipContent side="right" className="text-xs">{tool.label}</TooltipContent>
+      <TooltipContent side="right" className="text-xs">
+        {tool.label}{tool.shortcut && <kbd className="ml-1.5 px-1 py-0.5 rounded bg-muted text-[10px] font-mono">{tool.shortcut}</kbd>}
+      </TooltipContent>
     </Tooltip>
   );
 }
