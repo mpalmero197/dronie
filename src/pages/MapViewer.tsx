@@ -146,6 +146,11 @@ export default function MapViewer() {
       const key = e.key.toLowerCase();
       if (key === "escape") {
         setActiveTool(null);
+        setBookmarksOpen(false);
+        return;
+      }
+      if (key === "b") {
+        setBookmarksOpen(prev => !prev);
         return;
       }
       const tool = KEYBOARD_SHORTCUT_MAP[key];
