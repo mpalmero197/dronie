@@ -23,6 +23,8 @@ interface MapToolbarProps {
   canRedo?: boolean;
   onFullscreen?: () => void;
   isFullscreen?: boolean;
+  onToggleBookmarks?: () => void;
+  bookmarksOpen?: boolean;
 }
 
 type ToolDef = { id: DrawTool; icon: typeof MapPin; label: string; shortcut?: string };
