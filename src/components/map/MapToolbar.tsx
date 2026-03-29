@@ -92,7 +92,7 @@ function ToolButton({ tool, isActive, onClick, activeClass = "bg-primary text-pr
 
 export default function MapToolbar({
   activeTool, onToolChange, onExportPng, onEmbedCode, activeOverlay, onOverlayChange,
-  onUndo, onRedo, canUndo, canRedo, onFullscreen, isFullscreen,
+  onUndo, onRedo, canUndo, canRedo, onFullscreen, isFullscreen, onToggleBookmarks, bookmarksOpen,
 }: MapToolbarProps) {
   const [drawExpanded, setDrawExpanded] = useState(true);
   const [moreExpanded, setMoreExpanded] = useState(false);
