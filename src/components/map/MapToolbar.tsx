@@ -25,7 +25,17 @@ interface MapToolbarProps {
   isFullscreen?: boolean;
 }
 
-type ToolDef = { id: DrawTool; icon: typeof MapPin; label: string };
+type ToolDef = { id: DrawTool; icon: typeof MapPin; label: string; shortcut?: string };
+
+export const KEYBOARD_SHORTCUT_MAP: Record<string, DrawTool> = {
+  m: "marker",
+  l: "polyline",
+  p: "polygon",
+  r: "rectangle",
+  c: "circle",
+  d: "measure-distance",
+  a: "measure-area",
+};
 
 const DRAW_TOOLS: ToolDef[] = [
   { id: "marker", icon: MapPin, label: "Drop Pin", shortcut: "M" },
