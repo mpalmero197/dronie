@@ -25,19 +25,29 @@ interface MapToolbarProps {
   isFullscreen?: boolean;
 }
 
-type ToolDef = { id: DrawTool; icon: typeof MapPin; label: string };
+type ToolDef = { id: DrawTool; icon: typeof MapPin; label: string; shortcut?: string };
+
+export const KEYBOARD_SHORTCUT_MAP: Record<string, DrawTool> = {
+  m: "marker",
+  l: "polyline",
+  p: "polygon",
+  r: "rectangle",
+  c: "circle",
+  d: "measure-distance",
+  a: "measure-area",
+};
 
 const DRAW_TOOLS: ToolDef[] = [
-  { id: "marker", icon: MapPin, label: "Drop Pin" },
-  { id: "polyline", icon: Minus, label: "Draw Line" },
-  { id: "polygon", icon: Pentagon, label: "Draw Polygon" },
-  { id: "rectangle", icon: Square, label: "Draw Rectangle" },
-  { id: "circle", icon: Circle, label: "Draw Circle" },
+  { id: "marker", icon: MapPin, label: "Drop Pin", shortcut: "M" },
+  { id: "polyline", icon: Minus, label: "Draw Line", shortcut: "L" },
+  { id: "polygon", icon: Pentagon, label: "Draw Polygon", shortcut: "P" },
+  { id: "rectangle", icon: Square, label: "Draw Rectangle", shortcut: "R" },
+  { id: "circle", icon: Circle, label: "Draw Circle", shortcut: "C" },
 ];
 
 const MEASURE_TOOLS: ToolDef[] = [
-  { id: "measure-distance", icon: Ruler, label: "Measure Distance" },
-  { id: "measure-area", icon: Pentagon, label: "Measure Area" },
+  { id: "measure-distance", icon: Ruler, label: "Measure Distance", shortcut: "D" },
+  { id: "measure-area", icon: Pentagon, label: "Measure Area", shortcut: "A" },
 ];
 
 const OVERLAYS = [
@@ -71,7 +81,9 @@ function ToolButton({ tool, isActive, onClick, activeClass = "bg-primary text-pr
           <Icon className="w-3.5 h-3.5" />
         </button>
       </TooltipTrigger>
-      <TooltipContent side="right" className="text-xs">{tool.label}</TooltipContent>
+      <TooltipContent side="right" className="text-xs">
+        {tool.label}{tool.shortcut && <kbd className="ml-1.5 px-1 py-0.5 rounded bg-muted text-[10px] font-mono">{tool.shortcut}</kbd>}
+      </TooltipContent>
     </Tooltip>
   );
 }

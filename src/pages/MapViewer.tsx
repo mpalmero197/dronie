@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { supabase, Project } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
-import MapToolbar, { DrawTool } from "@/components/map/MapToolbar";
+import MapToolbar, { DrawTool, KEYBOARD_SHORTCUT_MAP } from "@/components/map/MapToolbar";
 import MapDrawingLayer, { MapDrawingLayerRef } from "@/components/map/MapDrawingLayer";
 import MapInfoPanel from "@/components/map/MapInfoPanel";
 import LayerSwitcher, { BaseLayer } from "@/components/map/LayerSwitcher";
@@ -133,6 +133,27 @@ export default function MapViewer() {
     }
     fetchProject();
   }, [projectId, isDemo]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      // Ignore when typing in inputs
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+      const key = e.key.toLowerCase();
+      if (key === "escape") {
+        setActiveTool(null);
+        return;
+      }
+      const tool = KEYBOARD_SHORTCUT_MAP[key];
+      if (tool) {
+        setActiveTool(prev => prev === tool ? null : tool);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   // Fullscreen listeners
   useEffect(() => {
