@@ -85,7 +85,7 @@ export default function SunPositionWidget() {
   const isGoldenHour = new Date() >= sun.goldenHourStart && new Date() <= sun.goldenHourEnd;
 
   return (
-    <div className="absolute top-[6.5rem] left-14 sm:top-14 sm:left-auto sm:right-3 z-[900]">
+    <div className="absolute top-[6.5rem] left-14 sm:top-14 sm:left-auto sm:right-[15rem] z-[900]">
       <div className="bg-card/90 backdrop-blur border border-border rounded-xl shadow-lg overflow-hidden min-w-[160px]">
         <button
           onClick={() => setExpanded((v) => !v)}
