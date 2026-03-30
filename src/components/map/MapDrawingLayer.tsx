@@ -140,6 +140,21 @@ const MapDrawingLayer = forwardRef<MapDrawingLayerRef, MapDrawingLayerProps>(
           setShapes(prev => [...prev, { id: crypto.randomUUID(), type: "marker", positions: [pt], note: "" }]);
           return;
         }
+        if (activeTool === "bearing") {
+          if (drawingPoints.length === 0) {
+            setDrawingPoints([pt]);
+            setBearingCursor(null);
+          } else {
+            // Second click finalizes
+            const origin = drawingPoints[0];
+            const dist = haversineDistance(origin, pt);
+            const brg = bearingBetween(origin, pt);
+            onMeasurement?.(`${formatDistance(dist)} · ${brg.toFixed(1)}° ${compassDirection(brg)}`);
+            setDrawingPoints([]);
+            setBearingCursor(null);
+          }
+          return;
+        }
         if (activeTool === "measure-distance") {
           const newPts = [...drawingPoints, pt];
           setDrawingPoints(newPts);
@@ -180,6 +195,11 @@ const MapDrawingLayer = forwardRef<MapDrawingLayerRef, MapDrawingLayerProps>(
             setDrawingPoints([]);
           }
           return;
+        }
+      },
+      mousemove(e) {
+        if (activeTool === "bearing" && drawingPoints.length === 1) {
+          setBearingCursor([e.latlng.lat, e.latlng.lng]);
         }
       },
       dblclick(e) {
