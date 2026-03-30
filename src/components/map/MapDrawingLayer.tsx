@@ -4,6 +4,22 @@ import L from "leaflet";
 import { Trash2 } from "lucide-react";
 import type { DrawTool } from "./MapToolbar";
 
+function bearingBetween(p1: [number, number], p2: [number, number]): number {
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const toDeg = (r: number) => (r * 180) / Math.PI;
+  const dLng = toRad(p2[1] - p1[1]);
+  const lat1 = toRad(p1[0]);
+  const lat2 = toRad(p2[0]);
+  const x = Math.sin(dLng) * Math.cos(lat2);
+  const y = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+  return (toDeg(Math.atan2(x, y)) + 360) % 360;
+}
+
+function compassDirection(deg: number): string {
+  const dirs = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
+  return dirs[Math.round(deg / 22.5) % 16];
+}
+
 interface DrawnShape {
   id: string;
   type: "marker" | "polyline" | "polygon" | "rectangle" | "circle";
