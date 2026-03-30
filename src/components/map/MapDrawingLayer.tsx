@@ -128,7 +128,7 @@ const MapDrawingLayer = forwardRef<MapDrawingLayerRef, MapDrawingLayerProps>(
       return () => window.removeEventListener("keydown", handler);
     }, [undo, redo]);
 
-    useEffect(() => { setDrawingPoints([]); }, [activeTool]);
+    useEffect(() => { setDrawingPoints([]); setBearingCursor(null); }, [activeTool]);
 
     useMapEvents({
       click(e) {
