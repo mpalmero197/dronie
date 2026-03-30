@@ -50,6 +50,7 @@ const DRAW_TOOLS: ToolDef[] = [
 const MEASURE_TOOLS: ToolDef[] = [
   { id: "measure-distance", icon: Ruler, label: "Measure Distance", shortcut: "D" },
   { id: "measure-area", icon: Pentagon, label: "Measure Area", shortcut: "A" },
+  { id: "bearing", icon: Compass, label: "Bearing Line", shortcut: "G" },
 ];
 
 const OVERLAYS = [
