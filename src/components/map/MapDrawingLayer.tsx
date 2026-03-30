@@ -240,6 +240,33 @@ const MapDrawingLayer = forwardRef<MapDrawingLayerRef, MapDrawingLayerProps>(
           <Polygon positions={drawingPoints} pathOptions={{ color: activeTool === "measure-area" ? "#e97316" : "#166534", fillOpacity: 0.15, dashArray: "8 4", weight: 2 }} />
         )}
 
+        {/* Bearing line with real-time tooltip */}
+        {activeTool === "bearing" && drawingPoints.length === 1 && bearingCursor && (() => {
+          const origin = drawingPoints[0];
+          const dist = haversineDistance(origin, bearingCursor);
+          const brg = bearingBetween(origin, bearingCursor);
+          const midLat = (origin[0] + bearingCursor[0]) / 2;
+          const midLng = (origin[1] + bearingCursor[1]) / 2;
+          return (
+            <>
+              <Polyline
+                positions={[origin, bearingCursor]}
+                pathOptions={{ color: "#dc2626", weight: 2.5, dashArray: "6 6" }}
+              />
+              <Marker
+                position={[midLat, midLng]}
+                icon={L.divIcon({
+                  className: "",
+                  html: `<div style="background:rgba(0,0,0,0.8);color:#fff;padding:3px 8px;border-radius:6px;font-size:11px;white-space:nowrap;transform:translate(-50%,-50%);pointer-events:none;font-weight:500">${formatDistance(dist)} · ${brg.toFixed(1)}° ${compassDirection(brg)}</div>`,
+                  iconSize: [0, 0],
+                  iconAnchor: [0, 0],
+                })}
+                interactive={false}
+              />
+            </>
+          );
+        })()}
+
         {shapes.map((shape) => {
           if (shape.type === "marker") {
             return (
