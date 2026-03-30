@@ -37,6 +37,7 @@ export const KEYBOARD_SHORTCUT_MAP: Record<string, DrawTool> = {
   c: "circle",
   d: "measure-distance",
   a: "measure-area",
+  g: "bearing",
 };
 
 const DRAW_TOOLS: ToolDef[] = [
