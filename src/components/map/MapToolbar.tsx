@@ -2,13 +2,13 @@ import { useState } from "react";
 import {
   MapPin, Ruler, Pentagon, Minus, Circle, Square,
   Layers, Code2, Camera, Leaf, Mountain, MousePointerClick, Plane, ShieldAlert,
-  ChevronDown, ChevronUp, Undo2, Redo2, Maximize, Bookmark,
+  ChevronDown, ChevronUp, Undo2, Redo2, Maximize, Bookmark, Compass,
 } from "lucide-react";
 import {
   Tooltip, TooltipContent, TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-export type DrawTool = "marker" | "polyline" | "polygon" | "rectangle" | "circle" | "measure-distance" | "measure-area" | "fetch-parcels" | "flight-plan" | "laanc-check" | null;
+export type DrawTool = "marker" | "polyline" | "polygon" | "rectangle" | "circle" | "measure-distance" | "measure-area" | "bearing" | "fetch-parcels" | "flight-plan" | "laanc-check" | null;
 
 interface MapToolbarProps {
   activeTool: DrawTool;
@@ -37,6 +37,7 @@ export const KEYBOARD_SHORTCUT_MAP: Record<string, DrawTool> = {
   c: "circle",
   d: "measure-distance",
   a: "measure-area",
+  g: "bearing",
 };
 
 const DRAW_TOOLS: ToolDef[] = [
@@ -50,6 +51,7 @@ const DRAW_TOOLS: ToolDef[] = [
 const MEASURE_TOOLS: ToolDef[] = [
   { id: "measure-distance", icon: Ruler, label: "Measure Distance", shortcut: "D" },
   { id: "measure-area", icon: Pentagon, label: "Measure Area", shortcut: "A" },
+  { id: "bearing", icon: Compass, label: "Bearing Line", shortcut: "G" },
 ];
 
 const OVERLAYS = [

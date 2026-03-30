@@ -4,6 +4,22 @@ import L from "leaflet";
 import { Trash2 } from "lucide-react";
 import type { DrawTool } from "./MapToolbar";
 
+function bearingBetween(p1: [number, number], p2: [number, number]): number {
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const toDeg = (r: number) => (r * 180) / Math.PI;
+  const dLng = toRad(p2[1] - p1[1]);
+  const lat1 = toRad(p1[0]);
+  const lat2 = toRad(p2[0]);
+  const x = Math.sin(dLng) * Math.cos(lat2);
+  const y = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+  return (toDeg(Math.atan2(x, y)) + 360) % 360;
+}
+
+function compassDirection(deg: number): string {
+  const dirs = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
+  return dirs[Math.round(deg / 22.5) % 16];
+}
+
 interface DrawnShape {
   id: string;
   type: "marker" | "polyline" | "polygon" | "rectangle" | "circle";
@@ -64,6 +80,7 @@ const MapDrawingLayer = forwardRef<MapDrawingLayerRef, MapDrawingLayerProps>(
     const [undoStack, setUndoStack] = useState<DrawnShape[][]>([]);
     const [redoStack, setRedoStack] = useState<DrawnShape[][]>([]);
     const [drawingPoints, setDrawingPoints] = useState<[number, number][]>([]);
+    const [bearingCursor, setBearingCursor] = useState<[number, number] | null>(null);
     const map = useMap();
 
     const pushUndo = useCallback((currentShapes: DrawnShape[]) => {
@@ -111,7 +128,7 @@ const MapDrawingLayer = forwardRef<MapDrawingLayerRef, MapDrawingLayerProps>(
       return () => window.removeEventListener("keydown", handler);
     }, [undo, redo]);
 
-    useEffect(() => { setDrawingPoints([]); }, [activeTool]);
+    useEffect(() => { setDrawingPoints([]); setBearingCursor(null); }, [activeTool]);
 
     useMapEvents({
       click(e) {
@@ -121,6 +138,21 @@ const MapDrawingLayer = forwardRef<MapDrawingLayerRef, MapDrawingLayerProps>(
         if (activeTool === "marker") {
           pushUndo(shapes);
           setShapes(prev => [...prev, { id: crypto.randomUUID(), type: "marker", positions: [pt], note: "" }]);
+          return;
+        }
+        if (activeTool === "bearing") {
+          if (drawingPoints.length === 0) {
+            setDrawingPoints([pt]);
+            setBearingCursor(null);
+          } else {
+            // Second click finalizes
+            const origin = drawingPoints[0];
+            const dist = haversineDistance(origin, pt);
+            const brg = bearingBetween(origin, pt);
+            onMeasurement?.(`${formatDistance(dist)} · ${brg.toFixed(1)}° ${compassDirection(brg)}`);
+            setDrawingPoints([]);
+            setBearingCursor(null);
+          }
           return;
         }
         if (activeTool === "measure-distance") {
@@ -165,6 +197,11 @@ const MapDrawingLayer = forwardRef<MapDrawingLayerRef, MapDrawingLayerProps>(
           return;
         }
       },
+      mousemove(e) {
+        if (activeTool === "bearing" && drawingPoints.length === 1) {
+          setBearingCursor([e.latlng.lat, e.latlng.lng]);
+        }
+      },
       dblclick(e) {
         if (activeTool === "polyline" && drawingPoints.length >= 2) {
           e.originalEvent.preventDefault();
@@ -202,6 +239,33 @@ const MapDrawingLayer = forwardRef<MapDrawingLayerRef, MapDrawingLayerProps>(
         {drawingPoints.length >= 3 && (activeTool === "polygon" || activeTool === "measure-area") && (
           <Polygon positions={drawingPoints} pathOptions={{ color: activeTool === "measure-area" ? "#e97316" : "#166534", fillOpacity: 0.15, dashArray: "8 4", weight: 2 }} />
         )}
+
+        {/* Bearing line with real-time tooltip */}
+        {activeTool === "bearing" && drawingPoints.length === 1 && bearingCursor && (() => {
+          const origin = drawingPoints[0];
+          const dist = haversineDistance(origin, bearingCursor);
+          const brg = bearingBetween(origin, bearingCursor);
+          const midLat = (origin[0] + bearingCursor[0]) / 2;
+          const midLng = (origin[1] + bearingCursor[1]) / 2;
+          return (
+            <>
+              <Polyline
+                positions={[origin, bearingCursor]}
+                pathOptions={{ color: "#dc2626", weight: 2.5, dashArray: "6 6" }}
+              />
+              <Marker
+                position={[midLat, midLng]}
+                icon={L.divIcon({
+                  className: "",
+                  html: `<div style="background:rgba(0,0,0,0.8);color:#fff;padding:3px 8px;border-radius:6px;font-size:11px;white-space:nowrap;transform:translate(-50%,-50%);pointer-events:none;font-weight:500">${formatDistance(dist)} · ${brg.toFixed(1)}° ${compassDirection(brg)}</div>`,
+                  iconSize: [0, 0],
+                  iconAnchor: [0, 0],
+                })}
+                interactive={false}
+              />
+            </>
+          );
+        })()}
 
         {shapes.map((shape) => {
           if (shape.type === "marker") {
