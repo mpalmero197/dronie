@@ -80,6 +80,7 @@ const MapDrawingLayer = forwardRef<MapDrawingLayerRef, MapDrawingLayerProps>(
     const [undoStack, setUndoStack] = useState<DrawnShape[][]>([]);
     const [redoStack, setRedoStack] = useState<DrawnShape[][]>([]);
     const [drawingPoints, setDrawingPoints] = useState<[number, number][]>([]);
+    const [bearingCursor, setBearingCursor] = useState<[number, number] | null>(null);
     const map = useMap();
 
     const pushUndo = useCallback((currentShapes: DrawnShape[]) => {
