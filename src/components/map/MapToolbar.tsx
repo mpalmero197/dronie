@@ -2,7 +2,7 @@ import { useState } from "react";
 import {
   MapPin, Ruler, Pentagon, Minus, Circle, Square,
   Layers, Code2, Camera, Leaf, Mountain, MousePointerClick, Plane, ShieldAlert,
-  ChevronDown, ChevronUp, Undo2, Redo2, Maximize, Bookmark,
+  ChevronDown, ChevronUp, Undo2, Redo2, Maximize, Bookmark, Compass,
 } from "lucide-react";
 import {
   Tooltip, TooltipContent, TooltipTrigger,
