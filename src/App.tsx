@@ -16,6 +16,7 @@ import ActiveJobs from "./pages/ActiveJobs.tsx";
 import PrivacyPolicy from "./pages/PrivacyPolicy.tsx";
 import TermsOfService from "./pages/TermsOfService.tsx";
 import CookieConsent from "./components/CookieConsent.tsx";
+import Subscription from "./pages/Subscription.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
