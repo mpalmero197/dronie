@@ -392,10 +392,16 @@ export default function ProjectDetail() {
       const res = await fetch(`https://${pid}.supabase.co/functions/v1/process-project`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}`, apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
-        body: JSON.stringify({ project_id: project.id, settings }),
+        body: JSON.stringify({ project_id: project.id, settings, subscription_tier: subscriptionTier }),
       });
       if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || "Failed"); }
-      toast({ title: "Processing started!", description: "Watch the pipeline steps update in real-time." });
+      const result = await res.json();
+      const priorityMsg = result.priority_processing
+        ? "Priority processing enabled — your project is at the front of the queue."
+        : result.queue_position > 0
+          ? `Your project is in position ${result.queue_position + 1} in the queue. Upgrade for priority processing.`
+          : "Watch the pipeline steps update in real-time.";
+      toast({ title: "Processing started!", description: priorityMsg });
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally {

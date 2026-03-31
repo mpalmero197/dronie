@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
 
   const userId = user.id;
 
-  const { project_id, settings } = await req.json();
+  const { project_id, settings, subscription_tier } = await req.json();
   if (!project_id) {
     return new Response(JSON.stringify({ error: "project_id required" }), {
       status: 400,
@@ -85,25 +85,69 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
   );
 
-  // Mark as processing
+  // Determine processing priority based on subscription tier and admin role
+  // Check if user is admin
+  const { data: roleData } = await serviceClient
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId)
+    .eq("role", "admin")
+    .maybeSingle();
+  const isAdmin = !!roleData;
+
+  let priority = 0; // free
+  if (isAdmin) priority = 99;
+  else if (subscription_tier === "enterprise") priority = 20;
+  else if (subscription_tier === "professional") priority = 10;
+
+  // Mark as queued/processing with priority
   await serviceClient
     .from("projects")
-    .update({ status: "processing", progress: 0 })
+    .update({ status: "processing", progress: 0, processing_priority: priority })
     .eq("id", project_id);
+
+  // Check queue position — count projects currently processing with higher priority
+  const { count: higherPriorityCount } = await serviceClient
+    .from("projects")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "processing")
+    .gt("processing_priority", priority)
+    .neq("id", project_id);
+
+  const queuePosition = (higherPriorityCount || 0);
+  const isPriority = priority >= 10;
 
   const webodmUrl = Deno.env.get("WEBODM_URL");
   const webodmToken = Deno.env.get("WEBODM_TOKEN");
   const useWebODM = !!(webodmUrl && webodmToken);
 
+  // Add a simulated queue delay for free-tier projects when there are higher-priority jobs
+  const queueDelayMs = (!isPriority && queuePosition > 0) ? Math.min(queuePosition * 5000, 30000) : 0;
+
   // Start background processing
   EdgeRuntime.waitUntil(
-    useWebODM
-      ? runWebODMProcessing(serviceClient, project_id, userId, webodmUrl!, webodmToken!, settings)
-      : runSimulatedProcessing(serviceClient, project_id, userId, settings)
+    (async () => {
+      if (queueDelayMs > 0) {
+        console.log(`[QUEUE] Free-tier project ${project_id} delayed ${queueDelayMs}ms (${queuePosition} higher-priority jobs ahead)`);
+        await sleep(queueDelayMs);
+      }
+      if (useWebODM) {
+        await runWebODMProcessing(serviceClient, project_id, userId, webodmUrl!, webodmToken!, settings);
+      } else {
+        await runSimulatedProcessing(serviceClient, project_id, userId, settings);
+      }
+    })()
   );
 
   return new Response(
-    JSON.stringify({ success: true, message: "Processing started", mode: useWebODM ? "webodm" : "simulated" }),
+    JSON.stringify({
+      success: true,
+      message: "Processing started",
+      mode: useWebODM ? "webodm" : "simulated",
+      priority,
+      queue_position: queuePosition,
+      priority_processing: isPriority,
+    }),
     { headers: { ...corsHeaders, "Content-Type": "application/json" } }
   );
 });
