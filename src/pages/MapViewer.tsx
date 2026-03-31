@@ -10,6 +10,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { supabase, Project } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { canUseFeature } from "@/lib/subscription-limits";
+import UpgradePrompt from "@/components/UpgradePrompt";
 import MapToolbar, { DrawTool, KEYBOARD_SHORTCUT_MAP } from "@/components/map/MapToolbar";
 import MapDrawingLayer, { MapDrawingLayerRef } from "@/components/map/MapDrawingLayer";
 import MapInfoPanel from "@/components/map/MapInfoPanel";
