@@ -107,6 +107,28 @@ export default function MapViewer() {
   const [undoRedoTick, setUndoRedoTick] = useState(0);
   const [laancResult, setLaancResult] = useState<LaancResult | null>(null);
   const [bookmarksOpen, setBookmarksOpen] = useState(false);
+  const [upgradePrompt, setUpgradePrompt] = useState<{ feature: string; description: string } | null>(null);
+
+  const { subscriptionTier, isAdmin } = useAuth();
+  const hasPro = isAdmin || canUseFeature(subscriptionTier, "priorityProcessing");
+
+  const gatedToolActivate = useCallback((tool: DrawTool) => {
+    if ((tool === "flight-plan" || tool === "laanc-check") && !hasPro) {
+      setUpgradePrompt({
+        feature: tool === "flight-plan" ? "Flight Planner" : "LAANC Checker",
+        description: tool === "flight-plan"
+          ? "The Flight Planner lets you design automated survey patterns, export mission files, and generate PDF briefings. Upgrade to Professional to unlock this feature."
+          : "The LAANC Checker verifies FAA airspace authorization at any location on the map. Upgrade to Professional to unlock this feature.",
+      });
+      return;
+    }
+    if (tool === "flight-plan") {
+      setFlightPlannerOpen(v => !v);
+      setActiveTool("polygon");
+      return;
+    }
+    setActiveTool(tool);
+  }, [hasPro]);
 
   const isDemo = projectId === "demo";
   const prevOverlayRef = useRef<string | null>(null);
