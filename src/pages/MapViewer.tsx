@@ -371,14 +371,7 @@ export default function MapViewer() {
         {/* Toolbar */}
         <MapToolbar
           activeTool={activeTool}
-          onToolChange={(tool) => {
-            if (tool === "flight-plan") {
-              setFlightPlannerOpen(v => !v);
-              setActiveTool(v => v === "flight-plan" ? "polygon" : "polygon");
-              return;
-            }
-            setActiveTool(tool);
-          }}
+          onToolChange={gatedToolActivate}
           onExportPng={exportPng}
           onEmbedCode={() => setShowEmbed(true)}
           activeOverlay={activeOverlay}
@@ -391,6 +384,15 @@ export default function MapViewer() {
           isFullscreen={isFullscreen}
           onToggleBookmarks={() => setBookmarksOpen(v => !v)}
           bookmarksOpen={bookmarksOpen}
+        />
+
+        {/* Upgrade Prompt */}
+        <UpgradePrompt
+          open={!!upgradePrompt}
+          onClose={() => setUpgradePrompt(null)}
+          feature={upgradePrompt?.feature ?? ""}
+          description={upgradePrompt?.description ?? ""}
+          requiredTier="professional"
         />
 
         {/* Layer Switcher */}
