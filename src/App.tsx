@@ -16,6 +16,7 @@ import ActiveJobs from "./pages/ActiveJobs.tsx";
 import PrivacyPolicy from "./pages/PrivacyPolicy.tsx";
 import TermsOfService from "./pages/TermsOfService.tsx";
 import CookieConsent from "./components/CookieConsent.tsx";
+import Subscription from "./pages/Subscription.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -38,6 +39,7 @@ const App = () => (
             <Route path="/fleet" element={<FleetManagement />} />
             <Route path="/jobs" element={<ActiveJobs />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/subscription" element={<Subscription />} />
             <Route path="/terms" element={<TermsOfService />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
