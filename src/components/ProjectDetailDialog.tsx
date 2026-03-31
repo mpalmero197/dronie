@@ -103,7 +103,7 @@ export default function ProjectDetailDialog({
   onClose: () => void;
   onProjectUpdated: (p: Project) => void;
 }) {
-  const { user } = useAuth();
+  const { user, subscriptionTier } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -294,7 +294,7 @@ export default function ProjectDetailDialog({
             Authorization: `Bearer ${session.access_token}`,
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
           },
-          body: JSON.stringify({ project_id: project.id }),
+          body: JSON.stringify({ project_id: project.id, subscription_tier: subscriptionTier }),
         }
       );
 
@@ -303,12 +303,14 @@ export default function ProjectDetailDialog({
         throw new Error(err.error || "Failed to start processing");
       }
 
+      const result = await res.json();
       const updated: Project = { ...project, status: "processing", progress: 0 };
       onProjectUpdated(updated);
-      toast({
-        title: "Processing started!",
-        description: "Your project is now in the processing queue. Progress will update in real-time.",
-      });
+
+      const priorityMsg = result.priority_processing
+        ? "Priority processing enabled — your project is at the front of the queue."
+        : "Your project is now in the processing queue. Progress will update in real-time.";
+      toast({ title: "Processing started!", description: priorityMsg });
       onClose();
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });

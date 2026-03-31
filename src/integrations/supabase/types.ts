@@ -280,6 +280,7 @@ export type Database = {
           name: string
           outputs: string[] | null
           outputs_urls: Json | null
+          processing_priority: number
           progress: number
           status: string
           updated_at: string
@@ -294,6 +295,7 @@ export type Database = {
           name: string
           outputs?: string[] | null
           outputs_urls?: Json | null
+          processing_priority?: number
           progress?: number
           status?: string
           updated_at?: string
@@ -308,6 +310,7 @@ export type Database = {
           name?: string
           outputs?: string[] | null
           outputs_urls?: Json | null
+          processing_priority?: number
           progress?: number
           status?: string
           updated_at?: string
