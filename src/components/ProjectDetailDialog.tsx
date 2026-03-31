@@ -103,7 +103,7 @@ export default function ProjectDetailDialog({
   onClose: () => void;
   onProjectUpdated: (p: Project) => void;
 }) {
-  const { user } = useAuth();
+  const { user, subscriptionTier } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 

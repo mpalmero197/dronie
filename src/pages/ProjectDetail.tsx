@@ -182,7 +182,7 @@ function UploadRow({ item, onDismiss }: { item: UploadItem; onDismiss: () => voi
 
 export default function ProjectDetail() {
   const { projectId } = useParams<{ projectId: string }>();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, subscriptionTier } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
