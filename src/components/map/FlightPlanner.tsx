@@ -366,6 +366,16 @@ export default function FlightPlanner({
     toast({ title: "CSV exported" });
   }, [result, params.altitude, perWpAltitudes, toast]);
 
+  const downloadLitchi = useCallback(() => {
+    if (!result) return;
+    const csv = generateLitchiCSV(result.waypoints, params.altitude, params.speed, params.heading, perWpAltitudes);
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = "litchi-waypoints.csv"; a.click();
+    URL.revokeObjectURL(url);
+    toast({ title: "Litchi CSV exported", description: "Import into Litchi Mission Hub or app" });
+  }, [result, params, perWpAltitudes, toast]);
+
   const downloadPDF = useCallback(async () => {
     if (!result || !stats) return;
     toast({ title: "Generating PDF…", description: "Capturing map and building report" });
