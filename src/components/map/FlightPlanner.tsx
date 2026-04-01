@@ -160,6 +160,51 @@ function generateCSV(waypoints: [number, number][], altitude: number, perWpAltit
   return csv;
 }
 
+function generateLitchiCSV(
+  waypoints: [number, number][],
+  altitude: number,
+  speed: number,
+  heading: number,
+  perWpAltitudes?: number[],
+): string {
+  // DJI Litchi waypoint CSV format
+  // Reference: https://flylitchi.com/hub (Mission Hub CSV export)
+  const header = [
+    "latitude", "longitude", "altitude(m)", "heading(deg)", "curvesize(m)",
+    "rotationdir", "gimbalmode", "gimbalpitchangle", "actiontype1",
+    "actionparam1", "actiontype2", "actionparam2", "actiontype3",
+    "actionparam3", "actiontype4", "actionparam4", "actiontype5",
+    "actionparam5", "actiontype6", "actionparam6", "actiontype7",
+    "actionparam7", "actiontype8", "actionparam8", "actiontype9",
+    "actionparam9", "actiontype10", "actionparam10", "actiontype11",
+    "actionparam11", "actiontype12", "actionparam12", "actiontype13",
+    "actionparam13", "actiontype14", "actionparam14", "actiontype15",
+    "actionparam15", "altitudemode", "speed(m/s)", "poi_latitude",
+    "poi_longitude", "poi_altitude(m)", "poi_altitudemode",
+    "photo_timeinterval", "photo_distinterval",
+  ].join(",");
+
+  const rows = waypoints.map((w, i) => {
+    const alt = perWpAltitudes ? perWpAltitudes[i] : altitude;
+    const altMode = perWpAltitudes ? 1 : 0; // 0 = relative (AGL), 1 = absolute (MSL)
+    // actiontype 1 = take photo; gimbalmode 0 = disabled
+    return [
+      w[0].toFixed(7), w[1].toFixed(7), alt.toFixed(1), heading.toFixed(0), "0.2",
+      "0", "0", "-90",
+      "1", "0",   // action1: take photo
+      "-1", "0", "-1", "0", "-1", "0", "-1", "0",
+      "-1", "0", "-1", "0", "-1", "0", "-1", "0",
+      "-1", "0", "-1", "0", "-1", "0", "-1", "0",
+      "-1", "0",
+      altMode.toString(), speed.toFixed(1),
+      "0", "0", "0", "0",
+      "-1", "-1",
+    ].join(",");
+  });
+
+  return header + "\n" + rows.join("\n") + "\n";
+}
+
 const homeIcon = new L.DivIcon({
   className: "home-marker",
   html: `<div style="width:24px;height:24px;border-radius:50%;background:#22c55e;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center">
