@@ -1,42 +1,41 @@
 
 
-# Improve LAANC Checker Error Handling
+## Verifying the Simulated Processing Pipeline
 
-## Current State
+This is a manual verification task — you need to test the end-to-end flow in the live preview. Here are the exact steps:
 
-The LAANC checker has basic error handling: a `try/catch` that silently falls back to "uncontrolled" on any failure, and ignores non-OK HTTP responses (just proceeds with empty zones). Problems:
+### Steps to Test
 
-1. **Non-OK responses are silent** — 401, 403, 429, 500 all treated as "no zones found" (misleading)
-2. **Malformed JSON not handled** — `res.json()` could throw inside the `try` but the catch gives a generic message
-3. **No timeout** — request could hang indefinitely
-4. **No retry mechanism** — transient failures immediately show error
-5. **Error result masquerades as "uncontrolled"** — user can't distinguish API failure from genuinely uncontrolled airspace (dangerous for safety)
+1. **Sign in** at `/auth` (create an account if needed)
+2. **Create a project** from the Dashboard — give it any name
+3. **Navigate to the project detail page** (`/project/:id`)
+4. **Upload drone images** — drag JPEG files into the "Drone Images" upload area
+   - For best results, use real drone photos with GPS EXIF data (the pipeline extracts coordinates)
+   - Any JPEGs will work for the basic flow; GPS-tagged ones will produce meaningful contours/DSM
+5. **Click "Start Processing"** — watch the 7 pipeline steps animate through:
+   - Image Alignment → Dense Point Cloud → Mesh → Orthomosaic → DSM/DTM → Contours → Final Export
+6. **Wait for completion** (~10-15 seconds in simulated mode)
+7. **Verify outputs** — once status is "complete", the Outputs section should list downloadable files:
+   - Orthomosaic (PNG)
+   - DSM / DTM (ASC)
+   - Contours (GeoJSON)
+   - Flight Report (PDF)
+8. **Click download links** to confirm each file downloads successfully
 
-## Implementation
+### What the Pipeline Generates
 
-**Single file change: `src/components/map/LaancChecker.tsx`**
+| Output | Format | Content |
+|--------|--------|---------|
+| Orthomosaic | PNG | 1×1 placeholder image |
+| DSM / DTM | ASCII Grid (.asc) | 50×50 elevation grid based on GPS bbox |
+| Contours | GeoJSON | 5-20 contour lines across the bbox |
+| Flight Report | PDF | Text report with GPS coords, area, camera info |
 
-### Add an "error" authorization status
-- Add `"error"` to the `LaancResult.authorization` union type
-- Add an `error` entry to `statusConfig` with a distinct icon (`AlertTriangle`), orange/gray styling, and "API Error" label
-- This lets the UI and PDF clearly distinguish errors from real results
+### Known Limitations
 
-### Add fetch timeout
-- Use `AbortController` with a 10-second timeout so requests don't hang
+- Without WebODM configured, all outputs are simulated/sample data
+- The orthomosaic is a 1×1 pixel placeholder PNG (not a real composite)
+- Free-tier projects may have a brief queue delay if other projects are processing
 
-### Handle non-OK HTTP responses explicitly
-- Check `res.ok`; if false, throw with status code info (e.g., "API returned 429")
-- Handle rate limiting (429) with a specific user-friendly message
-
-### Handle malformed JSON
-- Wrap `res.json()` in its own try/catch to give a clear "unexpected response format" message
-
-### Add single retry for transient failures
-- On network error or 5xx, retry once after a 1-second delay before showing the error
-
-### Show toast on error
-- Import `toast` from hooks and show a warning toast so the error is noticed even if the panel is off-screen
-
-### Update error result to use `"error"` status
-- Instead of pretending the result is `"uncontrolled"`, set `authorization: "error"` with `maxAutoAltFt: 0` — this prevents pilots from mistakenly thinking they're cleared to fly
+Would you like me to implement this test, or shall I proceed with something else?
 
