@@ -22,7 +22,7 @@ export interface Project {
   progress: number;
   outputs: string[];
   outputs_urls: Record<string, string> | null;
-  gps_points: Array<{ lat: number; lng: number; alt: number | null; camera: string | null; date: string | null }> | null;
+  gps_points: unknown;
   created_at: string;
   updated_at: string;
 }
