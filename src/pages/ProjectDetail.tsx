@@ -7,6 +7,7 @@ import {
   AlertCircle, X, ChevronRight, Sliders, Layers,
   Mountain, Grid3X3, Ruler, FileType, MapPin, Upload,
 } from "lucide-react";
+import GpsMapPreview from "@/components/project/GpsMapPreview";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
