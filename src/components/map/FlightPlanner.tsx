@@ -6,6 +6,7 @@ import {
   Mountain, Save, FolderOpen, Trash2, Loader2, FileText,
   CircleDot, Route, Compass,
 } from "lucide-react";
+import ElevationProfileChart from "@/components/map/ElevationProfileChart";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
@@ -779,20 +780,30 @@ export default function FlightPlanner({
               )}
 
               {terrainData && params.terrainFollow && (
-                <div className="grid grid-cols-3 gap-1 text-[10px]">
-                  <div className="px-2 py-1 rounded bg-primary/10 text-center">
-                    <span className="text-muted-foreground block">Min</span>
-                    <span className="font-semibold text-foreground">{terrainData.minElev.toFixed(0)}m</span>
+                <>
+                  <div className="grid grid-cols-3 gap-1 text-[10px]">
+                    <div className="px-2 py-1 rounded bg-primary/10 text-center">
+                      <span className="text-muted-foreground block">Min</span>
+                      <span className="font-semibold text-foreground">{terrainData.minElev.toFixed(0)}m</span>
+                    </div>
+                    <div className="px-2 py-1 rounded bg-accent/10 text-center">
+                      <span className="text-muted-foreground block">Max</span>
+                      <span className="font-semibold text-foreground">{terrainData.maxElev.toFixed(0)}m</span>
+                    </div>
+                    <div className="px-2 py-1 rounded bg-destructive/10 text-center">
+                      <span className="text-muted-foreground block">Δ</span>
+                      <span className="font-semibold text-foreground">{(terrainData.maxElev - terrainData.minElev).toFixed(0)}m</span>
+                    </div>
                   </div>
-                  <div className="px-2 py-1 rounded bg-accent/10 text-center">
-                    <span className="text-muted-foreground block">Max</span>
-                    <span className="font-semibold text-foreground">{terrainData.maxElev.toFixed(0)}m</span>
-                  </div>
-                  <div className="px-2 py-1 rounded bg-destructive/10 text-center">
-                    <span className="text-muted-foreground block">Δ</span>
-                    <span className="font-semibold text-foreground">{(terrainData.maxElev - terrainData.minElev).toFixed(0)}m</span>
-                  </div>
-                </div>
+                  {result && (
+                    <ElevationProfileChart
+                      waypoints={result.waypoints}
+                      elevations={terrainData.elevations}
+                      altitude={params.altitude}
+                      terrainFollow={params.terrainFollow}
+                    />
+                  )}
+                </>
               )}
 
               {/* Altitude */}
