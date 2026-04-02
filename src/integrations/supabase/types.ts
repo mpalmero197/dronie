@@ -275,6 +275,7 @@ export type Database = {
           area_ha: number | null
           created_at: string
           description: string | null
+          gps_points: Json | null
           id: string
           image_count: number
           name: string
@@ -290,6 +291,7 @@ export type Database = {
           area_ha?: number | null
           created_at?: string
           description?: string | null
+          gps_points?: Json | null
           id?: string
           image_count?: number
           name: string
@@ -305,6 +307,7 @@ export type Database = {
           area_ha?: number | null
           created_at?: string
           description?: string | null
+          gps_points?: Json | null
           id?: string
           image_count?: number
           name?: string

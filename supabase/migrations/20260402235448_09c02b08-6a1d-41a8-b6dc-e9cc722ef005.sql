@@ -1,0 +1,1 @@
+ALTER TABLE public.projects ADD COLUMN gps_points jsonb DEFAULT NULL;

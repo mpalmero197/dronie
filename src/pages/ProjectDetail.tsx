@@ -7,6 +7,7 @@ import {
   AlertCircle, X, ChevronRight, Sliders, Layers,
   Mountain, Grid3X3, Ruler, FileType, MapPin, Upload,
 } from "lucide-react";
+import GpsMapPreview from "@/components/project/GpsMapPreview";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
@@ -484,6 +485,11 @@ export default function ProjectDetail() {
           />
           {savingDesc && <p className="text-xs text-muted-foreground mt-1">Saving…</p>}
         </div>
+
+        {/* GPS Map Preview */}
+        {project.gps_points && Array.isArray(project.gps_points) && (project.gps_points as any[]).length > 0 && (
+          <GpsMapPreview gpsPoints={project.gps_points as any} />
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left: Pipeline + Outputs */}

@@ -611,6 +611,7 @@ async function runSimulatedProcessing(
         area_ha: parseFloat(areaHa.toFixed(1)),
         outputs: ["Orthomosaic", "DSM", "DTM", "Contours GeoJSON", "Flight Report PDF"],
         outputs_urls: outputsUrls,
+        gps_points: gpsPoints.length > 0 ? gpsPoints : null,
       })
       .eq("id", projectId);
   } catch (err: any) {
