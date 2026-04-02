@@ -1,41 +1,37 @@
 
 
-## Verifying the Simulated Processing Pipeline
+## 2D Map Preview for Project Detail Page
 
-This is a manual verification task — you need to test the end-to-end flow in the live preview. Here are the exact steps:
+### Overview
+Add a Leaflet map to the project detail page that plots GPS coordinates extracted from uploaded drone images. The map will appear between the description and the main grid, showing markers for each image location and a polygon/bounds overlay.
 
-### Steps to Test
+### Changes Required
 
-1. **Sign in** at `/auth` (create an account if needed)
-2. **Create a project** from the Dashboard — give it any name
-3. **Navigate to the project detail page** (`/project/:id`)
-4. **Upload drone images** — drag JPEG files into the "Drone Images" upload area
-   - For best results, use real drone photos with GPS EXIF data (the pipeline extracts coordinates)
-   - Any JPEGs will work for the basic flow; GPS-tagged ones will produce meaningful contours/DSM
-5. **Click "Start Processing"** — watch the 7 pipeline steps animate through:
-   - Image Alignment → Dense Point Cloud → Mesh → Orthomosaic → DSM/DTM → Contours → Final Export
-6. **Wait for completion** (~10-15 seconds in simulated mode)
-7. **Verify outputs** — once status is "complete", the Outputs section should list downloadable files:
-   - Orthomosaic (PNG)
-   - DSM / DTM (ASC)
-   - Contours (GeoJSON)
-   - Flight Report (PDF)
-8. **Click download links** to confirm each file downloads successfully
+**1. Database: Add `gps_points` JSONB column to `projects` table**
+- Migration to add a `gps_points` column (JSONB, nullable) storing the extracted GPS array from processing
+- Format: `[{lat, lng, alt, camera, date}, ...]`
 
-### What the Pipeline Generates
+**2. Edge function: Save GPS points after extraction**
+- In `supabase/functions/process-project/index.ts`, include `gps_points` in the final project update (alongside `outputs`, `outputs_urls`, etc.)
 
-| Output | Format | Content |
-|--------|--------|---------|
-| Orthomosaic | PNG | 1×1 placeholder image |
-| DSM / DTM | ASCII Grid (.asc) | 50×50 elevation grid based on GPS bbox |
-| Contours | GeoJSON | 5-20 contour lines across the bbox |
-| Flight Report | PDF | Text report with GPS coords, area, camera info |
+**3. Update `Project` type in `src/lib/supabase.ts`**
+- Add `gps_points` field to the `Project` interface
 
-### Known Limitations
+**4. New component: `src/components/project/GpsMapPreview.tsx`**
+- Leaflet map (~200px tall) using OpenStreetMap tiles
+- Plots markers for each GPS point with popup showing lat/lng/alt
+- Auto-fits bounds to show all points
+- Shows a convex hull polygon connecting the outermost points
+- Displays point count and estimated area in a small overlay
+- Handles empty state gracefully (hidden when no GPS data)
 
-- Without WebODM configured, all outputs are simulated/sample data
-- The orthomosaic is a 1×1 pixel placeholder PNG (not a real composite)
-- Free-tier projects may have a brief queue delay if other projects are processing
+**5. Integrate into `ProjectDetail.tsx`**
+- Import and render `GpsMapPreview` after the description section, before the main grid
+- Pass `project.gps_points` as props
+- Only render when GPS data exists (after processing or if coordinates are available)
 
-Would you like me to implement this test, or shall I proceed with something else?
+### Technical Notes
+- Leaflet is already used in the project (MapViewer page), so no new dependencies needed
+- The map will use the same tile layer as the main map viewer
+- GPS points are extracted during processing; the map only appears once processing has completed and GPS data is stored
 
