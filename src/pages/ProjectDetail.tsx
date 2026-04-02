@@ -486,6 +486,11 @@ export default function ProjectDetail() {
           {savingDesc && <p className="text-xs text-muted-foreground mt-1">Saving…</p>}
         </div>
 
+        {/* GPS Map Preview */}
+        {project.gps_points && Array.isArray(project.gps_points) && (project.gps_points as any[]).length > 0 && (
+          <GpsMapPreview gpsPoints={project.gps_points as any} />
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left: Pipeline + Outputs */}
           <div className="lg:col-span-2 space-y-6">
