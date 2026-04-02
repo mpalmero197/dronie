@@ -6,6 +6,7 @@ import {
   Mountain, Save, FolderOpen, Trash2, Loader2, FileText,
   CircleDot, Route, Compass,
 } from "lucide-react";
+import ElevationProfileChart from "@/components/map/ElevationProfileChart";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
