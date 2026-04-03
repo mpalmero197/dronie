@@ -504,6 +504,11 @@ export default function Dashboard() {
             <Link to="/" className="lg:hidden">
               <ArrowLeft className="w-5 h-5 text-muted-foreground hover:text-foreground transition-colors" />
             </Link>
+            {/* Mobile tier badge */}
+            <div className={`lg:hidden flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold ${isSubscribed ? "bg-accent/15 text-accent border border-accent/20" : "bg-secondary text-muted-foreground border border-border"}`}>
+              <Zap className="w-3 h-3" />
+              {tierLimits.tierLabel}
+            </div>
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="font-display font-700 text-foreground">
