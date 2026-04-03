@@ -1,37 +1,34 @@
 
 
-## 2D Map Preview for Project Detail Page
+## Verify Free-Tier Limits & Upgrade Prompts
 
-### Overview
-Add a Leaflet map to the project detail page that plots GPS coordinates extracted from uploaded drone images. The map will appear between the description and the main grid, showing markers for each image location and a polygon/bounds overlay.
+This is a **manual verification task** — you need to test it in the live preview yourself.
 
-### Changes Required
+### Steps to Test
 
-**1. Database: Add `gps_points` JSONB column to `projects` table**
-- Migration to add a `gps_points` column (JSONB, nullable) storing the extracted GPS array from processing
-- Format: `[{lat, lng, alt, camera, date}, ...]`
+1. **Sign up as a new user** at `/auth` (new accounts default to free tier with `pilot` role, no subscription)
+2. **Go to Dashboard** — verify:
+   - Tier label shows "Pilot (Free)"
+   - Projects remaining counter shows "3 remaining this month"
+   - Storage limit shows 1 GB
+3. **Create 3 projects** — after the 3rd, try creating a 4th and verify the **Upgrade Prompt dialog** appears with the lock icon and "View Plans" button
+4. **Check feature gates** — on a project detail page, look for any locked features (share links, point cloud, contour export, priority processing) that should show `UpgradeBanner` or trigger `UpgradePrompt`
+5. **Verify image limit** — free tier allows 500 images per project; uploading more should be blocked or warned
 
-**2. Edge function: Save GPS points after extraction**
-- In `supabase/functions/process-project/index.ts`, include `gps_points` in the final project update (alongside `outputs`, `outputs_urls`, etc.)
+### What to Look For
 
-**3. Update `Project` type in `src/lib/supabase.ts`**
-- Add `gps_points` field to the `Project` interface
+| Area | Expected for Free Tier |
+|------|----------------------|
+| Projects/month | 3 limit, counter visible |
+| Storage | 1 GB cap |
+| Images/project | 500 max |
+| Share links | Locked |
+| Point cloud | Locked |
+| Priority processing | Disabled |
+| Upgrade prompt | Appears when hitting limits |
+| "View Plans" button | Navigates to `/#pricing` |
 
-**4. New component: `src/components/project/GpsMapPreview.tsx`**
-- Leaflet map (~200px tall) using OpenStreetMap tiles
-- Plots markers for each GPS point with popup showing lat/lng/alt
-- Auto-fits bounds to show all points
-- Shows a convex hull polygon connecting the outermost points
-- Displays point count and estimated area in a small overlay
-- Handles empty state gracefully (hidden when no GPS data)
+### No Code Changes Needed
 
-**5. Integrate into `ProjectDetail.tsx`**
-- Import and render `GpsMapPreview` after the description section, before the main grid
-- Pass `project.gps_points` as props
-- Only render when GPS data exists (after processing or if coordinates are available)
-
-### Technical Notes
-- Leaflet is already used in the project (MapViewer page), so no new dependencies needed
-- The map will use the same tile layer as the main map viewer
-- GPS points are extracted during processing; the map only appears once processing has completed and GPS data is stored
+The subscription limits logic in `subscription-limits.ts` and upgrade prompts in `UpgradePrompt.tsx` are already implemented. The `AuthContext` defaults to `subscriptionTier: null` (mapped to "free") for users without a Stripe subscription. This is purely a manual QA check.
 
