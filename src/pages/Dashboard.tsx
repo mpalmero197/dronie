@@ -541,7 +541,7 @@ export default function Dashboard() {
 
         <div className="flex-1 p-6 space-y-6">
           {sidebarView === "analytics" && <AnalyticsPanel projects={projects} />}
-          {sidebarView === "storage" && <StoragePanel projects={projects} />}
+          {sidebarView === "storage" && <StoragePanel projects={projects} tierLimits={tierLimits} />}
 
           {sidebarView === "projects" && (
             <>
