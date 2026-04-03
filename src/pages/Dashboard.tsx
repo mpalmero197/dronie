@@ -108,12 +108,12 @@ function AnalyticsPanel({ projects }: { projects: Project[] }) {
   );
 }
 
-function StoragePanel({ projects }: { projects: Project[] }) {
+function StoragePanel({ projects, tierLimits }: { projects: Project[]; tierLimits: TierLimits }) {
   const totalImages = projects.reduce((sum, p) => sum + (p.image_count || 0), 0);
   // Estimate: avg 8MB per image
   const estimatedMB = totalImages * 8;
   const usedGB = (estimatedMB / 1024).toFixed(2);
-  const limitGB = 50;
+  const limitGB = tierLimits.storageGB === Infinity ? 9999 : tierLimits.storageGB;
   const pct = Math.min((parseFloat(usedGB) / limitGB) * 100, 100);
 
   return (
@@ -126,8 +126,8 @@ function StoragePanel({ projects }: { projects: Project[] }) {
       <div className="bg-card rounded-xl p-5 border border-border space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <p className="font-semibold text-foreground">{usedGB} GB <span className="text-muted-foreground font-normal text-sm">of {limitGB} GB used</span></p>
-            <p className="text-xs text-muted-foreground mt-0.5">Professional plan · {Math.round(pct)}% used</p>
+            <p className="font-semibold text-foreground">{usedGB} GB <span className="text-muted-foreground font-normal text-sm">of {tierLimits.storageGB === Infinity ? "∞" : `${limitGB} GB`} used</span></p>
+            <p className="text-xs text-muted-foreground mt-0.5">{tierLimits.tierLabel} plan · {Math.round(pct)}% used</p>
           </div>
           <HardDrive className="w-8 h-8 text-primary opacity-60" />
         </div>
@@ -144,7 +144,7 @@ function StoragePanel({ projects }: { projects: Project[] }) {
           { label: "Drone Images", icon: ImageIcon, value: `${totalImages.toLocaleString()} files`, sub: `~${usedGB} GB` },
           { label: "Flight Plans", icon: FileArchive, value: `${projects.length} KML/KMZ`, sub: "< 1 MB" },
           { label: "Output Files", icon: FolderOpen, value: `${projects.filter(p => p.status === "complete").length} projects`, sub: "GeoTIFF · LAZ · SHP" },
-          { label: "Available", icon: HardDrive, value: `${(limitGB - parseFloat(usedGB)).toFixed(1)} GB`, sub: "Free space" },
+          { label: "Available", icon: HardDrive, value: tierLimits.storageGB === Infinity ? "∞" : `${(limitGB - parseFloat(usedGB)).toFixed(1)} GB`, sub: "Free space" },
         ].map((item) => {
           const Icon = item.icon;
           return (
