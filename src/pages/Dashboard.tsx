@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase, Project } from "@/lib/supabase";
-import { getTierLimits, canCreateProject, getProjectsRemaining } from "@/lib/subscription-limits";
+import { getTierLimits, canCreateProject, getProjectsRemaining, TierLimits } from "@/lib/subscription-limits";
 import UpgradePrompt from "@/components/UpgradePrompt";
 import { useToast } from "@/hooks/use-toast";
 
