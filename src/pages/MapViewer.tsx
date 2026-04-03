@@ -138,7 +138,12 @@ export default function MapViewer() {
   useEffect(() => {
     if (activeTool === "laanc-check") {
       prevOverlayRef.current = activeOverlay;
-      setActiveOverlay("airspace");
+      if (activeOverlay !== "airspace") {
+        setActiveOverlay("airspace");
+        toast("Airspace overlay enabled", {
+          description: "Airspace zones are now visible on the map for your LAANC check.",
+        });
+      }
     } else {
       if (activeOverlay === "airspace" && prevOverlayRef.current !== "airspace") {
         setActiveOverlay(prevOverlayRef.current);
