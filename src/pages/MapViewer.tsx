@@ -141,7 +141,7 @@ export default function MapViewer() {
       prevOverlayRef.current = activeOverlay;
       if (activeOverlay !== "airspace") {
         setActiveOverlay("airspace");
-        toast("Airspace overlay enabled", {
+        sonnerToast("Airspace overlay enabled", {
           description: "Airspace zones are now visible on the map for your LAANC check.",
         });
       }
