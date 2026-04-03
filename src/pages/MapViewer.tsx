@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { supabase, Project } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { toast as sonnerToast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { canUseFeature } from "@/lib/subscription-limits";
 import UpgradePrompt from "@/components/UpgradePrompt";
@@ -138,7 +139,12 @@ export default function MapViewer() {
   useEffect(() => {
     if (activeTool === "laanc-check") {
       prevOverlayRef.current = activeOverlay;
-      setActiveOverlay("airspace");
+      if (activeOverlay !== "airspace") {
+        setActiveOverlay("airspace");
+        sonnerToast("Airspace overlay enabled", {
+          description: "Airspace zones are now visible on the map for your LAANC check.",
+        });
+      }
     } else {
       if (activeOverlay === "airspace" && prevOverlayRef.current !== "airspace") {
         setActiveOverlay(prevOverlayRef.current);
