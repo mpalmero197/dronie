@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import html2canvas from "html2canvas";
 import { generateMissionPDF } from "@/lib/generateMissionPDF";
+import { generateDJIFlyKMZ } from "@/lib/generateDJIFlyKMZ";
 import {
   haversineDistance, polygonArea, generateLawnmowerPath,
   generatePerimeterPath, generateOrbitPath, generateCorridorPath, calculateGSD,
@@ -376,6 +377,27 @@ export default function FlightPlanner({
     URL.revokeObjectURL(url);
     toast({ title: "Litchi CSV exported", description: "Import into Litchi Mission Hub or app" });
   }, [result, params, perWpAltitudes, toast]);
+
+  const downloadDJIFly = useCallback(async () => {
+    if (!result) return;
+    try {
+      const blob = await generateDJIFlyKMZ({
+        waypoints: result.waypoints,
+        altitude: params.altitude,
+        speed: params.speed,
+        heading: params.heading,
+        name: "Flight Plan",
+        homePosition: homePosition ?? undefined,
+        perWpAltitudes,
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href = url; a.download = "dji-fly-mission.kmz"; a.click();
+      URL.revokeObjectURL(url);
+      toast({ title: "DJI Fly KMZ exported", description: "Import into DJI Fly app (Mini 4 Pro, Air 3, Mavic 3)" });
+    } catch {
+      toast({ title: "KMZ export failed", variant: "destructive" });
+    }
+  }, [result, params, homePosition, perWpAltitudes, toast]);
 
   const downloadPDF = useCallback(async () => {
     if (!result || !stats) return;
@@ -946,6 +968,11 @@ export default function FlightPlanner({
                 <Button size="sm" variant="outline" onClick={downloadLitchi} className="flex-1 h-8 text-xs gap-1.5">
                   <Download className="w-3 h-3" /> Litchi CSV
                 </Button>
+                <Button size="sm" variant="outline" onClick={downloadDJIFly} className="flex-1 h-8 text-xs gap-1.5">
+                  <Download className="w-3 h-3" /> DJI Fly
+                </Button>
+              </div>
+              <div className="flex gap-2">
                 <Button size="sm" variant="outline" onClick={downloadPDF} className="flex-1 h-8 text-xs gap-1.5">
                   <FileText className="w-3 h-3" /> PDF Report
                 </Button>
