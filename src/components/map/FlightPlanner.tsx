@@ -62,6 +62,8 @@ interface FlightParams {
   crossHeadingOffset: number;
   droneModelIdx: number;
   terrainFollow: boolean;
+  gimbalPitchStart: number;
+  gimbalPitchEnd: number;
 }
 
 const DEFAULT_PARAMS: FlightParams = {
@@ -74,6 +76,8 @@ const DEFAULT_PARAMS: FlightParams = {
   crossHeadingOffset: 90,
   droneModelIdx: 0,
   terrainFollow: false,
+  gimbalPitchStart: -90,
+  gimbalPitchEnd: -90,
 };
 
 interface SavedPlan {
@@ -168,6 +172,8 @@ function generateLitchiCSV(
   speed: number,
   heading: number,
   perWpAltitudes?: number[],
+  gimbalPitchStart: number = -90,
+  gimbalPitchEnd: number = -90,
 ): string {
   // DJI Litchi waypoint CSV format
   // Reference: https://flylitchi.com/hub (Mission Hub CSV export)
@@ -186,13 +192,19 @@ function generateLitchiCSV(
     "photo_timeinterval", "photo_distinterval",
   ].join(",");
 
+  // gimbalmode: 0 = disabled, 1 = focus POI, 2 = interpolate
+  const useInterpolation = gimbalPitchStart !== gimbalPitchEnd;
+  const gimbalMode = useInterpolation ? 2 : 2; // always use interpolate for smooth transitions
+
   const rows = waypoints.map((w, i) => {
     const alt = perWpAltitudes ? perWpAltitudes[i] : altitude;
     const altMode = perWpAltitudes ? 1 : 0; // 0 = relative (AGL), 1 = absolute (MSL)
-    // actiontype 1 = take photo; gimbalmode 0 = disabled
+    // Linearly interpolate gimbal pitch from start to end across all waypoints
+    const t = waypoints.length > 1 ? i / (waypoints.length - 1) : 0;
+    const pitch = gimbalPitchStart + t * (gimbalPitchEnd - gimbalPitchStart);
     return [
       w[0].toFixed(7), w[1].toFixed(7), alt.toFixed(1), heading.toFixed(0), "0.2",
-      "0", "0", "-90",
+      "0", gimbalMode.toString(), pitch.toFixed(1),
       "1", "0",   // action1: take photo
       "-1", "0", "-1", "0", "-1", "0", "-1", "0",
       "-1", "0", "-1", "0", "-1", "0", "-1", "0",
@@ -370,7 +382,7 @@ export default function FlightPlanner({
 
   const downloadLitchi = useCallback(() => {
     if (!result) return;
-    const csv = generateLitchiCSV(result.waypoints, params.altitude, params.speed, params.heading, perWpAltitudes);
+    const csv = generateLitchiCSV(result.waypoints, params.altitude, params.speed, params.heading, perWpAltitudes, params.gimbalPitchStart, params.gimbalPitchEnd);
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a"); a.href = url; a.download = "litchi-waypoints.csv"; a.click();
@@ -888,6 +900,22 @@ export default function FlightPlanner({
                   <span className="font-semibold text-foreground">{params.speed} m/s</span>
                 </div>
                 <Slider value={[params.speed]} onValueChange={([v]) => setParams(p => ({ ...p, speed: v }))} min={2} max={15} step={1} />
+              </div>
+
+              {/* Gimbal Pitch Interpolation */}
+              <div className="space-y-2 pt-1 border-t border-border">
+                <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Gimbal Pitch</h4>
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Start pitch</span>
+                  <span className="font-semibold text-foreground">{params.gimbalPitchStart}°</span>
+                </div>
+                <Slider value={[params.gimbalPitchStart]} onValueChange={([v]) => setParams(p => ({ ...p, gimbalPitchStart: v }))} min={-90} max={0} step={5} />
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">End pitch</span>
+                  <span className="font-semibold text-foreground">{params.gimbalPitchEnd}°</span>
+                </div>
+                <Slider value={[params.gimbalPitchEnd]} onValueChange={([v]) => setParams(p => ({ ...p, gimbalPitchEnd: v }))} min={-90} max={0} step={5} />
+                <p className="text-[10px] text-muted-foreground">Camera smoothly tilts between start and end pitch across waypoints (Litchi interpolation mode)</p>
               </div>
 
               {/* Home position hint */}
