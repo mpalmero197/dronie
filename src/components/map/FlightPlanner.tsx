@@ -902,6 +902,22 @@ export default function FlightPlanner({
                 <Slider value={[params.speed]} onValueChange={([v]) => setParams(p => ({ ...p, speed: v }))} min={2} max={15} step={1} />
               </div>
 
+              {/* Gimbal Pitch Interpolation */}
+              <div className="space-y-2 pt-1 border-t border-border">
+                <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Gimbal Pitch</h4>
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Start pitch</span>
+                  <span className="font-semibold text-foreground">{params.gimbalPitchStart}°</span>
+                </div>
+                <Slider value={[params.gimbalPitchStart]} onValueChange={([v]) => setParams(p => ({ ...p, gimbalPitchStart: v }))} min={-90} max={0} step={5} />
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">End pitch</span>
+                  <span className="font-semibold text-foreground">{params.gimbalPitchEnd}°</span>
+                </div>
+                <Slider value={[params.gimbalPitchEnd]} onValueChange={([v]) => setParams(p => ({ ...p, gimbalPitchEnd: v }))} min={-90} max={0} step={5} />
+                <p className="text-[10px] text-muted-foreground">Camera smoothly tilts between start and end pitch across waypoints (Litchi interpolation mode)</p>
+              </div>
+
               {/* Home position hint */}
               {flightMode !== "orbit" && (
                 <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-primary/10 border border-primary/20">
