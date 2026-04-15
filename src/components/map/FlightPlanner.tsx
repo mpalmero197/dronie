@@ -76,6 +76,9 @@ const DEFAULT_PARAMS: FlightParams = {
   crossHeadingOffset: 90,
   droneModelIdx: 0,
   terrainFollow: false,
+  gimbalPitchStart: -90,
+  gimbalPitchEnd: -90,
+};
 };
 
 interface SavedPlan {
