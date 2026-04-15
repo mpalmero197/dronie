@@ -378,6 +378,27 @@ export default function FlightPlanner({
     toast({ title: "Litchi CSV exported", description: "Import into Litchi Mission Hub or app" });
   }, [result, params, perWpAltitudes, toast]);
 
+  const downloadDJIFly = useCallback(async () => {
+    if (!result) return;
+    try {
+      const blob = await generateDJIFlyKMZ({
+        waypoints: result.waypoints,
+        altitude: params.altitude,
+        speed: params.speed,
+        heading: params.heading,
+        name: "Flight Plan",
+        homePosition: homePosition ?? undefined,
+        perWpAltitudes,
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href = url; a.download = "dji-fly-mission.kmz"; a.click();
+      URL.revokeObjectURL(url);
+      toast({ title: "DJI Fly KMZ exported", description: "Import into DJI Fly app (Mini 4 Pro, Air 3, Mavic 3)" });
+    } catch {
+      toast({ title: "KMZ export failed", variant: "destructive" });
+    }
+  }, [result, params, homePosition, perWpAltitudes, toast]);
+
   const downloadPDF = useCallback(async () => {
     if (!result || !stats) return;
     toast({ title: "Generating PDF…", description: "Capturing map and building report" });
