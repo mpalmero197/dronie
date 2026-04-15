@@ -968,6 +968,11 @@ export default function FlightPlanner({
                 <Button size="sm" variant="outline" onClick={downloadLitchi} className="flex-1 h-8 text-xs gap-1.5">
                   <Download className="w-3 h-3" /> Litchi CSV
                 </Button>
+                <Button size="sm" variant="outline" onClick={downloadDJIFly} className="flex-1 h-8 text-xs gap-1.5">
+                  <Download className="w-3 h-3" /> DJI Fly
+                </Button>
+              </div>
+              <div className="flex gap-2">
                 <Button size="sm" variant="outline" onClick={downloadPDF} className="flex-1 h-8 text-xs gap-1.5">
                   <FileText className="w-3 h-3" /> PDF Report
                 </Button>
