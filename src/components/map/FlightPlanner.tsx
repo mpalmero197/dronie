@@ -62,6 +62,8 @@ interface FlightParams {
   crossHeadingOffset: number;
   droneModelIdx: number;
   terrainFollow: boolean;
+  gimbalPitchStart: number;
+  gimbalPitchEnd: number;
 }
 
 const DEFAULT_PARAMS: FlightParams = {
