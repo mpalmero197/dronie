@@ -382,7 +382,7 @@ export default function FlightPlanner({
 
   const downloadLitchi = useCallback(() => {
     if (!result) return;
-    const csv = generateLitchiCSV(result.waypoints, params.altitude, params.speed, params.heading, perWpAltitudes);
+    const csv = generateLitchiCSV(result.waypoints, params.altitude, params.speed, params.heading, perWpAltitudes, params.gimbalPitchStart, params.gimbalPitchEnd);
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a"); a.href = url; a.download = "litchi-waypoints.csv"; a.click();
