@@ -7,7 +7,7 @@
  *   wpmz/template.kml   – template with waypoint definitions
  *   wpmz/waylines.wpml  – executable waylines with detailed actions
  */
-import JSZip from "jszip";
+import * as JSZip from "jszip";
 
 interface DJIFlyKMZOptions {
   waypoints: [number, number][];
