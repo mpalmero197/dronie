@@ -79,7 +79,6 @@ const DEFAULT_PARAMS: FlightParams = {
   gimbalPitchStart: -90,
   gimbalPitchEnd: -90,
 };
-};
 
 interface SavedPlan {
   id: string;
