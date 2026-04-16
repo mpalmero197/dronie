@@ -126,7 +126,7 @@ export default function MapViewer() {
     }
     if (tool === "flight-plan") {
       setFlightPlannerOpen(v => !v);
-      setActiveTool("polygon");
+      // Don't force polygon tool — FlightPlanner handles its own drawing
       return;
     }
     setActiveTool(tool);
