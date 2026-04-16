@@ -344,9 +344,9 @@ export default function MapViewer() {
           <ScaleControl position="bottomleft" imperial metric />
           <MapDrawingLayer
             ref={drawingLayerRef}
-            activeTool={activeTool}
+            activeTool={flightPlannerDrawing ? null : activeTool}
             onMeasurement={setMeasurement}
-            onPolygonComplete={flightPlannerOpen ? (pts) => setSurveyPolygon(pts) : undefined}
+            onPolygonComplete={undefined}
             onPolylineComplete={flightPlannerOpen ? (pts) => setCorridorLine(pts) : undefined}
           />
           <LaancChecker active={activeTool === "laanc-check"} onResult={setLaancResult} />
