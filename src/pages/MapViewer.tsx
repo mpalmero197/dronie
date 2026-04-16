@@ -360,12 +360,15 @@ export default function MapViewer() {
             projectId={projectId}
             mapContainerRef={mapContainerRef}
             onPolygonEdit={setSurveyPolygon}
+            onCorridorEdit={setCorridorLine}
             laancResult={laancResult}
+            onDrawingStateChange={setFlightPlannerDrawing}
             onClose={() => {
               setFlightPlannerOpen(false);
               setSurveyPolygon(null);
               setCorridorLine(null);
               setActiveTool(null);
+              setFlightPlannerDrawing(false);
             }}
           />
           <MousePositionDisplay />
