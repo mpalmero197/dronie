@@ -105,6 +105,7 @@ export default function MapViewer() {
   const [surveyPolygon, setSurveyPolygon] = useState<[number, number][] | null>(null);
   const [corridorLine, setCorridorLine] = useState<[number, number][] | null>(null);
   const [flightPlannerOpen, setFlightPlannerOpen] = useState(false);
+  const [flightPlannerDrawing, setFlightPlannerDrawing] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [undoRedoTick, setUndoRedoTick] = useState(0);
   const [laancResult, setLaancResult] = useState<LaancResult | null>(null);
@@ -126,7 +127,7 @@ export default function MapViewer() {
     }
     if (tool === "flight-plan") {
       setFlightPlannerOpen(v => !v);
-      setActiveTool("polygon");
+      // Don't force polygon tool — FlightPlanner handles its own drawing
       return;
     }
     setActiveTool(tool);
@@ -343,10 +344,10 @@ export default function MapViewer() {
           <ScaleControl position="bottomleft" imperial metric />
           <MapDrawingLayer
             ref={drawingLayerRef}
-            activeTool={activeTool}
+            activeTool={flightPlannerDrawing ? null : activeTool}
             onMeasurement={setMeasurement}
-            onPolygonComplete={flightPlannerOpen ? (pts) => setSurveyPolygon(pts) : undefined}
-            onPolylineComplete={flightPlannerOpen ? (pts) => setCorridorLine(pts) : undefined}
+            onPolygonComplete={undefined}
+            onPolylineComplete={undefined}
           />
           <LaancChecker active={activeTool === "laanc-check"} onResult={setLaancResult} />
           <AddressSearch />
@@ -359,12 +360,15 @@ export default function MapViewer() {
             projectId={projectId}
             mapContainerRef={mapContainerRef}
             onPolygonEdit={setSurveyPolygon}
+            onCorridorEdit={setCorridorLine}
             laancResult={laancResult}
+            onDrawingStateChange={setFlightPlannerDrawing}
             onClose={() => {
               setFlightPlannerOpen(false);
               setSurveyPolygon(null);
               setCorridorLine(null);
               setActiveTool(null);
+              setFlightPlannerDrawing(false);
             }}
           />
           <MousePositionDisplay />
