@@ -750,8 +750,7 @@ export default function FlightPlanner({
               draggable
               eventHandlers={{
                 dragend: (e) => handleVertexDrag(i, e.target.getLatLng()),
-                contextmenu: (e) => {
-                  L.DomEvent.preventDefault(e);
+                contextmenu: () => {
                   handleVertexDelete(i);
                 },
               }}
@@ -805,8 +804,7 @@ export default function FlightPlanner({
               draggable
               eventHandlers={{
                 dragend: (e) => handleCorridorVertexDrag(i, e.target.getLatLng()),
-                contextmenu: (e) => {
-                  L.DomEvent.preventDefault(e);
+                contextmenu: () => {
                   handleCorridorVertexDelete(i);
                 },
               }}
