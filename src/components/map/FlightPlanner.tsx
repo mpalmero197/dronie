@@ -1,10 +1,10 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useMap, Polyline, Marker, Polygon as LeafletPolygon, CircleMarker, Circle } from "react-leaflet";
 import L from "leaflet";
 import {
   Plane, X, Download, RotateCcw, Battery, MapPin, Grid3X3,
   Mountain, Save, FolderOpen, Trash2, Loader2, FileText,
-  CircleDot, Route, Compass,
+  CircleDot, Route, Compass, Plus, MousePointer, Undo2, Redo2,
 } from "lucide-react";
 import ElevationProfileChart from "@/components/map/ElevationProfileChart";
 import { Button } from "@/components/ui/button";
@@ -32,11 +32,15 @@ interface FlightPlannerProps {
   corridorLine?: [number, number][] | null;
   orbitCenter?: [number, number] | null;
   onPolygonEdit?: (polygon: [number, number][]) => void;
+  onCorridorEdit?: (line: [number, number][]) => void;
   laancResult?: LaancResult | null;
+  /** When true, the flight planner is capturing map clicks — parent should disable other interactions */
+  onDrawingStateChange?: (isDrawing: boolean) => void;
 }
 
 type FlightMode = "grid" | "perimeter" | "orbit" | "corridor";
 type FlightPattern = "single" | "crosshatch";
+type DrawState = "idle" | "drawing" | "editing";
 
 interface DroneModel {
   name: string;
@@ -93,6 +97,12 @@ interface TerrainData {
   elevations: number[];
   minElev: number;
   maxElev: number;
+}
+
+// Undo/redo history entry
+interface HistoryEntry {
+  polygon: [number, number][] | null;
+  corridor: [number, number][] | null;
 }
 
 async function fetchTerrainElevations(waypoints: [number, number][]): Promise<number[]> {
@@ -175,8 +185,6 @@ function generateLitchiCSV(
   gimbalPitchStart: number = -90,
   gimbalPitchEnd: number = -90,
 ): string {
-  // DJI Litchi waypoint CSV format
-  // Reference: https://flylitchi.com/hub (Mission Hub CSV export)
   const header = [
     "latitude", "longitude", "altitude(m)", "heading(deg)", "curvesize(m)",
     "rotationdir", "gimbalmode", "gimbalpitchangle", "actiontype1",
@@ -192,24 +200,22 @@ function generateLitchiCSV(
     "photo_timeinterval", "photo_distinterval",
   ].join(",");
 
-  // gimbalmode: 0 = disabled, 1 = focus POI, 2 = interpolate
   const useInterpolation = gimbalPitchStart !== gimbalPitchEnd;
-  const gimbalMode = useInterpolation ? 2 : 2; // always use interpolate for smooth transitions
+  const gimbalMode = useInterpolation ? 2 : 2;
 
   const rows = waypoints.map((w, i) => {
     const alt = perWpAltitudes ? perWpAltitudes[i] : altitude;
-    const altMode = perWpAltitudes ? 1 : 0; // 0 = relative (AGL), 1 = absolute (MSL)
-    // Linearly interpolate gimbal pitch from start to end across all waypoints
+    const altMode = perWpAltitudes ? 1 : 0;
     const t = waypoints.length > 1 ? i / (waypoints.length - 1) : 0;
     const pitch = gimbalPitchStart + t * (gimbalPitchEnd - gimbalPitchStart);
     return [
       w[0].toFixed(7), w[1].toFixed(7), alt.toFixed(1), heading.toFixed(0), "0.2",
       "0", gimbalMode.toString(), pitch.toFixed(1),
-      "1", "0",   // action1: take photo
-      "-1", "0", "-1", "0", "-1", "0", "-1", "0",  // actions 2-5
-      "-1", "0", "-1", "0", "-1", "0", "-1", "0",  // actions 6-9
-      "-1", "0", "-1", "0", "-1", "0", "-1", "0",  // actions 10-13
-      "-1", "0", "-1", "0",                          // actions 14-15
+      "1", "0",
+      "-1", "0", "-1", "0", "-1", "0", "-1", "0",
+      "-1", "0", "-1", "0", "-1", "0", "-1", "0",
+      "-1", "0", "-1", "0", "-1", "0", "-1", "0",
+      "-1", "0", "-1", "0",
       altMode.toString(), speed.toFixed(1),
       "0", "0", "0", "0",
       "-1", "-1",
@@ -235,9 +241,17 @@ const vertexIcon = new L.DivIcon({
   iconAnchor: [6, 6],
 });
 
+const midpointIcon = new L.DivIcon({
+  className: "",
+  html: `<div style="width:10px;height:10px;border-radius:50%;background:rgba(37,99,235,0.4);border:2px solid rgba(255,255,255,0.7);cursor:pointer"></div>`,
+  iconSize: [10, 10],
+  iconAnchor: [5, 5],
+});
+
 export default function FlightPlanner({
   active, surveyPolygon, onClose, projectId, mapContainerRef,
-  corridorLine, orbitCenter, onPolygonEdit, laancResult,
+  corridorLine, orbitCenter, onPolygonEdit, onCorridorEdit, laancResult,
+  onDrawingStateChange,
 }: FlightPlannerProps) {
   const map = useMap();
   const { toast } = useToast();
@@ -246,6 +260,77 @@ export default function FlightPlanner({
   const [terrainData, setTerrainData] = useState<TerrainData | null>(null);
   const [terrainLoading, setTerrainLoading] = useState(false);
   const [flightMode, setFlightMode] = useState<FlightMode>("grid");
+
+  // Drawing state machine
+  const [drawState, setDrawState] = useState<DrawState>("idle");
+
+  // Undo/redo
+  const historyRef = useRef<HistoryEntry[]>([]);
+  const historyIdxRef = useRef(-1);
+  const skipHistoryRef = useRef(false);
+
+  const pushHistory = useCallback(() => {
+    if (skipHistoryRef.current) { skipHistoryRef.current = false; return; }
+    const entry: HistoryEntry = {
+      polygon: surveyPolygon ? surveyPolygon.map(p => [...p] as [number, number]) : null,
+      corridor: corridorLine ? corridorLine.map(p => [...p] as [number, number]) : null,
+    };
+    // Trim future entries
+    historyRef.current = historyRef.current.slice(0, historyIdxRef.current + 1);
+    historyRef.current.push(entry);
+    historyIdxRef.current = historyRef.current.length - 1;
+  }, [surveyPolygon, corridorLine]);
+
+  // Push initial history when polygon/corridor changes externally
+  const prevPolyLenRef = useRef(0);
+  const prevCorridorLenRef = useRef(0);
+  useEffect(() => {
+    const polyLen = surveyPolygon?.length ?? 0;
+    const corrLen = corridorLine?.length ?? 0;
+    if (polyLen !== prevPolyLenRef.current || corrLen !== prevCorridorLenRef.current) {
+      pushHistory();
+      prevPolyLenRef.current = polyLen;
+      prevCorridorLenRef.current = corrLen;
+    }
+  }, [surveyPolygon, corridorLine, pushHistory]);
+
+  const handleUndo = useCallback(() => {
+    if (historyIdxRef.current <= 0) return;
+    historyIdxRef.current -= 1;
+    const entry = historyRef.current[historyIdxRef.current];
+    skipHistoryRef.current = true;
+    if (entry.polygon && onPolygonEdit) onPolygonEdit(entry.polygon);
+    if (entry.corridor && onCorridorEdit) onCorridorEdit(entry.corridor);
+  }, [onPolygonEdit, onCorridorEdit]);
+
+  const handleRedo = useCallback(() => {
+    if (historyIdxRef.current >= historyRef.current.length - 1) return;
+    historyIdxRef.current += 1;
+    const entry = historyRef.current[historyIdxRef.current];
+    skipHistoryRef.current = true;
+    if (entry.polygon && onPolygonEdit) onPolygonEdit(entry.polygon);
+    if (entry.corridor && onCorridorEdit) onCorridorEdit(entry.corridor);
+  }, [onPolygonEdit, onCorridorEdit]);
+
+  const canUndo = historyIdxRef.current > 0;
+  const canRedo = historyIdxRef.current < historyRef.current.length - 1;
+
+  // Keyboard undo/redo
+  useEffect(() => {
+    if (!active) return;
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        handleUndo();
+      }
+      if ((e.ctrlKey || e.metaKey) && (e.key === "y" || (e.key === "z" && e.shiftKey))) {
+        e.preventDefault();
+        handleRedo();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [active, handleUndo, handleRedo]);
 
   // Orbit-specific state
   const [orbitPos, setOrbitPos] = useState<[number, number] | null>(orbitCenter || null);
@@ -267,6 +352,65 @@ export default function FlightPlanner({
   const [showLoadList, setShowLoadList] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loadingPlans, setLoadingPlans] = useState(false);
+
+  // Notify parent about drawing state
+  useEffect(() => {
+    onDrawingStateChange?.(drawState === "drawing");
+  }, [drawState, onDrawingStateChange]);
+
+  // Auto-enter drawing state when flight planner opens without a polygon
+  useEffect(() => {
+    if (!active) {
+      setDrawState("idle");
+      return;
+    }
+    const needsPoly = flightMode === "grid" || flightMode === "perimeter";
+    const needsLine = flightMode === "corridor";
+    if (needsPoly && (!surveyPolygon || surveyPolygon.length < 3)) {
+      setDrawState("drawing");
+    } else if (needsLine && (!corridorLine || corridorLine.length < 2)) {
+      setDrawState("drawing");
+    } else if (needsPoly && surveyPolygon && surveyPolygon.length >= 3) {
+      setDrawState("editing");
+    } else if (needsLine && corridorLine && corridorLine.length >= 2) {
+      setDrawState("editing");
+    }
+  }, [active, flightMode]);
+
+  // Map click handler for drawing polygon/corridor
+  useEffect(() => {
+    if (!active || drawState !== "drawing") return;
+    const needsPoly = flightMode === "grid" || flightMode === "perimeter";
+    const needsLine = flightMode === "corridor";
+
+    const handler = (e: L.LeafletMouseEvent) => {
+      const pt: [number, number] = [e.latlng.lat, e.latlng.lng];
+      if (needsPoly && onPolygonEdit) {
+        const current = surveyPolygon || [];
+        const updated = [...current, pt];
+        onPolygonEdit(updated);
+        if (updated.length >= 3) {
+          // Auto-transition to editing once we have 3+ points
+          setDrawState("editing");
+        }
+      } else if (needsLine && onCorridorEdit) {
+        const current = corridorLine || [];
+        const updated = [...current, pt];
+        onCorridorEdit(updated);
+        if (updated.length >= 2) {
+          setDrawState("editing");
+        }
+      }
+    };
+
+    map.on("click", handler);
+    // Change cursor
+    map.getContainer().style.cursor = "crosshair";
+    return () => {
+      map.off("click", handler);
+      map.getContainer().style.cursor = "";
+    };
+  }, [active, drawState, flightMode, surveyPolygon, corridorLine, onPolygonEdit, onCorridorEdit, map]);
 
   // Set orbit center when map is clicked in orbit mode
   useEffect(() => {
@@ -458,6 +602,15 @@ export default function FlightPlanner({
     setOrbitPos(null);
   };
 
+  const clearArea = useCallback(() => {
+    if (onPolygonEdit) onPolygonEdit([]);
+    if (onCorridorEdit) onCorridorEdit([]);
+    setHomePosition(null);
+    setDrawState("drawing");
+    historyRef.current = [];
+    historyIdxRef.current = -1;
+  }, [onPolygonEdit, onCorridorEdit]);
+
   // Save/Load
   const loadSavedPlans = useCallback(async () => {
     setLoadingPlans(true);
@@ -508,6 +661,46 @@ export default function FlightPlanner({
     onPolygonEdit(updated);
   }, [surveyPolygon, onPolygonEdit]);
 
+  const handleCorridorVertexDrag = useCallback((index: number, latlng: L.LatLng) => {
+    if (!corridorLine || !onCorridorEdit) return;
+    const updated = [...corridorLine];
+    updated[index] = [latlng.lat, latlng.lng];
+    onCorridorEdit(updated);
+  }, [corridorLine, onCorridorEdit]);
+
+  const handleVertexDelete = useCallback((index: number) => {
+    if (!surveyPolygon || !onPolygonEdit || surveyPolygon.length <= 3) return;
+    const updated = surveyPolygon.filter((_, i) => i !== index);
+    onPolygonEdit(updated);
+  }, [surveyPolygon, onPolygonEdit]);
+
+  const handleCorridorVertexDelete = useCallback((index: number) => {
+    if (!corridorLine || !onCorridorEdit || corridorLine.length <= 2) return;
+    const updated = corridorLine.filter((_, i) => i !== index);
+    onCorridorEdit(updated);
+  }, [corridorLine, onCorridorEdit]);
+
+  const handleMidpointInsert = useCallback((afterIndex: number) => {
+    if (!surveyPolygon || !onPolygonEdit) return;
+    const nextIdx = (afterIndex + 1) % surveyPolygon.length;
+    const midLat = (surveyPolygon[afterIndex][0] + surveyPolygon[nextIdx][0]) / 2;
+    const midLng = (surveyPolygon[afterIndex][1] + surveyPolygon[nextIdx][1]) / 2;
+    const updated = [...surveyPolygon];
+    updated.splice(afterIndex + 1, 0, [midLat, midLng]);
+    onPolygonEdit(updated);
+  }, [surveyPolygon, onPolygonEdit]);
+
+  const handleCorridorMidpointInsert = useCallback((afterIndex: number) => {
+    if (!corridorLine || !onCorridorEdit) return;
+    const nextIdx = afterIndex + 1;
+    if (nextIdx >= corridorLine.length) return;
+    const midLat = (corridorLine[afterIndex][0] + corridorLine[nextIdx][0]) / 2;
+    const midLng = (corridorLine[afterIndex][1] + corridorLine[nextIdx][1]) / 2;
+    const updated = [...corridorLine];
+    updated.splice(afterIndex + 1, 0, [midLat, midLng]);
+    onCorridorEdit(updated);
+  }, [corridorLine, onCorridorEdit]);
+
   if (!active) return null;
 
   const formatTime = (seconds: number) => {
@@ -527,9 +720,21 @@ export default function FlightPlanner({
     { id: "corridor", icon: Route, label: "Corridor", short: "Line" },
   ];
 
+  // Compute midpoints for polygon edges
+  const polygonMidpoints = hasPoly ? surveyPolygon.map((pos, i) => {
+    const next = surveyPolygon[(i + 1) % surveyPolygon.length];
+    return [(pos[0] + next[0]) / 2, (pos[1] + next[1]) / 2] as [number, number];
+  }) : [];
+
+  // Compute midpoints for corridor edges
+  const corridorMidpoints = (hasLine && corridorLine) ? corridorLine.slice(0, -1).map((pos, i) => {
+    const next = corridorLine[i + 1];
+    return [(pos[0] + next[0]) / 2, (pos[1] + next[1]) / 2] as [number, number];
+  }) : [];
+
   return (
     <>
-      {/* Survey polygon with draggable vertices */}
+      {/* Survey polygon with draggable vertices + midpoint handles */}
       {hasPoly && flightMode !== "orbit" && (
         <>
           <LeafletPolygon
@@ -545,15 +750,93 @@ export default function FlightPlanner({
               draggable
               eventHandlers={{
                 dragend: (e) => handleVertexDrag(i, e.target.getLatLng()),
+                contextmenu: (e) => {
+                  L.DomEvent.preventDefault(e);
+                  handleVertexDelete(i);
+                },
+              }}
+            />
+          ))}
+          {/* Midpoint handles */}
+          {onPolygonEdit && drawState === "editing" && polygonMidpoints.map((pos, i) => (
+            <Marker
+              key={`midpoint-${i}`}
+              position={pos}
+              icon={midpointIcon}
+              draggable
+              eventHandlers={{
+                dragend: (e) => {
+                  // Insert a new vertex at the dragged position
+                  if (!surveyPolygon || !onPolygonEdit) return;
+                  const latlng = e.target.getLatLng();
+                  const updated = [...surveyPolygon];
+                  updated.splice(i + 1, 0, [latlng.lat, latlng.lng]);
+                  onPolygonEdit(updated);
+                },
+                click: () => handleMidpointInsert(i),
               }}
             />
           ))}
         </>
       )}
 
-      {/* Corridor line */}
+      {/* Partial polygon while drawing (fewer than 3 points) */}
+      {drawState === "drawing" && surveyPolygon && surveyPolygon.length > 0 && surveyPolygon.length < 3 && (flightMode === "grid" || flightMode === "perimeter") && (
+        <>
+          {surveyPolygon.length === 2 && (
+            <Polyline positions={surveyPolygon} pathOptions={{ color: "#2563eb", weight: 2, dashArray: "6 4" }} />
+          )}
+          {surveyPolygon.map((pos, i) => (
+            <CircleMarker key={`draw-pt-${i}`} center={pos} radius={5}
+              pathOptions={{ color: "#ffffff", fillColor: "#2563eb", fillOpacity: 1, weight: 2 }} />
+          ))}
+        </>
+      )}
+
+      {/* Corridor line with vertex + midpoint handles */}
       {hasLine && flightMode === "corridor" && (
-        <Polyline positions={corridorLine!} pathOptions={{ color: "#2563eb", weight: 3, dashArray: "6 4" }} />
+        <>
+          <Polyline positions={corridorLine!} pathOptions={{ color: "#2563eb", weight: 3, dashArray: "6 4" }} />
+          {onCorridorEdit && corridorLine!.map((pos, i) => (
+            <Marker
+              key={`corr-vertex-${i}`}
+              position={pos}
+              icon={vertexIcon}
+              draggable
+              eventHandlers={{
+                dragend: (e) => handleCorridorVertexDrag(i, e.target.getLatLng()),
+                contextmenu: (e) => {
+                  L.DomEvent.preventDefault(e);
+                  handleCorridorVertexDelete(i);
+                },
+              }}
+            />
+          ))}
+          {onCorridorEdit && drawState === "editing" && corridorMidpoints.map((pos, i) => (
+            <Marker
+              key={`corr-mid-${i}`}
+              position={pos}
+              icon={midpointIcon}
+              draggable
+              eventHandlers={{
+                dragend: (e) => {
+                  if (!corridorLine || !onCorridorEdit) return;
+                  const latlng = e.target.getLatLng();
+                  const updated = [...corridorLine];
+                  updated.splice(i + 1, 0, [latlng.lat, latlng.lng]);
+                  onCorridorEdit(updated);
+                },
+                click: () => handleCorridorMidpointInsert(i),
+              }}
+            />
+          ))}
+        </>
+      )}
+
+      {/* Partial corridor while drawing */}
+      {drawState === "drawing" && corridorLine && corridorLine.length === 1 && flightMode === "corridor" && (
+        <CircleMarker center={corridorLine[0]} radius={5}
+          pathOptions={{ color: "#ffffff", fillColor: "#2563eb", fillOpacity: 1, weight: 2 }} />
       )}
 
       {/* Orbit circle preview */}
@@ -685,28 +968,71 @@ export default function FlightPlanner({
             </div>
           )}
 
-          {/* Input prompt */}
+          {/* Drawing state UI */}
           {!hasInput ? (
-            <div className="text-center py-6 space-y-2">
+            <div className="text-center py-6 space-y-3">
               {flightMode === "orbit" ? (
                 <>
                   <CircleDot className="w-8 h-8 mx-auto text-muted-foreground/40" />
                   <p className="text-xs text-muted-foreground">Click on the map to set the orbit center point.</p>
                 </>
-              ) : flightMode === "corridor" ? (
-                <>
-                  <Route className="w-8 h-8 mx-auto text-muted-foreground/40" />
-                  <p className="text-xs text-muted-foreground">Draw a polyline on the map to define the corridor.</p>
-                </>
               ) : (
                 <>
-                  <Plane className="w-8 h-8 mx-auto text-muted-foreground/40" />
-                  <p className="text-xs text-muted-foreground">Draw a polygon on the map to define your survey area.</p>
+                  <div className="relative mx-auto w-12 h-12 flex items-center justify-center">
+                    <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping" style={{ animationDuration: "2s" }} />
+                    <div className="w-6 h-6 rounded-full bg-primary/30 flex items-center justify-center">
+                      <Plus className="w-3.5 h-3.5 text-primary" />
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {drawState === "drawing"
+                      ? (flightMode === "corridor"
+                        ? "Click on the map to place corridor points"
+                        : `Click to place survey points${surveyPolygon && surveyPolygon.length > 0 ? ` (${surveyPolygon.length}/3 min)` : ""}`)
+                      : (flightMode === "corridor"
+                        ? "Draw a corridor line on the map"
+                        : "Draw a polygon to define your survey area")}
+                  </p>
+                  {drawState !== "drawing" && (
+                    <Button size="sm" onClick={() => setDrawState("drawing")} className="gap-1.5 text-xs">
+                      <Plus className="w-3 h-3" /> Start Drawing
+                    </Button>
+                  )}
                 </>
               )}
             </div>
           ) : (
             <>
+              {/* Drawing controls toolbar */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50 text-[10px] text-muted-foreground">
+                  <MapPin className="w-3 h-3" />
+                  {flightMode === "corridor"
+                    ? `${corridorLine?.length ?? 0} points`
+                    : `${surveyPolygon?.length ?? 0} vertices`}
+                </div>
+                <Button
+                  size="sm" variant={drawState === "drawing" ? "default" : "outline"}
+                  onClick={() => setDrawState(drawState === "drawing" ? "editing" : "drawing")}
+                  className="h-6 text-[10px] gap-1 px-2"
+                >
+                  {drawState === "drawing" ? <MousePointer className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
+                  {drawState === "drawing" ? "Done" : "Add Points"}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={handleUndo} disabled={!canUndo}
+                  className="h-6 w-6 p-0" title="Undo (Ctrl+Z)">
+                  <Undo2 className="w-3 h-3" />
+                </Button>
+                <Button size="sm" variant="ghost" onClick={handleRedo} disabled={!canRedo}
+                  className="h-6 w-6 p-0" title="Redo (Ctrl+Y)">
+                  <Redo2 className="w-3 h-3" />
+                </Button>
+                <Button size="sm" variant="ghost" onClick={clearArea}
+                  className="h-6 text-[10px] gap-1 px-2 text-destructive hover:text-destructive">
+                  <Trash2 className="w-3 h-3" /> Clear
+                </Button>
+              </div>
+
               {/* Drone Model */}
               <div className="space-y-1.5">
                 <span className="text-xs text-muted-foreground">Drone Model</span>
@@ -918,12 +1244,12 @@ export default function FlightPlanner({
                 <p className="text-[10px] text-muted-foreground">Camera smoothly tilts between start and end pitch across waypoints (Litchi interpolation mode)</p>
               </div>
 
-              {/* Home position hint */}
+              {/* Editing hints */}
               {flightMode !== "orbit" && (
                 <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-primary/10 border border-primary/20">
                   <MapPin className="w-3.5 h-3.5 text-primary flex-shrink-0" />
                   <p className="text-[10px] text-primary">
-                    {onPolygonEdit ? "Drag blue dots to reshape · Green dot = takeoff" : "Drag the green marker to set takeoff point"}
+                    Drag vertices to reshape · Right-click to delete · Click midpoints to add
                   </p>
                 </div>
               )}
