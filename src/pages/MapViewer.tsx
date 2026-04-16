@@ -347,7 +347,7 @@ export default function MapViewer() {
             activeTool={flightPlannerDrawing ? null : activeTool}
             onMeasurement={setMeasurement}
             onPolygonComplete={undefined}
-            onPolylineComplete={flightPlannerOpen ? (pts) => setCorridorLine(pts) : undefined}
+            onPolylineComplete={undefined}
           />
           <LaancChecker active={activeTool === "laanc-check"} onResult={setLaancResult} />
           <AddressSearch />
