@@ -15,6 +15,8 @@ export interface Drone {
   heading: number;
   flight_time_minutes: number;
   stream_url: string | null;
+  stream_mode?: 'none' | 'webrtc' | 'url' | 'upload';
+  stream_demo_path?: string | null;
   assigned_pilot_id: string | null;
   created_at: string;
   updated_at: string;
