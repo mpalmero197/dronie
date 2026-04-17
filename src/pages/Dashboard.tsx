@@ -512,9 +512,13 @@ export default function Dashboard() {
         {/* Top bar */}
         <header className="sticky top-0 z-10 bg-card/95 backdrop-blur-md border-b border-border px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Link to="/" className="lg:hidden">
-              <ArrowLeft className="w-5 h-5 text-muted-foreground hover:text-foreground transition-colors" />
-            </Link>
+            <button
+              onClick={() => setMobileNavOpen(true)}
+              className="lg:hidden p-2 -ml-2 rounded-lg hover:bg-secondary transition-colors"
+              aria-label="Open menu"
+            >
+              <Menu className="w-5 h-5 text-muted-foreground" />
+            </button>
             {/* Mobile tier badge */}
             <div className={`lg:hidden flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold ${isSubscribed ? "bg-accent/15 text-accent border border-accent/20" : "bg-secondary text-muted-foreground border border-border"}`}>
               <Zap className="w-3 h-3" />
