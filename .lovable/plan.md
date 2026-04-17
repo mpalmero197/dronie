@@ -1,83 +1,69 @@
 
 
-# Interactive Flight Path Builder — Maps Made Easy Style
+## How real apps handle this
 
-## Problem
-Currently, flight planning requires a two-step workflow: (1) select the polygon draw tool, (2) draw and double-click to finish, (3) then the flight planner consumes it. Professional apps like Maps Made Easy and DroneLink let you click directly on the map to build your survey area while seeing the flight path generate in real-time. Vertices are fully editable inline — drag, add, and delete — without switching tools.
+You're right — pasting an `rtsp://` URL is a power-user workflow. Here's how the major drone apps actually do it:
 
-## What Changes
+| App | How the feed gets in |
+|---|---|
+| **DJI Fly / GO 4** | Phone connects to the controller via USB. The controller has the radio link to the drone. The app reads the H.264 video stream straight off the USB port — no URL, no network. |
+| **DroneDeploy / Skydio** | Their mobile SDK app on the pilot's phone captures the controller feed, then re-broadcasts it to their cloud. Office viewers just open the project — the URL is invisible plumbing. |
+| **DJI FlightHub 2** | Same idea: pilot opens the DJI Pilot 2 app, taps "Livestream to Cloud," the cloud assigns a viewer link automatically. |
 
-### 1. Integrated polygon drawing inside FlightPlanner
-When the flight planner opens in grid/perimeter mode without a polygon, clicking the map adds vertices one at a time. After 3+ points, the flight path previews in real-time. No need to double-click to "finish" — the polygon is always live and editable. A "Close Polygon" button finalizes, but the path is visible as-is.
+The pattern: **the pilot's phone is the bridge.** It already has the feed; it just needs a one-tap "share" button. No one types URLs.
 
-### 2. Midpoint handles on polygon edges
-Small semi-transparent circles appear at the midpoint of each polygon edge. Dragging one inserts a new vertex at that position, splitting the edge — exactly like Maps Made Easy and Google My Maps.
+## Plan: Pilot Phone Broadcast (WebRTC)
 
-### 3. Vertex deletion
-Right-clicking (or long-pressing on mobile) a vertex handle shows a "Delete vertex" option. Minimum 3 vertices enforced.
+Add a "Broadcast Camera" mode that turns the pilot's phone into the streaming source. Three paths, ranked by realism for a web app:
 
-### 4. Inline corridor drawing
-Same integrated click-to-add-points experience for corridor mode — click to extend the polyline, drag handles to adjust, midpoint handles to add points.
+### Path A — Phone-as-camera broadcast (recommended, ship this)
+The pilot opens the Dronie web app on the phone that's plugged into their controller and taps **"Start Broadcast"** on their assigned drone. The app:
+1. Calls `getUserMedia()` to grab the phone's screen or rear camera
+2. Opens a WebRTC peer connection
+3. Uses Supabase Realtime as the **signaling channel** (offer/answer/ICE exchange via a `drone_signals` table)
+4. Office viewers on `/jobs` automatically receive the stream — no URL needed
 
-### 5. Undo/Redo for polygon edits
-Each vertex add/move/delete is tracked so Ctrl+Z and Ctrl+Y work within the flight planner context.
+For DJI controllers with HDMI out → USB capture, the phone sees the controller feed as a webcam. For app-only setups, the pilot mirrors the DJI Fly app via screen share.
 
-### 6. Real-time path preview during drawing
-After 3+ vertices are placed, the lawnmower/perimeter path renders immediately and updates as you add or move points — no "finish drawing" step required.
+### Path B — QR pairing for hardware encoders
+For teams with dedicated encoders (e.g. an Accsoon or LiveU box), generate a QR code from the drone card. Scan it on the encoder's config page → the encoder POSTs its stream endpoint back to us. Pilot never copies a URL.
 
-## Technical Details
+### Path C — Upload demo clip
+For testing/demos without hardware, let admins upload an MP4 to Supabase Storage and use it as the "live" feed. Useful for screenshots and sales demos.
 
-### Files modified
+## What gets built
 
-**`src/components/map/FlightPlanner.tsx`**
-- Add an internal drawing state machine: `idle` → `drawing` → `editing`
-- Register map click handler when in `drawing` state to append vertices to `surveyPolygon` (via `onPolygonEdit`)
-- Add midpoint marker layer: for each edge `[i, i+1]`, render a semi-transparent draggable `Marker` at the midpoint. On `dragend`, splice a new vertex into the polygon array
-- Add right-click handler on vertex markers to delete that vertex (if length > 3)
-- Track edit history (vertex adds/moves/deletes) in a local undo stack
-- Show "Start Drawing" / "Add Points" / "Done" button states in the panel
-- Remove the "Draw a polygon on the map" empty state prompt — replace with a "Tap the map to place survey points" instruction with a pulsing dot animation
+**Database** (one new migration)
+- `drone_signals` table: `drone_id`, `from_peer`, `to_peer`, `payload jsonb`, `created_at` — ephemeral WebRTC offer/answer/ICE messages, RLS scoped to authenticated users, realtime enabled
+- Add `stream_mode` column to `drones`: `'webrtc' | 'url' | 'upload' | 'none'` (default `'none'`)
+- Add `stream_demo_path` column for Path C uploads
 
-**`src/pages/MapViewer.tsx`**
-- When flight planner opens, no longer force `activeTool` to `"polygon"` — the FlightPlanner handles its own click events
-- Pass a new `onStartDrawing` callback so the flight planner can signal it's capturing map clicks (disabling other map interactions)
-- Remove the dependency on `MapDrawingLayer.onPolygonComplete` for flight planning — the FlightPlanner manages its own polygon lifecycle
+**New files**
+- `src/lib/webrtcBroadcast.ts` — encapsulates `startBroadcast(droneId)` and `joinBroadcast(droneId)` using Supabase Realtime for signaling
+- `src/components/fleet/BroadcastButton.tsx` — big "Start Broadcast" button shown to the pilot assigned to a drone, with camera/mic permissions flow and "Stop" state
+- `src/components/fleet/StreamSourcePicker.tsx` — replaces the raw URL input in `AddDroneDialog` with three tiles: **Phone Broadcast** / **Stream URL (advanced)** / **Demo Upload**
 
-**`src/components/map/FlightPlanner.tsx` — new UI elements**
-- "Add Point" mode toggle button in the panel header
-- Vertex count indicator ("5 vertices")
-- "Clear Area" button to reset and start over
-- Midpoint handle icon: smaller, semi-transparent version of the vertex icon with a `+` indicator
+**Modified files**
+- `src/components/fleet/AddDroneDialog.tsx` — swap the "Stream URL" field for `StreamSourcePicker`. URL input becomes an "Advanced" disclosure
+- `src/components/fleet/CameraFeed.tsx` — add a `webrtc` branch that subscribes to the drone's signaling channel and renders the incoming `MediaStream`
+- `src/pages/FleetManagement.tsx` — show `BroadcastButton` on cards for drones the current user is assigned to
+- `src/pages/ActiveJobs.tsx` — same broadcast button, contextual to the job
 
-### New midpoint handle icon
+**Tech snippet** (signaling via Supabase Realtime)
 ```typescript
-const midpointIcon = new L.DivIcon({
-  html: `<div style="width:10px;height:10px;border-radius:50%;background:rgba(37,99,235,0.4);border:2px solid rgba(255,255,255,0.7);cursor:pointer"></div>`,
-  iconSize: [10, 10],
-  iconAnchor: [5, 5],
-});
+const channel = supabase.channel(`drone:${droneId}`)
+  .on('broadcast', { event: 'offer' }, ({ payload }) => pc.setRemoteDescription(payload))
+  .on('broadcast', { event: 'ice' }, ({ payload }) => pc.addIceCandidate(payload))
+  .subscribe();
 ```
 
-### State machine
-```text
-┌──────────┐   click "Draw Area"   ┌──────────┐   3+ points    ┌──────────┐
-│   IDLE   │ ────────────────────▶ │ DRAWING  │ ─────────────▶ │ EDITING  │
-│ no poly  │                       │ clicking  │  path visible  │ drag/add │
-└──────────┘                       │ on map    │                │ /delete  │
-                                   └──────────┘                └──────────┘
-                                        ▲                           │
-                                        └───── "Add Points" ───────┘
-```
+## What the pilot/viewer actually sees
 
-### Corridor mode
-Same pattern: click to add corridor line points, drag to adjust, midpoint handles to insert.
+- **Pilot (mobile):** Opens drone card → taps green "📡 Broadcast Camera" button → grants permission → status flips to "🔴 Live" → done.
+- **Viewer (anywhere):** Opens `/jobs` or fleet page → live tile auto-appears in the Live Camera Feeds grid. No URL ever shown.
 
-## Summary of UX improvements
-- Single-click to start placing survey points — no tool switching
-- Flight path appears as soon as 3 points are placed
-- Drag any vertex to reshape; path updates live
-- Click edge midpoints to add detail where needed
-- Right-click vertex to delete it
-- Undo/redo for all polygon edits
-- Clear and restart without closing the planner
+## Out of scope (will note as follow-ups)
+- Native DJI SDK integration (requires React Native rewrite)
+- Recording broadcasts to storage
+- Multi-viewer TURN server for restrictive networks (Supabase signaling works P2P; we'll add a fallback note)
 
