@@ -1,0 +1,139 @@
+import { useEffect, useRef, useState } from "react";
+import { Radio, Square, Camera, Monitor, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { startBroadcast, type BroadcastHandle, type BroadcastSource } from "@/lib/webrtcBroadcast";
+import type { Drone } from "@/lib/fleet-types";
+
+interface BroadcastButtonProps {
+  drone: Drone;
+  compact?: boolean;
+}
+
+export default function BroadcastButton({ drone, compact = false }: BroadcastButtonProps) {
+  const { user, isAdmin } = useAuth();
+  const { toast } = useToast();
+  const [handle, setHandle] = useState<BroadcastHandle | null>(null);
+  const [starting, setStarting] = useState(false);
+  const [showPicker, setShowPicker] = useState(false);
+  const previewRef = useRef<HTMLVideoElement>(null);
+
+  const isAssigned = user && (drone.assigned_pilot_id === user.id || isAdmin);
+  const isLive = !!handle;
+
+  useEffect(() => {
+    return () => {
+      // Cleanup on unmount
+      handle?.stop();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (handle && previewRef.current) {
+      previewRef.current.srcObject = handle.stream;
+    }
+  }, [handle]);
+
+  const start = async (source: BroadcastSource) => {
+    setShowPicker(false);
+    setStarting(true);
+    try {
+      const h = await startBroadcast(drone.id, source);
+      setHandle(h);
+      toast({
+        title: "🔴 Broadcasting live",
+        description: `${drone.name} feed is now visible to your team.`,
+      });
+    } catch (err: any) {
+      toast({
+        title: "Couldn't start broadcast",
+        description: err?.message ?? "Camera/screen permission denied.",
+        variant: "destructive",
+      });
+    } finally {
+      setStarting(false);
+    }
+  };
+
+  const stop = () => {
+    handle?.stop();
+    setHandle(null);
+    toast({ title: "Broadcast ended", description: `${drone.name} feed is offline.` });
+  };
+
+  if (!isAssigned) return null;
+
+  if (isLive) {
+    return (
+      <div className={compact ? "space-y-2" : "space-y-3"}>
+        <div className="relative rounded-lg overflow-hidden bg-black">
+          <video
+            ref={previewRef}
+            autoPlay
+            muted
+            playsInline
+            className={compact ? "w-full h-24 object-cover" : "w-full h-32 object-cover"}
+          />
+          <span className="absolute top-2 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded bg-destructive text-white text-[10px] font-bold">
+            <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+            LIVE
+          </span>
+        </div>
+        <Button onClick={stop} variant="destructive" size={compact ? "sm" : "default"} className="w-full gap-1.5">
+          <Square className="w-3.5 h-3.5" /> Stop Broadcast
+        </Button>
+      </div>
+    );
+  }
+
+  if (showPicker) {
+    return (
+      <div className="space-y-2 p-3 rounded-lg border border-border bg-card">
+        <p className="text-xs font-medium text-foreground">Choose broadcast source</p>
+        <Button
+          onClick={() => start("camera")}
+          variant="outline"
+          size="sm"
+          className="w-full gap-2 justify-start"
+          disabled={starting}
+        >
+          <Camera className="w-4 h-4" />
+          <div className="text-left flex-1">
+            <p className="text-xs font-semibold">Phone Camera</p>
+            <p className="text-[10px] text-muted-foreground">Use rear camera or USB capture device</p>
+          </div>
+        </Button>
+        <Button
+          onClick={() => start("screen")}
+          variant="outline"
+          size="sm"
+          className="w-full gap-2 justify-start"
+          disabled={starting}
+        >
+          <Monitor className="w-4 h-4" />
+          <div className="text-left flex-1">
+            <p className="text-xs font-semibold">Screen Share</p>
+            <p className="text-[10px] text-muted-foreground">Mirror DJI Fly app or controller screen</p>
+          </div>
+        </Button>
+        <Button onClick={() => setShowPicker(false)} variant="ghost" size="sm" className="w-full">
+          Cancel
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <Button
+      onClick={() => setShowPicker(true)}
+      size={compact ? "sm" : "default"}
+      className="w-full gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+      disabled={starting}
+    >
+      {starting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Radio className="w-3.5 h-3.5" />}
+      {starting ? "Starting…" : "Broadcast Camera"}
+    </Button>
+  );
+}
