@@ -64,7 +64,7 @@ export default function FleetManagement() {
   });
 
   const activeDrones = drones.filter(d => d.status === "active");
-  const dronesWithCameras = drones.filter(d => d.stream_url);
+  const dronesWithCameras = drones.filter(d => d.stream_url || d.stream_mode === "webrtc");
 
   if (authLoading || loading) {
     return (
