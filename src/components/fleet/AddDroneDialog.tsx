@@ -3,8 +3,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import StreamSourcePicker, { type StreamMode } from "./StreamSourcePicker";
 
 interface AddDroneDialogProps {
   open: boolean;
@@ -19,7 +20,9 @@ export default function AddDroneDialog({ open, onOpenChange, onAdded }: AddDrone
     name: "",
     model: "",
     serial_number: "",
-    stream_url: "",
+  });
+  const [stream, setStream] = useState<{ mode: StreamMode; url?: string; demoPath?: string }>({
+    mode: "webrtc",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -31,11 +34,14 @@ export default function AddDroneDialog({ open, onOpenChange, onAdded }: AddDrone
         name: form.name.trim(),
         model: form.model.trim(),
         serial_number: form.serial_number.trim(),
-        stream_url: form.stream_url.trim() || null,
+        stream_mode: stream.mode,
+        stream_url: stream.mode === "url" ? (stream.url || null) : stream.mode === "upload" ? (stream.url || null) : null,
+        stream_demo_path: stream.mode === "upload" ? (stream.demoPath || null) : null,
       });
       if (error) throw error;
       toast({ title: "Drone added", description: `${form.name} has been registered.` });
-      setForm({ name: "", model: "", serial_number: "", stream_url: "" });
+      setForm({ name: "", model: "", serial_number: "" });
+      setStream({ mode: "webrtc" });
       onAdded();
       onOpenChange(false);
     } catch (err: any) {
@@ -47,7 +53,7 @@ export default function AddDroneDialog({ open, onOpenChange, onAdded }: AddDrone
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Register New Drone</DialogTitle>
         </DialogHeader>
@@ -64,11 +70,9 @@ export default function AddDroneDialog({ open, onOpenChange, onAdded }: AddDrone
             <Label htmlFor="drone-serial">Serial Number</Label>
             <Input id="drone-serial" value={form.serial_number} onChange={(e) => setForm(f => ({ ...f, serial_number: e.target.value }))} placeholder="e.g. 1ZNBJ1234567" />
           </div>
-          <div>
-            <Label htmlFor="drone-stream">Camera Stream URL</Label>
-            <Input id="drone-stream" value={form.stream_url} onChange={(e) => setForm(f => ({ ...f, stream_url: e.target.value }))} placeholder="rtsp:// or https://...m3u8" />
-            <p className="text-[10px] text-muted-foreground mt-1">RTSP, HLS (.m3u8), WebRTC, or direct video URL</p>
-          </div>
+
+          <StreamSourcePicker value={stream} onChange={setStream} />
+
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
             <Button type="submit" disabled={loading || !form.name.trim()}>
