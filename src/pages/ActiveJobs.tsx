@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import type { Drone, Job, JobStatus } from "@/lib/fleet-types";
 import CameraFeed from "@/components/fleet/CameraFeed";
+import BroadcastButton from "@/components/fleet/BroadcastButton";
 import DroneStatusBadge from "@/components/fleet/DroneStatusBadge";
 import CreateJobDialog from "@/components/fleet/CreateJobDialog";
 
@@ -160,19 +161,20 @@ export default function ActiveJobs() {
 
       <main className="container mx-auto px-4 py-6 space-y-6">
         {/* Multi-camera grid for active jobs */}
-        {activeJobs.length > 0 && activeJobs.some(j => j.drone_stream_url) && (
+        {activeJobs.length > 0 && activeJobs.some(j => j.drone && (j.drone.stream_url || j.drone.stream_mode === "webrtc")) && (
           <div>
             <h2 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
               <Video className="w-4 h-4 text-primary" /> Live Camera Feeds
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-              {activeJobs.filter(j => j.drone).map(job => (
+              {activeJobs.filter(j => j.drone && (j.drone.stream_url || j.drone.stream_mode === "webrtc")).map(job => (
                 <div key={job.id} className="space-y-1.5">
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-semibold text-foreground">{job.drone_name}</span>
                     <span className="text-muted-foreground capitalize">{job.mission_type}</span>
                   </div>
                   <CameraFeed drone={job.drone!} />
+                  {job.drone!.stream_mode === "webrtc" && <BroadcastButton drone={job.drone!} compact />}
                 </div>
               ))}
             </div>

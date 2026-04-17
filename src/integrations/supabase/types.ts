@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      drone_signals: {
+        Row: {
+          created_at: string
+          drone_id: string
+          from_peer: string
+          id: string
+          kind: string
+          payload: Json
+          to_peer: string | null
+        }
+        Insert: {
+          created_at?: string
+          drone_id: string
+          from_peer: string
+          id?: string
+          kind: string
+          payload: Json
+          to_peer?: string | null
+        }
+        Update: {
+          created_at?: string
+          drone_id?: string
+          from_peer?: string
+          id?: string
+          kind?: string
+          payload?: Json
+          to_peer?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "drone_signals_drone_id_fkey"
+            columns: ["drone_id"]
+            isOneToOne: false
+            referencedRelation: "drones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       drones: {
         Row: {
           altitude: number | null
@@ -30,6 +68,8 @@ export type Database = {
           serial_number: string
           speed: number | null
           status: Database["public"]["Enums"]["drone_status"]
+          stream_demo_path: string | null
+          stream_mode: string
           stream_url: string | null
           updated_at: string
         }
@@ -48,6 +88,8 @@ export type Database = {
           serial_number?: string
           speed?: number | null
           status?: Database["public"]["Enums"]["drone_status"]
+          stream_demo_path?: string | null
+          stream_mode?: string
           stream_url?: string | null
           updated_at?: string
         }
@@ -66,6 +108,8 @@ export type Database = {
           serial_number?: string
           speed?: number | null
           status?: Database["public"]["Enums"]["drone_status"]
+          stream_demo_path?: string | null
+          stream_mode?: string
           stream_url?: string | null
           updated_at?: string
         }

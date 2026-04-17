@@ -11,6 +11,7 @@ import DroneCard from "@/components/fleet/DroneCard";
 import CameraFeed from "@/components/fleet/CameraFeed";
 import AddDroneDialog from "@/components/fleet/AddDroneDialog";
 import DroneStatusBadge from "@/components/fleet/DroneStatusBadge";
+import BroadcastButton from "@/components/fleet/BroadcastButton";
 
 export default function FleetManagement() {
   const navigate = useNavigate();
@@ -63,7 +64,7 @@ export default function FleetManagement() {
   });
 
   const activeDrones = drones.filter(d => d.status === "active");
-  const dronesWithCameras = drones.filter(d => d.stream_url);
+  const dronesWithCameras = drones.filter(d => d.stream_url || d.stream_mode === "webrtc");
 
   if (authLoading || loading) {
     return (
@@ -177,6 +178,7 @@ export default function FleetManagement() {
                       <span className="text-xs text-muted-foreground">{drone.battery_level}% battery</span>
                     </div>
                     <CameraFeed drone={drone} />
+                    {drone.stream_mode === "webrtc" && <BroadcastButton drone={drone} compact />}
                   </div>
                 ))}
               </div>
@@ -201,6 +203,7 @@ export default function FleetManagement() {
 
               <div className="mt-4 space-y-3">
                 <CameraFeed drone={selectedDrone} />
+                <BroadcastButton drone={selectedDrone} />
 
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div className="bg-secondary/50 rounded-lg p-3">

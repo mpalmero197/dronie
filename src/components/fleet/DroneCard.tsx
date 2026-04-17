@@ -55,10 +55,10 @@ export default function DroneCard({ drone, onSelect }: DroneCardProps) {
           <Clock className="w-3.5 h-3.5" />
           <span>{formatFlightTime(drone.flight_time_minutes)}</span>
         </div>
-        {drone.stream_url && (
+        {(drone.stream_url || drone.stream_mode === "webrtc") && (
           <div className="flex items-center gap-1.5 text-primary">
             <Video className="w-3.5 h-3.5" />
-            <span className="font-semibold">Live</span>
+            <span className="font-semibold">{drone.stream_mode === "webrtc" ? "Broadcast" : "Live"}</span>
           </div>
         )}
       </div>
