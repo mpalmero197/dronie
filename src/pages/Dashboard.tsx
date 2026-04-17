@@ -5,8 +5,9 @@ import {
   CheckCircle2, AlertCircle, Loader2, FolderOpen,
   Eye, Trash2, BarChart3, HardDrive,
   ArrowLeft, LogOut, Shield, User as UserIcon, FileArchive, ImageIcon,
-  Play, Share2, Zap, Lock, CreditCard, Plane, Briefcase,
+  Play, Share2, Zap, Lock, CreditCard, Plane, Briefcase, Menu,
 } from "lucide-react";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import ProjectDetailDialog from "@/components/ProjectDetailDialog";
 import { Button } from "@/components/ui/button";
 import {
