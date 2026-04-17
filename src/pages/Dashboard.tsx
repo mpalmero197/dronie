@@ -179,6 +179,7 @@ export default function Dashboard() {
   const [sidebarView, setSidebarView] = useState<SidebarView>("projects");
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [upgradeFeature, setUpgradeFeature] = useState({ feature: "", description: "" });
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const tierLimits = getTierLimits(subscriptionTier, isAdmin);
 
