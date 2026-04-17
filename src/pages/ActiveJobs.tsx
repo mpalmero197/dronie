@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import type { Drone, Job, JobStatus } from "@/lib/fleet-types";
 import CameraFeed from "@/components/fleet/CameraFeed";
+import BroadcastButton from "@/components/fleet/BroadcastButton";
 import DroneStatusBadge from "@/components/fleet/DroneStatusBadge";
 import CreateJobDialog from "@/components/fleet/CreateJobDialog";
 
