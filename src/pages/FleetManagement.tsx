@@ -11,6 +11,7 @@ import DroneCard from "@/components/fleet/DroneCard";
 import CameraFeed from "@/components/fleet/CameraFeed";
 import AddDroneDialog from "@/components/fleet/AddDroneDialog";
 import DroneStatusBadge from "@/components/fleet/DroneStatusBadge";
+import BroadcastButton from "@/components/fleet/BroadcastButton";
 
 export default function FleetManagement() {
   const navigate = useNavigate();
