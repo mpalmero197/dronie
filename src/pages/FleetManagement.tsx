@@ -178,6 +178,7 @@ export default function FleetManagement() {
                       <span className="text-xs text-muted-foreground">{drone.battery_level}% battery</span>
                     </div>
                     <CameraFeed drone={drone} />
+                    {drone.stream_mode === "webrtc" && <BroadcastButton drone={drone} compact />}
                   </div>
                 ))}
               </div>
