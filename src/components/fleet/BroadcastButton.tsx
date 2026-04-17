@@ -129,7 +129,7 @@ export default function BroadcastButton({ drone, compact = false }: BroadcastBut
     <Button
       onClick={() => setShowPicker(true)}
       size={compact ? "sm" : "default"}
-      className="w-full gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+      className="w-full gap-1.5"
       disabled={starting}
     >
       {starting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Radio className="w-3.5 h-3.5" />}
