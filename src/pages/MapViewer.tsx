@@ -317,7 +317,7 @@ export default function MapViewer() {
           <Button
             variant="outline" size="sm"
             onClick={() => setShowInfo(v => !v)}
-            className="gap-1.5 text-xs hidden sm:flex"
+            className="gap-1.5 text-xs"
           >
             Info
           </Button>

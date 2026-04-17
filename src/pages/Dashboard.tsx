@@ -5,8 +5,9 @@ import {
   CheckCircle2, AlertCircle, Loader2, FolderOpen,
   Eye, Trash2, BarChart3, HardDrive,
   ArrowLeft, LogOut, Shield, User as UserIcon, FileArchive, ImageIcon,
-  Play, Share2, Zap, Lock, CreditCard, Plane, Briefcase,
+  Play, Share2, Zap, Lock, CreditCard, Plane, Briefcase, Menu,
 } from "lucide-react";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import ProjectDetailDialog from "@/components/ProjectDetailDialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -178,6 +179,7 @@ export default function Dashboard() {
   const [sidebarView, setSidebarView] = useState<SidebarView>("projects");
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [upgradeFeature, setUpgradeFeature] = useState({ feature: "", description: "" });
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const tierLimits = getTierLimits(subscriptionTier, isAdmin);
 
@@ -352,158 +354,171 @@ export default function Dashboard() {
 
   // Gallery link in sidebar nav items (rendered separately below)
 
+  const closeMobileNav = () => setMobileNavOpen(false);
+
+  const sidebarContent = (
+    <div className="flex flex-col h-full bg-sidebar">
+      <div className="p-5 border-b border-sidebar-border">
+        <Link to="/" className="flex items-center gap-2.5 group" onClick={closeMobileNav}>
+          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shadow">
+            <Map className="w-4 h-4 text-primary-foreground" />
+          </div>
+          <span className="font-display font-700 text-sidebar-foreground">Dronie</span>
+        </Link>
+      </div>
+
+      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = sidebarView === item.id;
+          return (
+            <button key={item.id}
+              onClick={() => { setSidebarView(item.id); closeMobileNav(); }}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                isActive
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                  : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+              }`}
+            >
+              <Icon className="w-4 h-4 flex-shrink-0" />
+              {item.label}
+            </button>
+          );
+        })}
+
+        <button
+          onClick={() => { closeMobileNav(); navigate(latestComplete ? `/viewer/${latestComplete.id}` : '/viewer/demo'); }}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+        >
+          <Eye className="w-4 h-4 flex-shrink-0" />
+          Map Viewer
+        </button>
+
+        <button
+          onClick={() => { closeMobileNav(); navigate('/gallery'); }}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+        >
+          <Map className="w-4 h-4 flex-shrink-0" />
+          Sample Gallery
+        </button>
+
+        <button
+          onClick={() => { closeMobileNav(); navigate('/fleet'); }}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+        >
+          <Plane className="w-4 h-4 flex-shrink-0" />
+          Fleet
+        </button>
+
+        <button
+          onClick={() => { closeMobileNav(); navigate('/jobs'); }}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+        >
+          <Briefcase className="w-4 h-4 flex-shrink-0" />
+          Active Jobs
+        </button>
+
+        <button
+          onClick={() => { closeMobileNav(); navigate('/subscription'); }}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+        >
+          <CreditCard className="w-4 h-4 flex-shrink-0" />
+          Subscription
+        </button>
+
+        {isAdmin && (
+          <button
+            onClick={() => { closeMobileNav(); navigate('/admin'); }}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+          >
+            <Shield className="w-4 h-4 flex-shrink-0" />
+            User Management
+          </button>
+        )}
+      </nav>
+
+      <div className="p-4 border-t border-sidebar-border space-y-3">
+        <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${isSubscribed ? "bg-accent/15 border border-accent/20" : "bg-secondary border border-border"}`}>
+          <Zap className={`w-3.5 h-3.5 flex-shrink-0 ${isSubscribed ? "text-accent" : "text-muted-foreground"}`} />
+          <span className={`text-xs font-semibold ${isSubscribed ? "text-accent" : "text-muted-foreground"}`}>
+            {tierLimits.tierLabel}
+          </span>
+          {tierLimits.priorityProcessing && (
+            <span className="ml-auto text-[9px] px-1.5 py-0.5 rounded-full bg-accent/20 text-accent font-bold uppercase">Priority</span>
+          )}
+        </div>
+        {isSubscribed && (
+          <button
+            onClick={async () => {
+              closeMobileNav();
+              try {
+                const { data, error } = await supabase.functions.invoke('customer-portal');
+                if (error) throw error;
+                if (data?.url) window.open(data.url, '_blank');
+              } catch {
+                toast({ title: 'Unable to open subscription portal', variant: 'destructive' });
+              }
+            }}
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
+          >
+            <CreditCard className="w-3.5 h-3.5" />
+            Manage Subscription
+          </button>
+        )}
+        {isAdmin && (
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-accent/15 border border-accent/20">
+            <Shield className="w-3.5 h-3.5 text-accent flex-shrink-0" />
+            <span className="text-xs font-semibold text-accent">Admin</span>
+          </div>
+        )}
+        <div className="flex items-center gap-2.5 px-1">
+          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+            <UserIcon className="w-4 h-4 text-primary-foreground" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold text-sidebar-foreground truncate">
+              {user?.user_metadata?.full_name || 'Pilot'}
+            </p>
+            <p className="text-xs text-sidebar-foreground/50 truncate">{user?.email}</p>
+          </div>
+        </div>
+        <button
+          onClick={() => { closeMobileNav(); handleSignOut(); }}
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
+        >
+          <LogOut className="w-3.5 h-3.5" />
+          Sign out
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-background flex">
-      {/* Sidebar */}
-      <aside className="hidden lg:flex flex-col w-64 bg-sidebar border-r border-sidebar-border min-h-screen sticky top-0">
-        <div className="p-5 border-b border-sidebar-border">
-          <Link to="/" className="flex items-center gap-2.5 group">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shadow">
-              <Map className="w-4 h-4 text-primary-foreground" />
-            </div>
-            <span className="font-display font-700 text-sidebar-foreground">Dronie</span>
-          </Link>
-        </div>
-
-        <nav className="flex-1 p-4 space-y-1">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = sidebarView === item.id;
-            return (
-              <button key={item.id}
-                onClick={() => setSidebarView(item.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  isActive
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
-                }`}
-              >
-                <Icon className="w-4 h-4 flex-shrink-0" />
-                {item.label}
-              </button>
-            );
-          })}
-
-          {/* Map Viewer link */}
-          <button
-            onClick={() => navigate(latestComplete ? `/viewer/${latestComplete.id}` : '/viewer/demo')}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
-          >
-            <Eye className="w-4 h-4 flex-shrink-0" />
-            Map Viewer
-          </button>
-
-          {/* Gallery link */}
-          <button
-            onClick={() => navigate('/gallery')}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
-          >
-            <Map className="w-4 h-4 flex-shrink-0" />
-            Sample Gallery
-          </button>
-
-          {/* Fleet Management link */}
-          <button
-            onClick={() => navigate('/fleet')}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
-          >
-            <Plane className="w-4 h-4 flex-shrink-0" />
-            Fleet
-          </button>
-
-          {/* Active Jobs link */}
-          <button
-            onClick={() => navigate('/jobs')}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
-          >
-            <Briefcase className="w-4 h-4 flex-shrink-0" />
-            Active Jobs
-          </button>
-
-          {/* Subscription link */}
-          <button
-            onClick={() => navigate('/subscription')}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
-          >
-            <CreditCard className="w-4 h-4 flex-shrink-0" />
-            Subscription
-          </button>
-
-          {isAdmin && (
-            <button
-              onClick={() => navigate('/admin')}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
-            >
-              <Shield className="w-4 h-4 flex-shrink-0" />
-              User Management
-            </button>
-          )}
-        </nav>
-
-        {/* User info */}
-        <div className="p-4 border-t border-sidebar-border space-y-3">
-          {/* Subscription tier badge */}
-          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${isSubscribed ? "bg-accent/15 border border-accent/20" : "bg-secondary border border-border"}`}>
-            <Zap className={`w-3.5 h-3.5 flex-shrink-0 ${isSubscribed ? "text-accent" : "text-muted-foreground"}`} />
-            <span className={`text-xs font-semibold ${isSubscribed ? "text-accent" : "text-muted-foreground"}`}>
-              {tierLimits.tierLabel}
-            </span>
-            {tierLimits.priorityProcessing && (
-              <span className="ml-auto text-[9px] px-1.5 py-0.5 rounded-full bg-accent/20 text-accent font-bold uppercase">Priority</span>
-            )}
-          </div>
-          {isSubscribed && (
-            <button
-              onClick={async () => {
-                try {
-                  const { data, error } = await supabase.functions.invoke('customer-portal');
-                  if (error) throw error;
-                  if (data?.url) window.open(data.url, '_blank');
-                } catch {
-                  toast({ title: 'Unable to open subscription portal', variant: 'destructive' });
-                }
-              }}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
-            >
-              <CreditCard className="w-3.5 h-3.5" />
-              Manage Subscription
-            </button>
-          )}
-          {isAdmin && (
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-accent/15 border border-accent/20">
-              <Shield className="w-3.5 h-3.5 text-accent flex-shrink-0" />
-              <span className="text-xs font-semibold text-accent">Admin</span>
-            </div>
-          )}
-          <div className="flex items-center gap-2.5 px-1">
-            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-              <UserIcon className="w-4 h-4 text-primary-foreground" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-sidebar-foreground truncate">
-                {user?.user_metadata?.full_name || 'Pilot'}
-              </p>
-              <p className="text-xs text-sidebar-foreground/50 truncate">{user?.email}</p>
-            </div>
-          </div>
-          <button
-            onClick={handleSignOut}
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            Sign out
-          </button>
-        </div>
+      {/* Desktop sidebar */}
+      <aside className="hidden lg:flex flex-col w-64 border-r border-sidebar-border min-h-screen sticky top-0">
+        {sidebarContent}
       </aside>
+
+      {/* Mobile nav drawer */}
+      <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+        <SheetContent side="left" className="p-0 w-72 bg-sidebar border-sidebar-border">
+          {sidebarContent}
+        </SheetContent>
+      </Sheet>
 
       {/* Main */}
       <main className="flex-1 flex flex-col min-h-screen">
         {/* Top bar */}
         <header className="sticky top-0 z-10 bg-card/95 backdrop-blur-md border-b border-border px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Link to="/" className="lg:hidden">
-              <ArrowLeft className="w-5 h-5 text-muted-foreground hover:text-foreground transition-colors" />
-            </Link>
+            <button
+              onClick={() => setMobileNavOpen(true)}
+              className="lg:hidden p-2 -ml-2 rounded-lg hover:bg-secondary transition-colors"
+              aria-label="Open menu"
+            >
+              <Menu className="w-5 h-5 text-muted-foreground" />
+            </button>
             {/* Mobile tier badge */}
             <div className={`lg:hidden flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold ${isSubscribed ? "bg-accent/15 text-accent border border-accent/20" : "bg-secondary text-muted-foreground border border-border"}`}>
               <Zap className="w-3 h-3" />
