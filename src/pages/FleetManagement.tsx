@@ -203,6 +203,7 @@ export default function FleetManagement() {
 
               <div className="mt-4 space-y-3">
                 <CameraFeed drone={selectedDrone} />
+                <BroadcastButton drone={selectedDrone} />
 
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div className="bg-secondary/50 rounded-lg p-3">
