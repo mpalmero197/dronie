@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { Radio, Square, Camera, Monitor, Loader2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Radio, Square, Camera, Monitor, Loader2, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -9,6 +9,21 @@ import type { Drone } from "@/lib/fleet-types";
 interface BroadcastButtonProps {
   drone: Drone;
   compact?: boolean;
+}
+
+/** True when the browser actually supports `getDisplayMedia` (screen sharing).
+ * iOS Safari/Chrome/Firefox all return false here — Apple has never shipped it. */
+function supportsScreenShare(): boolean {
+  return typeof navigator !== "undefined"
+    && !!navigator.mediaDevices
+    && typeof navigator.mediaDevices.getDisplayMedia === "function";
+}
+
+/** Detect iOS so we can show a tailored hint. */
+function isIOS(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent;
+  return /iPad|iPhone|iPod/.test(ua) || (ua.includes("Mac") && "ontouchend" in document);
 }
 
 export default function BroadcastButton({ drone, compact = false }: BroadcastButtonProps) {
