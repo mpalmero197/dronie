@@ -129,32 +129,57 @@ export default function BroadcastButton({ drone, compact = false }: BroadcastBut
     return (
       <div className="space-y-2 p-3 rounded-lg border border-border bg-card">
         <p className="text-xs font-medium text-foreground">Choose broadcast source</p>
+
+        {onIOS && (
+          <div className="flex gap-2 p-2 rounded-md bg-amber-500/10 border border-amber-500/30 text-[11px] text-foreground">
+            <Info className="w-3.5 h-3.5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <p>
+              On iPhone, screen sharing isn't supported by Apple. Use{" "}
+              <span className="font-semibold">Phone Camera</span> instead — point your phone at
+              the DJI controller screen.
+            </p>
+          </div>
+        )}
+
         <Button
           onClick={() => start("camera")}
           variant="outline"
           size="sm"
-          className="w-full gap-2 justify-start"
+          className="w-full gap-2 justify-start h-auto py-2.5"
           disabled={starting}
         >
-          <Camera className="w-4 h-4" />
+          <Camera className="w-4 h-4 flex-shrink-0" />
           <div className="text-left flex-1">
             <p className="text-xs font-semibold">Phone Camera</p>
-            <p className="text-[10px] text-muted-foreground">Use rear camera or USB capture device</p>
+            <p className="text-[10px] text-muted-foreground">
+              Rear camera or USB capture device {onIOS && "· works on iOS"}
+            </p>
           </div>
         </Button>
+
         <Button
           onClick={() => start("screen")}
           variant="outline"
           size="sm"
-          className="w-full gap-2 justify-start"
-          disabled={starting}
+          className="w-full gap-2 justify-start h-auto py-2.5"
+          disabled={starting || !screenShareAvailable}
         >
-          <Monitor className="w-4 h-4" />
+          <Monitor className="w-4 h-4 flex-shrink-0" />
           <div className="text-left flex-1">
-            <p className="text-xs font-semibold">Screen Share</p>
-            <p className="text-[10px] text-muted-foreground">Mirror DJI Fly app or controller screen</p>
+            <p className="text-xs font-semibold">
+              Screen Share
+              {!screenShareAvailable && (
+                <span className="ml-1.5 text-[9px] font-medium text-muted-foreground">
+                  (not available on this device)
+                </span>
+              )}
+            </p>
+            <p className="text-[10px] text-muted-foreground">
+              Mirror DJI Fly app or controller screen
+            </p>
           </div>
         </Button>
+
         <Button onClick={() => setShowPicker(false)} variant="ghost" size="sm" className="w-full">
           Cancel
         </Button>
