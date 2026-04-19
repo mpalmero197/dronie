@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, RefreshCw, Briefcase, Video, Loader2, Clock, StopCircle, CheckCircle } from "lucide-react";
+import { ArrowLeft, Plus, RefreshCw, Briefcase, Video, Loader2, Clock, StopCircle, CheckCircle, Navigation } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
@@ -215,7 +215,17 @@ export default function ActiveJobs() {
                         {job.notes && ` · ${job.notes}`}
                       </p>
                     </div>
-                    <div className="flex gap-1.5 flex-shrink-0">
+                    <div className="flex gap-1.5 flex-shrink-0 flex-wrap">
+                      {(user?.id === job.pilot_id || isAdmin) && (
+                        <Button
+                          size="sm"
+                          variant="default"
+                          onClick={() => navigate(`/jobs/${job.id}/fly`)}
+                          className="gap-1 text-xs"
+                        >
+                          <Navigation className="w-3 h-3" /> Pilot view
+                        </Button>
+                      )}
                       <Button size="sm" variant="outline" onClick={() => completeJob(job)} className="gap-1 text-xs">
                         <CheckCircle className="w-3 h-3" /> Complete
                       </Button>
