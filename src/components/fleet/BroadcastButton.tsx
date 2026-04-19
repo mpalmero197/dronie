@@ -51,22 +51,44 @@ export default function BroadcastButton({ drone, compact = false }: BroadcastBut
     }
   }, [handle]);
 
+  const screenShareAvailable = useMemo(supportsScreenShare, []);
+  const onIOS = useMemo(isIOS, []);
+
   const start = async (source: BroadcastSource) => {
     setShowPicker(false);
     setStarting(true);
     try {
+      if (source === "screen" && !screenShareAvailable) {
+        throw new Error(
+          onIOS
+            ? "iOS doesn't support browser screen sharing. Use Phone Camera mode instead — point your phone at the controller screen."
+            : "Your browser doesn't support screen sharing. Try Chrome on Android, or use Phone Camera mode.",
+        );
+      }
       const h = await startBroadcast(drone.id, source);
       setHandle(h);
       toast({
         title: "🔴 Broadcasting live",
         description: `${drone.name} feed is now visible to your team.`,
       });
-    } catch (err: any) {
-      toast({
-        title: "Couldn't start broadcast",
-        description: err?.message ?? "Camera/screen permission denied.",
-        variant: "destructive",
-      });
+    } catch (err: unknown) {
+      const e = err as Error & { name?: string };
+      let title = "Couldn't start broadcast";
+      let description = e?.message ?? "Permission denied.";
+      if (e?.name === "NotAllowedError") {
+        title = "Permission denied";
+        description =
+          source === "camera"
+            ? "Allow camera access in your browser settings, then try again."
+            : "Allow screen sharing, then try again.";
+      } else if (e?.name === "NotFoundError") {
+        title = "No camera found";
+        description = "Plug in a camera or USB capture device, then retry.";
+      } else if (e?.name === "NotReadableError") {
+        title = "Camera in use";
+        description = "Another app is using the camera. Close it and try again.";
+      }
+      toast({ title, description, variant: "destructive" });
     } finally {
       setStarting(false);
     }
