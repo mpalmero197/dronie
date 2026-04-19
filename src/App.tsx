@@ -13,6 +13,8 @@ import ProjectDetail from "./pages/ProjectDetail.tsx";
 import Gallery from "./pages/Gallery.tsx";
 import FleetManagement from "./pages/FleetManagement.tsx";
 import ActiveJobs from "./pages/ActiveJobs.tsx";
+import PilotCompanion from "./pages/PilotCompanion.tsx";
+import Install from "./pages/Install.tsx";
 import PrivacyPolicy from "./pages/PrivacyPolicy.tsx";
 import TermsOfService from "./pages/TermsOfService.tsx";
 import CookieConsent from "./components/CookieConsent.tsx";
@@ -38,6 +40,8 @@ const App = () => (
             <Route path="/gallery" element={<Gallery />} />
             <Route path="/fleet" element={<FleetManagement />} />
             <Route path="/jobs" element={<ActiveJobs />} />
+            <Route path="/jobs/:jobId/fly" element={<PilotCompanion />} />
+            <Route path="/install" element={<Install />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/subscription" element={<Subscription />} />
             <Route path="/terms" element={<TermsOfService />} />

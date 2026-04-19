@@ -290,6 +290,84 @@ export type Database = {
         }
         Relationships: []
       }
+      mission_logs: {
+        Row: {
+          altitude: number | null
+          created_at: string
+          event_type: string
+          id: string
+          job_id: string
+          latitude: number | null
+          longitude: number | null
+          payload: Json
+          pilot_id: string
+          recorded_at: string
+        }
+        Insert: {
+          altitude?: number | null
+          created_at?: string
+          event_type: string
+          id?: string
+          job_id: string
+          latitude?: number | null
+          longitude?: number | null
+          payload?: Json
+          pilot_id: string
+          recorded_at?: string
+        }
+        Update: {
+          altitude?: number | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          job_id?: string
+          latitude?: number | null
+          longitude?: number | null
+          payload?: Json
+          pilot_id?: string
+          recorded_at?: string
+        }
+        Relationships: []
+      }
+      pilot_tracks: {
+        Row: {
+          accuracy: number | null
+          altitude: number | null
+          heading: number | null
+          id: string
+          job_id: string
+          latitude: number
+          longitude: number
+          pilot_id: string
+          recorded_at: string
+          speed: number | null
+        }
+        Insert: {
+          accuracy?: number | null
+          altitude?: number | null
+          heading?: number | null
+          id?: string
+          job_id: string
+          latitude: number
+          longitude: number
+          pilot_id: string
+          recorded_at?: string
+          speed?: number | null
+        }
+        Update: {
+          accuracy?: number | null
+          altitude?: number | null
+          heading?: number | null
+          id?: string
+          job_id?: string
+          latitude?: number
+          longitude?: number
+          pilot_id?: string
+          recorded_at?: string
+          speed?: number | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
