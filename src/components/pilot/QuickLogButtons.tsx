@@ -49,12 +49,12 @@ export default function QuickLogButtons({ onLog }: Props) {
           onClick={() => onLog("landing")}
         />
         <Btn
-          icon={<Battery className="w-5 h-5 text-green-500" />}
+          icon={<Battery className="w-5 h-5 text-primary" />}
           label="Battery"
           onClick={() => setBatteryOpen(true)}
         />
         <Btn
-          icon={<Camera className="w-5 h-5 text-blue-500" />}
+          icon={<Camera className="w-5 h-5 text-accent" />}
           label="Photo"
           onClick={() => onLog("photo_taken")}
         />

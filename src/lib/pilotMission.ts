@@ -36,7 +36,7 @@ export async function logMissionEvent(
     job_id: jobId,
     pilot_id: pilotId,
     event_type: eventType,
-    payload,
+    payload: payload as never,
     latitude: position?.latitude ?? null,
     longitude: position?.longitude ?? null,
     altitude: position?.altitude ?? null,

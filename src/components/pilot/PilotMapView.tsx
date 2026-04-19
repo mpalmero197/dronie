@@ -68,7 +68,7 @@ export default function PilotMapView({ pilot, plannedPolygon, plannedPath, flown
 
         {flownTrack.length >= 2 && (
           <Polyline
-            positions={flownTrack.map((p) => [p.latitude, p.longitude])}
+            positions={flownTrack.map((p) => [p.latitude, p.longitude] as [number, number])}
             pathOptions={{ color: "hsl(140 60% 45%)", weight: 4 }}
           />
         )}
