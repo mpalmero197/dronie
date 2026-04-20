@@ -602,7 +602,7 @@ export default function Dashboard() {
                     Draw your survey area on the map → get an automated flight path, KMZ for DJI Fly, and a PDF briefing.
                   </p>
                 </div>
-                <ChevronRightArrow />
+                <svg className="w-5 h-5 flex-shrink-0 opacity-70" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
               </button>
 
               {/* Upload drop zone */}
