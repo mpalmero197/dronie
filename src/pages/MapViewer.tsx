@@ -453,6 +453,27 @@ export default function MapViewer() {
           </div>
         </div>
 
+        {/* Sticky Plan Mission FAB — always visible */}
+        {!flightPlannerOpen && (
+          <button
+            onClick={launchPlanner}
+            className="absolute bottom-16 right-3 z-[950] bg-primary text-primary-foreground rounded-full pl-4 pr-5 py-3 shadow-2xl hover:shadow-primary/40 hover:scale-[1.03] active:scale-95 transition-all flex items-center gap-2 font-semibold text-sm border-2 border-primary-foreground/10"
+            aria-label="Plan a drone mission"
+          >
+            <Plane className="w-4 h-4" />
+            Plan Mission
+          </button>
+        )}
+
+        {/* Onboarding coachmark */}
+        {showCoachmark && (
+          <PlanCoachmark
+            forceShow
+            key={coachmarkForce}
+            onClose={() => setShowCoachmark(false)}
+          />
+        )}
+
         {/* Embed Modal */}
         {showEmbed && projectId && <EmbedModal projectId={projectId} onClose={() => setShowEmbed(false)} />}
       </div>
