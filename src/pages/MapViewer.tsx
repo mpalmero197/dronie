@@ -137,8 +137,25 @@ export default function MapViewer() {
     setActiveTool(tool);
   }, [hasPro]);
 
+  const launchPlanner = useCallback(() => {
+    setActiveTool("polygon");
+    setFlightPlannerOpen(true);
+    setCoachmarkForce((n) => n + 1);
+    setShowCoachmark(true);
+  }, []);
+
   const isDemo = projectId === "demo";
   const prevOverlayRef = useRef<string | null>(null);
+
+  // Auto-launch planner when arriving with ?mode=plan
+  useEffect(() => {
+    if (searchParams.get("mode") === "plan" && hasPro) {
+      launchPlanner();
+      searchParams.delete("mode");
+      setSearchParams(searchParams, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasPro]);
 
   // Auto-enable airspace overlay when LAANC check is active
   useEffect(() => {
