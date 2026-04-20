@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { useState, useEffect } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,9 +11,11 @@ interface AddDroneDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onAdded: () => void;
+  prefill?: { name?: string; model?: string };
+  hint?: string;
 }
 
-export default function AddDroneDialog({ open, onOpenChange, onAdded }: AddDroneDialogProps) {
+export default function AddDroneDialog({ open, onOpenChange, onAdded, prefill, hint }: AddDroneDialogProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
@@ -24,6 +26,16 @@ export default function AddDroneDialog({ open, onOpenChange, onAdded }: AddDrone
   const [stream, setStream] = useState<{ mode: StreamMode; url?: string; demoPath?: string }>({
     mode: "webrtc",
   });
+
+  useEffect(() => {
+    if (open && prefill) {
+      setForm(f => ({
+        name: prefill.name ?? f.name,
+        model: prefill.model ?? f.model,
+        serial_number: f.serial_number,
+      }));
+    }
+  }, [open, prefill]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,6 +68,7 @@ export default function AddDroneDialog({ open, onOpenChange, onAdded }: AddDrone
       <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Register New Drone</DialogTitle>
+          {hint && <DialogDescription className="text-xs">{hint}</DialogDescription>}
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

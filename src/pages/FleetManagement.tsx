@@ -1,27 +1,69 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, RefreshCw, Plane, Video, Loader2, Search } from "lucide-react";
+import { ArrowLeft, Plus, RefreshCw, Plane, Video, Loader2, Search, Wifi, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
 import type { Drone, DroneStatus } from "@/lib/fleet-types";
+import { probeForNearbyDrone } from "@/lib/droneNetworkProbe";
 import DroneCard from "@/components/fleet/DroneCard";
 import CameraFeed from "@/components/fleet/CameraFeed";
 import AddDroneDialog from "@/components/fleet/AddDroneDialog";
+import EditDroneDialog from "@/components/fleet/EditDroneDialog";
 import DroneStatusBadge from "@/components/fleet/DroneStatusBadge";
 import BroadcastButton from "@/components/fleet/BroadcastButton";
 
 export default function FleetManagement() {
   const navigate = useNavigate();
   const { user, isAdmin, loading: authLoading } = useAuth();
+  const { toast } = useToast();
   const [drones, setDrones] = useState<Drone[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<DroneStatus | "all">("all");
   const [showAddDrone, setShowAddDrone] = useState(false);
+  const [addPrefill, setAddPrefill] = useState<{ name?: string; model?: string } | undefined>();
+  const [addHint, setAddHint] = useState<string | undefined>();
+  const [probing, setProbing] = useState(false);
   const [selectedDrone, setSelectedDrone] = useState<Drone | null>(null);
+  const [editDrone, setEditDrone] = useState<Drone | null>(null);
+  const [deleteDrone, setDeleteDrone] = useState<Drone | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleProbe = async () => {
+    setProbing(true);
+    try {
+      const result = await probeForNearbyDrone();
+      setAddPrefill(result.detected ? { model: result.suggestedModel, name: result.suggestedModel } : undefined);
+      setAddHint(result.hint);
+      setShowAddDrone(true);
+      if (!result.detected) {
+        toast({ title: "No drone detected", description: "Opening blank form. Make sure you're on the drone's Wi-Fi." });
+      }
+    } finally {
+      setProbing(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteDrone) return;
+    setDeleting(true);
+    try {
+      const { error } = await supabase.from("drones").delete().eq("id", deleteDrone.id);
+      if (error) throw error;
+      toast({ title: "Drone removed", description: deleteDrone.name });
+      if (selectedDrone?.id === deleteDrone.id) setSelectedDrone(null);
+      setDeleteDrone(null);
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const fetchDrones = useCallback(async () => {
     const { data, error } = await supabase
@@ -93,12 +135,18 @@ export default function FleetManagement() {
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={fetchDrones} className="gap-1.5">
-              <RefreshCw className="w-3.5 h-3.5" /> Refresh
+              <RefreshCw className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Refresh</span>
             </Button>
             {isAdmin && (
-              <Button size="sm" onClick={() => setShowAddDrone(true)} className="gap-1.5">
-                <Plus className="w-3.5 h-3.5" /> Add Drone
-              </Button>
+              <>
+                <Button variant="outline" size="sm" onClick={handleProbe} disabled={probing} className="gap-1.5" title="Detect drone on local Wi-Fi">
+                  {probing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wifi className="w-3.5 h-3.5" />}
+                  <span className="hidden sm:inline">{probing ? "Scanning…" : "Detect"}</span>
+                </Button>
+                <Button size="sm" onClick={() => { setAddPrefill(undefined); setAddHint(undefined); setShowAddDrone(true); }} className="gap-1.5">
+                  <Plus className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Add Drone</span>
+                </Button>
+              </>
             )}
           </div>
         </div>
@@ -240,13 +288,42 @@ export default function FleetManagement() {
                     </p>
                   </div>
                 )}
+
+                {isAdmin && (
+                  <div className="flex gap-2 pt-2 border-t border-border">
+                    <Button variant="outline" size="sm" onClick={() => setEditDrone(selectedDrone)} className="flex-1 gap-1.5">
+                      <Pencil className="w-3.5 h-3.5" /> Edit
+                    </Button>
+                    <Button variant="destructive" size="sm" onClick={() => setDeleteDrone(selectedDrone)} className="flex-1 gap-1.5">
+                      <Trash2 className="w-3.5 h-3.5" /> Remove
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         )}
       </main>
 
-      <AddDroneDialog open={showAddDrone} onOpenChange={setShowAddDrone} onAdded={fetchDrones} />
+      <AddDroneDialog open={showAddDrone} onOpenChange={setShowAddDrone} onAdded={fetchDrones} prefill={addPrefill} hint={addHint} />
+      <EditDroneDialog open={!!editDrone} onOpenChange={(o) => !o && setEditDrone(null)} drone={editDrone} onSaved={fetchDrones} />
+
+      <AlertDialog open={!!deleteDrone} onOpenChange={(o) => !o && setDeleteDrone(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove drone from fleet?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete <strong>{deleteDrone?.name}</strong> and unlink any associated jobs. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleting ? "Removing…" : "Remove"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
