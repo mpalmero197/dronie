@@ -135,12 +135,18 @@ export default function FleetManagement() {
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={fetchDrones} className="gap-1.5">
-              <RefreshCw className="w-3.5 h-3.5" /> Refresh
+              <RefreshCw className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Refresh</span>
             </Button>
             {isAdmin && (
-              <Button size="sm" onClick={() => setShowAddDrone(true)} className="gap-1.5">
-                <Plus className="w-3.5 h-3.5" /> Add Drone
-              </Button>
+              <>
+                <Button variant="outline" size="sm" onClick={handleProbe} disabled={probing} className="gap-1.5" title="Detect drone on local Wi-Fi">
+                  {probing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wifi className="w-3.5 h-3.5" />}
+                  <span className="hidden sm:inline">{probing ? "Scanning…" : "Detect"}</span>
+                </Button>
+                <Button size="sm" onClick={() => { setAddPrefill(undefined); setAddHint(undefined); setShowAddDrone(true); }} className="gap-1.5">
+                  <Plus className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Add Drone</span>
+                </Button>
+              </>
             )}
           </div>
         </div>
@@ -282,13 +288,42 @@ export default function FleetManagement() {
                     </p>
                   </div>
                 )}
+
+                {isAdmin && (
+                  <div className="flex gap-2 pt-2 border-t border-border">
+                    <Button variant="outline" size="sm" onClick={() => setEditDrone(selectedDrone)} className="flex-1 gap-1.5">
+                      <Pencil className="w-3.5 h-3.5" /> Edit
+                    </Button>
+                    <Button variant="destructive" size="sm" onClick={() => setDeleteDrone(selectedDrone)} className="flex-1 gap-1.5">
+                      <Trash2 className="w-3.5 h-3.5" /> Remove
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         )}
       </main>
 
-      <AddDroneDialog open={showAddDrone} onOpenChange={setShowAddDrone} onAdded={fetchDrones} />
+      <AddDroneDialog open={showAddDrone} onOpenChange={setShowAddDrone} onAdded={fetchDrones} prefill={addPrefill} hint={addHint} />
+      <EditDroneDialog open={!!editDrone} onOpenChange={(o) => !o && setEditDrone(null)} drone={editDrone} onSaved={fetchDrones} />
+
+      <AlertDialog open={!!deleteDrone} onOpenChange={(o) => !o && setDeleteDrone(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove drone from fleet?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete <strong>{deleteDrone?.name}</strong> and unlink any associated jobs. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleting ? "Removing…" : "Remove"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
