@@ -1,11 +1,11 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { MapContainer, TileLayer, ScaleControl } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import html2canvas from "html2canvas";
 import {
-  Map, ArrowLeft, Share2, CheckCircle2, Loader2,
+  Map, ArrowLeft, Share2, CheckCircle2, Loader2, Plane,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase, Project } from "@/lib/supabase";
@@ -33,6 +33,7 @@ import WeatherWidget from "@/components/map/WeatherWidget";
 import SunPositionWidget from "@/components/map/SunPosition";
 import GeolocationButton from "@/components/map/GeolocationButton";
 import BookmarksPanel from "@/components/map/BookmarksPanel";
+import PlanCoachmark from "@/components/map/PlanCoachmark";
 
 // Fix Leaflet default marker icon issue with Vite
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -90,6 +91,7 @@ if (!document.head.querySelector("[data-geo-pulse]")) {
 export default function MapViewer() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const drawingLayerRef = useRef<MapDrawingLayerRef>(null);
@@ -111,6 +113,8 @@ export default function MapViewer() {
   const [laancResult, setLaancResult] = useState<LaancResult | null>(null);
   const [bookmarksOpen, setBookmarksOpen] = useState(false);
   const [upgradePrompt, setUpgradePrompt] = useState<{ feature: string; description: string } | null>(null);
+  const [showCoachmark, setShowCoachmark] = useState(false);
+  const [coachmarkForce, setCoachmarkForce] = useState(0);
 
   const { subscriptionTier, isAdmin } = useAuth();
   const hasPro = isAdmin || canUseFeature(subscriptionTier, "priorityProcessing");
@@ -133,8 +137,25 @@ export default function MapViewer() {
     setActiveTool(tool);
   }, [hasPro]);
 
+  const launchPlanner = useCallback(() => {
+    setActiveTool("polygon");
+    setFlightPlannerOpen(true);
+    setCoachmarkForce((n) => n + 1);
+    setShowCoachmark(true);
+  }, []);
+
   const isDemo = projectId === "demo";
   const prevOverlayRef = useRef<string | null>(null);
+
+  // Auto-launch planner when arriving with ?mode=plan
+  useEffect(() => {
+    if (searchParams.get("mode") === "plan" && hasPro) {
+      launchPlanner();
+      searchParams.delete("mode");
+      setSearchParams(searchParams, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasPro]);
 
   // Auto-enable airspace overlay when LAANC check is active
   useEffect(() => {
@@ -431,6 +452,27 @@ export default function MapViewer() {
               : "Select a tool or right-click for quick actions"}
           </div>
         </div>
+
+        {/* Sticky Plan Mission FAB — always visible */}
+        {!flightPlannerOpen && (
+          <button
+            onClick={launchPlanner}
+            className="absolute bottom-16 right-3 z-[950] bg-primary text-primary-foreground rounded-full pl-4 pr-5 py-3 shadow-2xl hover:shadow-primary/40 hover:scale-[1.03] active:scale-95 transition-all flex items-center gap-2 font-semibold text-sm border-2 border-primary-foreground/10"
+            aria-label="Plan a drone mission"
+          >
+            <Plane className="w-4 h-4" />
+            Plan Mission
+          </button>
+        )}
+
+        {/* Onboarding coachmark */}
+        {showCoachmark && (
+          <PlanCoachmark
+            forceShow
+            key={coachmarkForce}
+            onClose={() => setShowCoachmark(false)}
+          />
+        )}
 
         {/* Embed Modal */}
         {showEmbed && projectId && <EmbedModal projectId={projectId} onClose={() => setShowEmbed(false)} />}

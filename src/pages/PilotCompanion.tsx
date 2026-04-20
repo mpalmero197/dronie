@@ -268,6 +268,19 @@ export default function PilotCompanion() {
           </div>
         )}
 
+        {/* Plan / View flight path */}
+        {job.project_id && (
+          <Button
+            variant={flightPlan ? "outline" : "default"}
+            size="sm"
+            onClick={() => navigate(`/viewer/${job.project_id}?mode=plan`)}
+            className="w-full gap-2"
+          >
+            <NavIcon className="w-4 h-4" />
+            {flightPlan ? `View / edit "${flightPlan.name}"` : "Plan flight path for this job"}
+          </Button>
+        )}
+
         {/* Hero: live map */}
         <PilotMapView
           pilot={position}
