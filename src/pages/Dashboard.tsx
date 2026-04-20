@@ -588,6 +588,23 @@ export default function Dashboard() {
                 })}
               </div>
 
+              {/* Quick actions: Plan a Flight */}
+              <button
+                onClick={() => navigate(latestComplete ? `/viewer/${latestComplete.id}?mode=plan` : '/viewer/demo?mode=plan')}
+                className="w-full bg-gradient-to-br from-primary via-primary to-primary/80 text-primary-foreground rounded-2xl p-5 flex items-center gap-4 hover:shadow-lg hover:shadow-primary/30 hover:scale-[1.005] active:scale-[0.99] transition-all text-left"
+              >
+                <div className="w-12 h-12 rounded-xl bg-primary-foreground/15 backdrop-blur flex items-center justify-center flex-shrink-0">
+                  <Plane className="w-6 h-6" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-display font-700 text-base">Plan a Flight</h3>
+                  <p className="text-xs text-primary-foreground/80 mt-0.5">
+                    Draw your survey area on the map → get an automated flight path, KMZ for DJI Fly, and a PDF briefing.
+                  </p>
+                </div>
+                <ChevronRightArrow />
+              </button>
+
               {/* Upload drop zone */}
               <div
                 onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
