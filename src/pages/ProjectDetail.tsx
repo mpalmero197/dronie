@@ -486,6 +486,31 @@ export default function ProjectDetail() {
           {savingDesc && <p className="text-xs text-muted-foreground mt-1">Saving…</p>}
         </div>
 
+        {/* Plan a Flight CTA */}
+        <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20 rounded-2xl p-5 flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-primary text-primary-foreground flex items-center justify-center flex-shrink-0 shadow">
+            <MapPin className="w-5 h-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-display font-700 text-foreground text-sm sm:text-base">
+              {flightPlans.length > 0 ? "Edit Flight Plan" : "Plan a Flight"}
+            </h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {flightPlans.length > 0
+                ? `${flightPlans.length} plan${flightPlans.length > 1 ? "s" : ""} attached. Open the planner to draw or refine your survey area.`
+                : "Draw your survey area on the map. Dronie generates the lawnmower path, KMZ for DJI Fly, and a PDF briefing."}
+            </p>
+          </div>
+          <Button
+            onClick={() => navigate(`/viewer/${project.id}?mode=plan`)}
+            className="gap-2 flex-shrink-0"
+          >
+            <MapPin className="w-4 h-4" />
+            <span className="hidden sm:inline">{flightPlans.length > 0 ? "Open Planner" : "Plan Flight"}</span>
+            <span className="sm:hidden">Plan</span>
+          </Button>
+        </div>
+
         {/* GPS Map Preview */}
         {project.gps_points && Array.isArray(project.gps_points) && (project.gps_points as any[]).length > 0 && (
           <GpsMapPreview gpsPoints={project.gps_points as any} />
