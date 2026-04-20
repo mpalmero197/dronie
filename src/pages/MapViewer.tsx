@@ -1,11 +1,11 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { MapContainer, TileLayer, ScaleControl } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import html2canvas from "html2canvas";
 import {
-  Map, ArrowLeft, Share2, CheckCircle2, Loader2,
+  Map, ArrowLeft, Share2, CheckCircle2, Loader2, Plane,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase, Project } from "@/lib/supabase";
@@ -33,6 +33,7 @@ import WeatherWidget from "@/components/map/WeatherWidget";
 import SunPositionWidget from "@/components/map/SunPosition";
 import GeolocationButton from "@/components/map/GeolocationButton";
 import BookmarksPanel from "@/components/map/BookmarksPanel";
+import PlanCoachmark from "@/components/map/PlanCoachmark";
 
 // Fix Leaflet default marker icon issue with Vite
 delete (L.Icon.Default.prototype as any)._getIconUrl;
