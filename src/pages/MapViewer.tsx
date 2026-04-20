@@ -91,6 +91,7 @@ if (!document.head.querySelector("[data-geo-pulse]")) {
 export default function MapViewer() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const drawingLayerRef = useRef<MapDrawingLayerRef>(null);
@@ -112,6 +113,8 @@ export default function MapViewer() {
   const [laancResult, setLaancResult] = useState<LaancResult | null>(null);
   const [bookmarksOpen, setBookmarksOpen] = useState(false);
   const [upgradePrompt, setUpgradePrompt] = useState<{ feature: string; description: string } | null>(null);
+  const [showCoachmark, setShowCoachmark] = useState(false);
+  const [coachmarkForce, setCoachmarkForce] = useState(0);
 
   const { subscriptionTier, isAdmin } = useAuth();
   const hasPro = isAdmin || canUseFeature(subscriptionTier, "priorityProcessing");
