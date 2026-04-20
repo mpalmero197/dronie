@@ -1,27 +1,69 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, RefreshCw, Plane, Video, Loader2, Search } from "lucide-react";
+import { ArrowLeft, Plus, RefreshCw, Plane, Video, Loader2, Search, Wifi, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
 import type { Drone, DroneStatus } from "@/lib/fleet-types";
+import { probeForNearbyDrone } from "@/lib/droneNetworkProbe";
 import DroneCard from "@/components/fleet/DroneCard";
 import CameraFeed from "@/components/fleet/CameraFeed";
 import AddDroneDialog from "@/components/fleet/AddDroneDialog";
+import EditDroneDialog from "@/components/fleet/EditDroneDialog";
 import DroneStatusBadge from "@/components/fleet/DroneStatusBadge";
 import BroadcastButton from "@/components/fleet/BroadcastButton";
 
 export default function FleetManagement() {
   const navigate = useNavigate();
   const { user, isAdmin, loading: authLoading } = useAuth();
+  const { toast } = useToast();
   const [drones, setDrones] = useState<Drone[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<DroneStatus | "all">("all");
   const [showAddDrone, setShowAddDrone] = useState(false);
+  const [addPrefill, setAddPrefill] = useState<{ name?: string; model?: string } | undefined>();
+  const [addHint, setAddHint] = useState<string | undefined>();
+  const [probing, setProbing] = useState(false);
   const [selectedDrone, setSelectedDrone] = useState<Drone | null>(null);
+  const [editDrone, setEditDrone] = useState<Drone | null>(null);
+  const [deleteDrone, setDeleteDrone] = useState<Drone | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleProbe = async () => {
+    setProbing(true);
+    try {
+      const result = await probeForNearbyDrone();
+      setAddPrefill(result.detected ? { model: result.suggestedModel, name: result.suggestedModel } : undefined);
+      setAddHint(result.hint);
+      setShowAddDrone(true);
+      if (!result.detected) {
+        toast({ title: "No drone detected", description: "Opening blank form. Make sure you're on the drone's Wi-Fi." });
+      }
+    } finally {
+      setProbing(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteDrone) return;
+    setDeleting(true);
+    try {
+      const { error } = await supabase.from("drones").delete().eq("id", deleteDrone.id);
+      if (error) throw error;
+      toast({ title: "Drone removed", description: deleteDrone.name });
+      if (selectedDrone?.id === deleteDrone.id) setSelectedDrone(null);
+      setDeleteDrone(null);
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const fetchDrones = useCallback(async () => {
     const { data, error } = await supabase
