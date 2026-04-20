@@ -123,7 +123,7 @@ export default function HeroSection() {
                 size="lg"
                 variant="outline"
                 onClick={() => navigate("/viewer/demo")}
-                className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 gap-2 transition-all active:scale-[0.97]"
+                className="bg-primary-foreground text-primary border-primary-foreground hover:bg-primary-foreground/90 hover:text-primary gap-2 transition-all active:scale-[0.97] font-semibold"
               >
                 See Example Maps
                 <ArrowRight className="w-4 h-4" />
