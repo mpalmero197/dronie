@@ -522,7 +522,7 @@ export default function FlightPlanner({
       waypoints: waypoints.length, distance: totalDist, area, flightTime, gsd,
       photos: waypoints.length, batteriesNeeded, batteryPercent, droneName: drone.name,
     };
-  }, [result, surveyPolygon, params, homePosition, flightMode, orbitRadius]);
+  }, [result, surveyPolygon, params, homePosition, flightMode, orbitRadius, returnToHome]);
 
   // Downloads
   const downloadKML = useCallback(() => {
