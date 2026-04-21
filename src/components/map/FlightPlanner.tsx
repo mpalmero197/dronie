@@ -918,10 +918,36 @@ export default function FlightPlanner({
               }}
             />
           ))}
+          {/* Drag-to-move whole polygon handle (centroid) — only in editing mode */}
+          {onPolygonEdit && drawState === "editing" && polygonCentroid && (
+            <Marker
+              position={polygonCentroid}
+              icon={moveHandleIcon}
+              draggable
+              eventHandlers={{
+                dragstart: () => {
+                  // Stash original centroid + vertices on the marker for delta computation
+                  (window as any).__polyDragStart = {
+                    centroid: polygonCentroid,
+                    verts: surveyPolygon!.map(p => [p[0], p[1]] as [number, number]),
+                  };
+                },
+                drag: (e) => {
+                  const start = (window as any).__polyDragStart;
+                  if (!start || !onPolygonEdit) return;
+                  const ll = e.target.getLatLng();
+                  const dLat = ll.lat - start.centroid[0];
+                  const dLng = ll.lng - start.centroid[1];
+                  onPolygonEdit(start.verts.map((p: [number, number]) => [p[0] + dLat, p[1] + dLng]));
+                },
+                dragend: () => { (window as any).__polyDragStart = null; },
+              }}
+            />
+          )}
         </>
       )}
 
-      {/* Partial polygon while drawing (fewer than 3 points) */}
+      {/* Partial polygon while drawing (1–2 placed points, no fill yet) */}
       {drawState === "drawing" && surveyPolygon && surveyPolygon.length > 0 && surveyPolygon.length < 3 && (flightMode === "grid" || flightMode === "perimeter") && (
         <>
           {surveyPolygon.length === 2 && (
@@ -932,6 +958,33 @@ export default function FlightPlanner({
               pathOptions={{ color: "#ffffff", fillColor: "#2563eb", fillOpacity: 1, weight: 2 }} />
           ))}
         </>
+      )}
+
+      {/* Rubber-band preview: from last placed vertex → cursor (and back to first vertex if we have ≥2 pts for polygon) */}
+      {drawState === "drawing" && cursorLatLng && (flightMode === "grid" || flightMode === "perimeter") && surveyPolygon && surveyPolygon.length > 0 && (
+        <>
+          <Polyline
+            positions={[
+              surveyPolygon[surveyPolygon.length - 1],
+              snapTarget ?? [cursorLatLng.lat, cursorLatLng.lng],
+            ]}
+            pathOptions={{ color: "#2563eb", weight: 2, dashArray: "2 6", opacity: 0.7 }}
+          />
+          {surveyPolygon.length >= 2 && (
+            <Polyline
+              positions={[
+                snapTarget ?? [cursorLatLng.lat, cursorLatLng.lng],
+                surveyPolygon[0],
+              ]}
+              pathOptions={{ color: "#2563eb", weight: 1.5, dashArray: "2 6", opacity: 0.4 }}
+            />
+          )}
+        </>
+      )}
+
+      {/* Snap indicator (orange ring on the vertex we'd snap to) */}
+      {drawState === "drawing" && snapTarget && (
+        <Marker position={snapTarget} icon={snapIndicatorIcon} interactive={false} />
       )}
 
       {/* Corridor line with vertex + midpoint handles */}
