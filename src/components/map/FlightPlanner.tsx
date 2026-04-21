@@ -5,6 +5,7 @@ import {
   Plane, X, Download, RotateCcw, Battery, MapPin, Grid3X3,
   Mountain, Save, FolderOpen, Trash2, Loader2, FileText,
   CircleDot, Route, Compass, Plus, MousePointer, Undo2, Redo2,
+  Home, CornerDownLeft,
 } from "lucide-react";
 import ElevationProfileChart from "@/components/map/ElevationProfileChart";
 import { Button } from "@/components/ui/button";
@@ -341,6 +342,10 @@ export default function FlightPlanner({
   // Corridor-specific state
   const [corridorWidth, setCorridorWidth] = useState(30);
 
+  // Home / Return-to-Home state
+  const [homeMode, setHomeMode] = useState(false);
+  const [returnToHome, setReturnToHome] = useState(true);
+
   // Perimeter-specific state
   const [perimeterLoops, setPerimeterLoops] = useState(1);
   const [perimeterInset, setPerimeterInset] = useState(0);
@@ -379,7 +384,21 @@ export default function FlightPlanner({
 
   // Map click handler for drawing polygon/corridor
   useEffect(() => {
-    if (!active || drawState !== "drawing") return;
+    if (!active) return;
+    // Home-set mode takes priority over drawing — single click sets home, then exits.
+    if (homeMode) {
+      const handler = (e: L.LeafletMouseEvent) => {
+        setHomePosition([e.latlng.lat, e.latlng.lng]);
+        setHomeMode(false);
+      };
+      map.on("click", handler);
+      map.getContainer().style.cursor = "crosshair";
+      return () => {
+        map.off("click", handler);
+        map.getContainer().style.cursor = "";
+      };
+    }
+    if (drawState !== "drawing") return;
     const needsPoly = flightMode === "grid" || flightMode === "perimeter";
     const needsLine = flightMode === "corridor";
 
@@ -410,17 +429,17 @@ export default function FlightPlanner({
       map.off("click", handler);
       map.getContainer().style.cursor = "";
     };
-  }, [active, drawState, flightMode, surveyPolygon, corridorLine, onPolygonEdit, onCorridorEdit, map]);
+  }, [active, drawState, flightMode, surveyPolygon, corridorLine, onPolygonEdit, onCorridorEdit, map, homeMode]);
 
   // Set orbit center when map is clicked in orbit mode
   useEffect(() => {
-    if (!active || flightMode !== "orbit") return;
+    if (!active || flightMode !== "orbit" || homeMode) return;
     const handler = (e: L.LeafletMouseEvent) => {
       if (!orbitPos) setOrbitPos([e.latlng.lat, e.latlng.lng]);
     };
     map.on("click", handler);
     return () => { map.off("click", handler); };
-  }, [active, flightMode, orbitPos, map]);
+  }, [active, flightMode, orbitPos, map, homeMode]);
 
   useEffect(() => {
     if (surveyPolygon && surveyPolygon.length >= 3 && !homePosition) {
@@ -488,7 +507,9 @@ export default function FlightPlanner({
     for (let i = 1; i < secondaryWps.length; i++) totalDist += haversineDistance(secondaryWps[i - 1], secondaryWps[i]);
     if (homePosition && waypoints.length > 0) {
       totalDist += haversineDistance(homePosition, waypoints[0]);
-      totalDist += haversineDistance(waypoints[waypoints.length - 1], homePosition);
+      if (returnToHome) {
+        totalDist += haversineDistance(waypoints[waypoints.length - 1], homePosition);
+      }
     }
     const area = surveyPolygon ? polygonArea(surveyPolygon) : (flightMode === "orbit" ? Math.PI * orbitRadius * orbitRadius : 0);
     const flightTime = totalDist / params.speed;
@@ -501,7 +522,7 @@ export default function FlightPlanner({
       waypoints: waypoints.length, distance: totalDist, area, flightTime, gsd,
       photos: waypoints.length, batteriesNeeded, batteryPercent, droneName: drone.name,
     };
-  }, [result, surveyPolygon, params, homePosition, flightMode, orbitRadius]);
+  }, [result, surveyPolygon, params, homePosition, flightMode, orbitRadius, returnToHome]);
 
   // Downloads
   const downloadKML = useCallback(() => {
@@ -894,7 +915,23 @@ export default function FlightPlanner({
         </>
       )}
 
-      {/* Home marker */}
+      {/* Takeoff → first waypoint and Return-to-Home (last waypoint → home) */}
+      {homePosition && result && result.waypoints.length > 0 && flightMode !== "orbit" && (
+        <>
+          <Polyline
+            positions={[homePosition, result.waypoints[0]]}
+            pathOptions={{ color: "#22c55e", weight: 2, dashArray: "4 6", opacity: 0.85 }}
+          />
+          {returnToHome && (
+            <Polyline
+              positions={[result.waypoints[result.waypoints.length - 1], homePosition]}
+              pathOptions={{ color: "#22c55e", weight: 2, dashArray: "4 6", opacity: 0.85 }}
+            />
+          )}
+        </>
+      )}
+
+      {/* Home / takeoff marker */}
       {homePosition && flightMode !== "orbit" && (
         <Marker position={homePosition} icon={homeIcon} draggable
           eventHandlers={{ dragend: (e) => setHomePosition([e.target.getLatLng().lat, e.target.getLatLng().lng]) }} />
@@ -1030,6 +1067,42 @@ export default function FlightPlanner({
                   <Trash2 className="w-3 h-3" /> Clear
                 </Button>
               </div>
+
+              {/* Home / Takeoff & Return-to-Home */}
+              {flightMode !== "orbit" && (
+                <div className="rounded-lg border border-border bg-secondary/30 p-2 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <Home className="w-3.5 h-3.5 text-primary" />
+                      <span className="text-xs font-semibold text-foreground">Takeoff / Home</span>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant={homeMode ? "default" : "outline"}
+                      onClick={() => setHomeMode(v => !v)}
+                      className="h-6 text-[10px] gap-1 px-2"
+                      title="Click on the map to place the takeoff / home point"
+                    >
+                      <MapPin className="w-3 h-3" />
+                      {homeMode ? "Click map…" : homePosition ? "Move home" : "Set home"}
+                    </Button>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground leading-snug">
+                    {homeMode
+                      ? "Click anywhere on the map to place the home point."
+                      : homePosition
+                        ? "Drag the green marker on the map to fine-tune. The drone takes off from and (optionally) returns to this point."
+                        : "Defaults to the first polygon vertex. Tap Set home to choose a custom takeoff point."}
+                  </p>
+                  <div className="flex items-center justify-between pt-1 border-t border-border/60">
+                    <div className="flex items-center gap-1.5">
+                      <CornerDownLeft className="w-3.5 h-3.5 text-primary" />
+                      <span className="text-xs text-foreground">Return to Home</span>
+                    </div>
+                    <Switch checked={returnToHome} onCheckedChange={setReturnToHome} />
+                  </div>
+                </div>
+              )}
 
               {/* Drone Model */}
               <div className="space-y-1.5">

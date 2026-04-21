@@ -130,15 +130,22 @@ export default function MapViewer() {
       return;
     }
     if (tool === "flight-plan") {
-      setFlightPlannerOpen(v => !v);
-      // Don't force polygon tool — FlightPlanner handles its own drawing
+      setFlightPlannerOpen(v => {
+        const next = !v;
+        // When opening the planner, clear any other active tool so map clicks are
+        // dedicated to flight-path editing only.
+        if (next) setActiveTool(null);
+        return next;
+      });
       return;
     }
+    // Don't allow activating other tools while the flight planner is open.
+    if (flightPlannerOpen) return;
     setActiveTool(tool);
-  }, [hasPro]);
+  }, [hasPro, flightPlannerOpen]);
 
   const launchPlanner = useCallback(() => {
-    setActiveTool("polygon");
+    setActiveTool(null);
     setFlightPlannerOpen(true);
     setCoachmarkForce((n) => n + 1);
     setShowCoachmark(true);
@@ -365,15 +372,15 @@ export default function MapViewer() {
           <ScaleControl position="bottomleft" imperial metric />
           <MapDrawingLayer
             ref={drawingLayerRef}
-            activeTool={flightPlannerDrawing ? null : activeTool}
+            activeTool={flightPlannerOpen ? null : activeTool}
             onMeasurement={setMeasurement}
             onPolygonComplete={undefined}
             onPolylineComplete={undefined}
           />
-          <LaancChecker active={activeTool === "laanc-check"} onResult={setLaancResult} />
+          <LaancChecker active={!flightPlannerOpen && activeTool === "laanc-check"} onResult={setLaancResult} />
           <AddressSearch />
           <PropertyLines />
-          <ParcelFetcher active={activeTool === "fetch-parcels"} />
+          <ParcelFetcher active={!flightPlannerOpen && activeTool === "fetch-parcels"} />
           <FlightPlanner
             active={flightPlannerOpen}
             surveyPolygon={surveyPolygon}
@@ -393,7 +400,7 @@ export default function MapViewer() {
             }}
           />
           <MousePositionDisplay />
-          <MapContextMenu onDropPin={handleDropPin} />
+          {!flightPlannerOpen && <MapContextMenu onDropPin={handleDropPin} />}
           <GeolocationButton />
           <WeatherWidget />
           <SunPositionWidget />
