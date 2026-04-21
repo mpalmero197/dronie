@@ -426,34 +426,55 @@ export default function FlightPlanner({
     const needsPoly = flightMode === "grid" || flightMode === "perimeter";
     const needsLine = flightMode === "corridor";
 
-    const handler = (e: L.LeafletMouseEvent) => {
-      const pt: [number, number] = [e.latlng.lat, e.latlng.lng];
+    const clickHandler = (e: L.LeafletMouseEvent) => {
+      const snap = findSnap(e.latlng);
+      // Close polygon when clicking on the first vertex (and we have ≥3 points)
+      if (
+        needsPoly &&
+        snap &&
+        surveyPolygon &&
+        surveyPolygon.length >= 3 &&
+        snap[0] === surveyPolygon[0][0] &&
+        snap[1] === surveyPolygon[0][1]
+      ) {
+        setDrawState("editing");
+        setCursorLatLng(null);
+        setSnapTarget(null);
+        return;
+      }
+      const pt: [number, number] = snap ?? [e.latlng.lat, e.latlng.lng];
       if (needsPoly && onPolygonEdit) {
         const current = surveyPolygon || [];
         const updated = [...current, pt];
         onPolygonEdit(updated);
         if (updated.length >= 3) {
-          // Auto-transition to editing once we have 3+ points
-          setDrawState("editing");
+          // Don't auto-exit — let the user keep adding vertices and close
+          // by clicking the first vertex or pressing Enter / Esc.
         }
       } else if (needsLine && onCorridorEdit) {
         const current = corridorLine || [];
         const updated = [...current, pt];
         onCorridorEdit(updated);
-        if (updated.length >= 2) {
-          setDrawState("editing");
-        }
       }
     };
 
-    map.on("click", handler);
+    const moveHandler = (e: L.LeafletMouseEvent) => {
+      setCursorLatLng(e.latlng);
+      setSnapTarget(findSnap(e.latlng));
+    };
+
+    map.on("click", clickHandler);
+    map.on("mousemove", moveHandler);
     // Change cursor
     map.getContainer().style.cursor = "crosshair";
     return () => {
-      map.off("click", handler);
+      map.off("click", clickHandler);
+      map.off("mousemove", moveHandler);
+      setCursorLatLng(null);
+      setSnapTarget(null);
       map.getContainer().style.cursor = "";
     };
-  }, [active, drawState, flightMode, surveyPolygon, corridorLine, onPolygonEdit, onCorridorEdit, map, homeMode]);
+  }, [active, drawState, flightMode, surveyPolygon, corridorLine, onPolygonEdit, onCorridorEdit, map, homeMode, findSnap]);
 
   // Set orbit center when map is clicked in orbit mode
   useEffect(() => {
