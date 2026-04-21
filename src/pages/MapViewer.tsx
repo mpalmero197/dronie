@@ -372,15 +372,15 @@ export default function MapViewer() {
           <ScaleControl position="bottomleft" imperial metric />
           <MapDrawingLayer
             ref={drawingLayerRef}
-            activeTool={flightPlannerDrawing ? null : activeTool}
+            activeTool={flightPlannerOpen ? null : activeTool}
             onMeasurement={setMeasurement}
             onPolygonComplete={undefined}
             onPolylineComplete={undefined}
           />
-          <LaancChecker active={activeTool === "laanc-check"} onResult={setLaancResult} />
+          <LaancChecker active={!flightPlannerOpen && activeTool === "laanc-check"} onResult={setLaancResult} />
           <AddressSearch />
           <PropertyLines />
-          <ParcelFetcher active={activeTool === "fetch-parcels"} />
+          <ParcelFetcher active={!flightPlannerOpen && activeTool === "fetch-parcels"} />
           <FlightPlanner
             active={flightPlannerOpen}
             surveyPolygon={surveyPolygon}
