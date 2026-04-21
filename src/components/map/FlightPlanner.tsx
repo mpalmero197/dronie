@@ -384,7 +384,21 @@ export default function FlightPlanner({
 
   // Map click handler for drawing polygon/corridor
   useEffect(() => {
-    if (!active || drawState !== "drawing") return;
+    if (!active) return;
+    // Home-set mode takes priority over drawing — single click sets home, then exits.
+    if (homeMode) {
+      const handler = (e: L.LeafletMouseEvent) => {
+        setHomePosition([e.latlng.lat, e.latlng.lng]);
+        setHomeMode(false);
+      };
+      map.on("click", handler);
+      map.getContainer().style.cursor = "crosshair";
+      return () => {
+        map.off("click", handler);
+        map.getContainer().style.cursor = "";
+      };
+    }
+    if (drawState !== "drawing") return;
     const needsPoly = flightMode === "grid" || flightMode === "perimeter";
     const needsLine = flightMode === "corridor";
 
@@ -415,17 +429,17 @@ export default function FlightPlanner({
       map.off("click", handler);
       map.getContainer().style.cursor = "";
     };
-  }, [active, drawState, flightMode, surveyPolygon, corridorLine, onPolygonEdit, onCorridorEdit, map]);
+  }, [active, drawState, flightMode, surveyPolygon, corridorLine, onPolygonEdit, onCorridorEdit, map, homeMode]);
 
   // Set orbit center when map is clicked in orbit mode
   useEffect(() => {
-    if (!active || flightMode !== "orbit") return;
+    if (!active || flightMode !== "orbit" || homeMode) return;
     const handler = (e: L.LeafletMouseEvent) => {
       if (!orbitPos) setOrbitPos([e.latlng.lat, e.latlng.lng]);
     };
     map.on("click", handler);
     return () => { map.off("click", handler); };
-  }, [active, flightMode, orbitPos, map]);
+  }, [active, flightMode, orbitPos, map, homeMode]);
 
   useEffect(() => {
     if (surveyPolygon && surveyPolygon.length >= 3 && !homePosition) {
