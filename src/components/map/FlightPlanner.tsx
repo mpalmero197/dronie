@@ -1073,7 +1073,7 @@ export default function FlightPlanner({
                 <div className="rounded-lg border border-border bg-secondary/30 p-2 space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
-                      <Home className="w-3.5 h-3.5 text-emerald-600" />
+                      <Home className="w-3.5 h-3.5 text-primary" />
                       <span className="text-xs font-semibold text-foreground">Takeoff / Home</span>
                     </div>
                     <Button
@@ -1096,7 +1096,7 @@ export default function FlightPlanner({
                   </p>
                   <div className="flex items-center justify-between pt-1 border-t border-border/60">
                     <div className="flex items-center gap-1.5">
-                      <CornerDownLeft className="w-3.5 h-3.5 text-emerald-600" />
+                      <CornerDownLeft className="w-3.5 h-3.5 text-primary" />
                       <span className="text-xs text-foreground">Return to Home</span>
                     </div>
                     <Switch checked={returnToHome} onCheckedChange={setReturnToHome} />
