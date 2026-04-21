@@ -346,6 +346,30 @@ export default function FlightPlanner({
   const [homeMode, setHomeMode] = useState(false);
   const [returnToHome, setReturnToHome] = useState(true);
 
+  // Drawing UX: live cursor for rubber-band preview + snapping
+  const [cursorLatLng, setCursorLatLng] = useState<L.LatLng | null>(null);
+  const [snapTarget, setSnapTarget] = useState<[number, number] | null>(null);
+  const SNAP_PIXELS = 14;
+
+  // Helper: find the closest existing vertex within SNAP_PIXELS, or null
+  const findSnap = useCallback((latlng: L.LatLng): [number, number] | null => {
+    const candidates: [number, number][] = [];
+    if (flightMode === "grid" || flightMode === "perimeter") {
+      if (surveyPolygon) candidates.push(...surveyPolygon);
+    } else if (flightMode === "corridor") {
+      if (corridorLine) candidates.push(...corridorLine);
+    }
+    if (candidates.length === 0) return null;
+    const cursorPt = map.latLngToContainerPoint(latlng);
+    let best: { pt: [number, number]; dist: number } | null = null;
+    for (const c of candidates) {
+      const cPt = map.latLngToContainerPoint(L.latLng(c[0], c[1]));
+      const d = cursorPt.distanceTo(cPt);
+      if (d <= SNAP_PIXELS && (!best || d < best.dist)) best = { pt: c, dist: d };
+    }
+    return best ? best.pt : null;
+  }, [flightMode, surveyPolygon, corridorLine, map]);
+
   // Perimeter-specific state
   const [perimeterLoops, setPerimeterLoops] = useState(1);
   const [perimeterInset, setPerimeterInset] = useState(0);
