@@ -1023,6 +1023,31 @@ export default function FlightPlanner({
               }}
             />
           ))}
+          {/* Drag-to-move whole corridor handle (centroid) */}
+          {onCorridorEdit && drawState === "editing" && corridorCentroid && (
+            <Marker
+              position={corridorCentroid}
+              icon={moveHandleIcon}
+              draggable
+              eventHandlers={{
+                dragstart: () => {
+                  (window as any).__corridorDragStart = {
+                    centroid: corridorCentroid,
+                    verts: corridorLine!.map(p => [p[0], p[1]] as [number, number]),
+                  };
+                },
+                drag: (e) => {
+                  const start = (window as any).__corridorDragStart;
+                  if (!start || !onCorridorEdit) return;
+                  const ll = e.target.getLatLng();
+                  const dLat = ll.lat - start.centroid[0];
+                  const dLng = ll.lng - start.centroid[1];
+                  onCorridorEdit(start.verts.map((p: [number, number]) => [p[0] + dLat, p[1] + dLng]));
+                },
+                dragend: () => { (window as any).__corridorDragStart = null; },
+              }}
+            />
+          )}
         </>
       )}
 
@@ -1030,6 +1055,17 @@ export default function FlightPlanner({
       {drawState === "drawing" && corridorLine && corridorLine.length === 1 && flightMode === "corridor" && (
         <CircleMarker center={corridorLine[0]} radius={5}
           pathOptions={{ color: "#ffffff", fillColor: "#2563eb", fillOpacity: 1, weight: 2 }} />
+      )}
+
+      {/* Rubber-band preview for corridor (last vertex → cursor) */}
+      {drawState === "drawing" && cursorLatLng && flightMode === "corridor" && corridorLine && corridorLine.length > 0 && (
+        <Polyline
+          positions={[
+            corridorLine[corridorLine.length - 1],
+            snapTarget ?? [cursorLatLng.lat, cursorLatLng.lng],
+          ]}
+          pathOptions={{ color: "#2563eb", weight: 2, dashArray: "2 6", opacity: 0.7 }}
+        />
       )}
 
       {/* Orbit circle preview */}
