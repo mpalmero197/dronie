@@ -5,6 +5,7 @@ import {
   Plane, X, Download, RotateCcw, Battery, MapPin, Grid3X3,
   Mountain, Save, FolderOpen, Trash2, Loader2, FileText,
   CircleDot, Route, Compass, Plus, MousePointer, Undo2, Redo2,
+  Home, CornerDownLeft,
 } from "lucide-react";
 import ElevationProfileChart from "@/components/map/ElevationProfileChart";
 import { Button } from "@/components/ui/button";
