@@ -249,6 +249,22 @@ const midpointIcon = new L.DivIcon({
   iconAnchor: [5, 5],
 });
 
+const moveHandleIcon = new L.DivIcon({
+  className: "",
+  html: `<div style="width:28px;height:28px;border-radius:50%;background:#2563eb;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;cursor:move">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l-3 3 3 3"/><path d="M9 5l3-3 3 3"/><path d="M15 19l-3 3-3-3"/><path d="M19 9l3 3-3 3"/><path d="M2 12h20"/><path d="M12 2v20"/></svg>
+  </div>`,
+  iconSize: [28, 28],
+  iconAnchor: [14, 14],
+});
+
+const snapIndicatorIcon = new L.DivIcon({
+  className: "",
+  html: `<div style="width:18px;height:18px;border-radius:50%;background:rgba(245,158,11,0.25);border:2px solid #f59e0b;box-shadow:0 0 0 2px rgba(245,158,11,0.2);pointer-events:none"></div>`,
+  iconSize: [18, 18],
+  iconAnchor: [9, 9],
+});
+
 export default function FlightPlanner({
   active, surveyPolygon, onClose, projectId, mapContainerRef,
   corridorLine, orbitCenter, onPolygonEdit, onCorridorEdit, laancResult,
