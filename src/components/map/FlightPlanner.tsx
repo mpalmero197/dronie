@@ -1238,6 +1238,14 @@ export default function FlightPlanner({
                         ? "Draw a corridor line on the map"
                         : "Draw a polygon to define your survey area")}
                   </p>
+                  {drawState === "drawing" && (
+                    <div className="text-[10px] text-muted-foreground space-y-0.5 pt-1">
+                      <p><kbd className="px-1 py-0.5 rounded border border-border bg-secondary/50 font-mono">Z</kbd> undo last point · <kbd className="px-1 py-0.5 rounded border border-border bg-secondary/50 font-mono">Enter</kbd> finish · <kbd className="px-1 py-0.5 rounded border border-border bg-secondary/50 font-mono">Esc</kbd> cancel</p>
+                      {flightMode !== "corridor" && (
+                        <p>Click the first vertex (orange ring) to close the polygon</p>
+                      )}
+                    </div>
+                  )}
                   {drawState !== "drawing" && (
                     <Button size="sm" onClick={() => setDrawState("drawing")} className="gap-1.5 text-xs">
                       <Plus className="w-3 h-3" /> Start Drawing
