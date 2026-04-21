@@ -507,7 +507,9 @@ export default function FlightPlanner({
     for (let i = 1; i < secondaryWps.length; i++) totalDist += haversineDistance(secondaryWps[i - 1], secondaryWps[i]);
     if (homePosition && waypoints.length > 0) {
       totalDist += haversineDistance(homePosition, waypoints[0]);
-      totalDist += haversineDistance(waypoints[waypoints.length - 1], homePosition);
+      if (returnToHome) {
+        totalDist += haversineDistance(waypoints[waypoints.length - 1], homePosition);
+      }
     }
     const area = surveyPolygon ? polygonArea(surveyPolygon) : (flightMode === "orbit" ? Math.PI * orbitRadius * orbitRadius : 0);
     const flightTime = totalDist / params.speed;
