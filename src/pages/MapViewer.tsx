@@ -130,15 +130,22 @@ export default function MapViewer() {
       return;
     }
     if (tool === "flight-plan") {
-      setFlightPlannerOpen(v => !v);
-      // Don't force polygon tool — FlightPlanner handles its own drawing
+      setFlightPlannerOpen(v => {
+        const next = !v;
+        // When opening the planner, clear any other active tool so map clicks are
+        // dedicated to flight-path editing only.
+        if (next) setActiveTool(null);
+        return next;
+      });
       return;
     }
+    // Don't allow activating other tools while the flight planner is open.
+    if (flightPlannerOpen) return;
     setActiveTool(tool);
-  }, [hasPro]);
+  }, [hasPro, flightPlannerOpen]);
 
   const launchPlanner = useCallback(() => {
-    setActiveTool("polygon");
+    setActiveTool(null);
     setFlightPlannerOpen(true);
     setCoachmarkForce((n) => n + 1);
     setShowCoachmark(true);
