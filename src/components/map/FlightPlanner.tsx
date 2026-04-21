@@ -913,7 +913,23 @@ export default function FlightPlanner({
         </>
       )}
 
-      {/* Home marker */}
+      {/* Takeoff → first waypoint and Return-to-Home (last waypoint → home) */}
+      {homePosition && result && result.waypoints.length > 0 && flightMode !== "orbit" && (
+        <>
+          <Polyline
+            positions={[homePosition, result.waypoints[0]]}
+            pathOptions={{ color: "#22c55e", weight: 2, dashArray: "4 6", opacity: 0.85 }}
+          />
+          {returnToHome && (
+            <Polyline
+              positions={[result.waypoints[result.waypoints.length - 1], homePosition]}
+              pathOptions={{ color: "#22c55e", weight: 2, dashArray: "4 6", opacity: 0.85 }}
+            />
+          )}
+        </>
+      )}
+
+      {/* Home / takeoff marker */}
       {homePosition && flightMode !== "orbit" && (
         <Marker position={homePosition} icon={homeIcon} draggable
           eventHandlers={{ dragend: (e) => setHomePosition([e.target.getLatLng().lat, e.target.getLatLng().lng]) }} />
