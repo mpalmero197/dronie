@@ -249,6 +249,22 @@ const midpointIcon = new L.DivIcon({
   iconAnchor: [5, 5],
 });
 
+const moveHandleIcon = new L.DivIcon({
+  className: "",
+  html: `<div style="width:28px;height:28px;border-radius:50%;background:#2563eb;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;cursor:move">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l-3 3 3 3"/><path d="M9 5l3-3 3 3"/><path d="M15 19l-3 3-3-3"/><path d="M19 9l3 3-3 3"/><path d="M2 12h20"/><path d="M12 2v20"/></svg>
+  </div>`,
+  iconSize: [28, 28],
+  iconAnchor: [14, 14],
+});
+
+const snapIndicatorIcon = new L.DivIcon({
+  className: "",
+  html: `<div style="width:18px;height:18px;border-radius:50%;background:rgba(245,158,11,0.25);border:2px solid #f59e0b;box-shadow:0 0 0 2px rgba(245,158,11,0.2);pointer-events:none"></div>`,
+  iconSize: [18, 18],
+  iconAnchor: [9, 9],
+});
+
 export default function FlightPlanner({
   active, surveyPolygon, onClose, projectId, mapContainerRef,
   corridorLine, orbitCenter, onPolygonEdit, onCorridorEdit, laancResult,
@@ -346,6 +362,74 @@ export default function FlightPlanner({
   const [homeMode, setHomeMode] = useState(false);
   const [returnToHome, setReturnToHome] = useState(true);
 
+  // Drawing UX: live cursor for rubber-band preview + snapping
+  const [cursorLatLng, setCursorLatLng] = useState<L.LatLng | null>(null);
+  const [snapTarget, setSnapTarget] = useState<[number, number] | null>(null);
+  const SNAP_PIXELS = 14;
+
+  // Keyboard shortcuts for drawing mode (ESC cancel, Z undo last point, Enter finish)
+  useEffect(() => {
+    if (!active) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key === "Escape") {
+        if (homeMode) {
+          setHomeMode(false);
+          return;
+        }
+        if (drawState === "drawing") {
+          if ((flightMode === "grid" || flightMode === "perimeter") && onPolygonEdit) {
+            onPolygonEdit([]);
+          } else if (flightMode === "corridor" && onCorridorEdit) {
+            onCorridorEdit([]);
+          }
+          setCursorLatLng(null);
+          setSnapTarget(null);
+        }
+        return;
+      }
+      if (e.key === "Enter" && drawState === "drawing") {
+        const polyOk = (flightMode === "grid" || flightMode === "perimeter") && surveyPolygon && surveyPolygon.length >= 3;
+        const lineOk = flightMode === "corridor" && corridorLine && corridorLine.length >= 2;
+        if (polyOk || lineOk) {
+          setDrawState("editing");
+          setCursorLatLng(null);
+          setSnapTarget(null);
+        }
+        return;
+      }
+      if ((e.key === "z" || e.key === "Z") && drawState === "drawing") {
+        if ((flightMode === "grid" || flightMode === "perimeter") && surveyPolygon && surveyPolygon.length > 0 && onPolygonEdit) {
+          onPolygonEdit(surveyPolygon.slice(0, -1));
+        } else if (flightMode === "corridor" && corridorLine && corridorLine.length > 0 && onCorridorEdit) {
+          onCorridorEdit(corridorLine.slice(0, -1));
+        }
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [active, drawState, flightMode, surveyPolygon, corridorLine, onPolygonEdit, onCorridorEdit, homeMode]);
+
+  // Helper: find the closest existing vertex within SNAP_PIXELS, or null
+  const findSnap = useCallback((latlng: L.LatLng): [number, number] | null => {
+    const candidates: [number, number][] = [];
+    if (flightMode === "grid" || flightMode === "perimeter") {
+      if (surveyPolygon) candidates.push(...surveyPolygon);
+    } else if (flightMode === "corridor") {
+      if (corridorLine) candidates.push(...corridorLine);
+    }
+    if (candidates.length === 0) return null;
+    const cursorPt = map.latLngToContainerPoint(latlng);
+    let best: { pt: [number, number]; dist: number } | null = null;
+    for (const c of candidates) {
+      const cPt = map.latLngToContainerPoint(L.latLng(c[0], c[1]));
+      const d = cursorPt.distanceTo(cPt);
+      if (d <= SNAP_PIXELS && (!best || d < best.dist)) best = { pt: c, dist: d };
+    }
+    return best ? best.pt : null;
+  }, [flightMode, surveyPolygon, corridorLine, map]);
+
   // Perimeter-specific state
   const [perimeterLoops, setPerimeterLoops] = useState(1);
   const [perimeterInset, setPerimeterInset] = useState(0);
@@ -402,34 +486,55 @@ export default function FlightPlanner({
     const needsPoly = flightMode === "grid" || flightMode === "perimeter";
     const needsLine = flightMode === "corridor";
 
-    const handler = (e: L.LeafletMouseEvent) => {
-      const pt: [number, number] = [e.latlng.lat, e.latlng.lng];
+    const clickHandler = (e: L.LeafletMouseEvent) => {
+      const snap = findSnap(e.latlng);
+      // Close polygon when clicking on the first vertex (and we have ≥3 points)
+      if (
+        needsPoly &&
+        snap &&
+        surveyPolygon &&
+        surveyPolygon.length >= 3 &&
+        snap[0] === surveyPolygon[0][0] &&
+        snap[1] === surveyPolygon[0][1]
+      ) {
+        setDrawState("editing");
+        setCursorLatLng(null);
+        setSnapTarget(null);
+        return;
+      }
+      const pt: [number, number] = snap ?? [e.latlng.lat, e.latlng.lng];
       if (needsPoly && onPolygonEdit) {
         const current = surveyPolygon || [];
         const updated = [...current, pt];
         onPolygonEdit(updated);
         if (updated.length >= 3) {
-          // Auto-transition to editing once we have 3+ points
-          setDrawState("editing");
+          // Don't auto-exit — let the user keep adding vertices and close
+          // by clicking the first vertex or pressing Enter / Esc.
         }
       } else if (needsLine && onCorridorEdit) {
         const current = corridorLine || [];
         const updated = [...current, pt];
         onCorridorEdit(updated);
-        if (updated.length >= 2) {
-          setDrawState("editing");
-        }
       }
     };
 
-    map.on("click", handler);
+    const moveHandler = (e: L.LeafletMouseEvent) => {
+      setCursorLatLng(e.latlng);
+      setSnapTarget(findSnap(e.latlng));
+    };
+
+    map.on("click", clickHandler);
+    map.on("mousemove", moveHandler);
     // Change cursor
     map.getContainer().style.cursor = "crosshair";
     return () => {
-      map.off("click", handler);
+      map.off("click", clickHandler);
+      map.off("mousemove", moveHandler);
+      setCursorLatLng(null);
+      setSnapTarget(null);
       map.getContainer().style.cursor = "";
     };
-  }, [active, drawState, flightMode, surveyPolygon, corridorLine, onPolygonEdit, onCorridorEdit, map, homeMode]);
+  }, [active, drawState, flightMode, surveyPolygon, corridorLine, onPolygonEdit, onCorridorEdit, map, homeMode, findSnap]);
 
   // Set orbit center when map is clicked in orbit mode
   useEffect(() => {
@@ -753,6 +858,22 @@ export default function FlightPlanner({
     return [(pos[0] + next[0]) / 2, (pos[1] + next[1]) / 2] as [number, number];
   }) : [];
 
+  // Polygon centroid for drag-to-move handle
+  const polygonCentroid: [number, number] | null = hasPoly && surveyPolygon
+    ? [
+        surveyPolygon.reduce((s, p) => s + p[0], 0) / surveyPolygon.length,
+        surveyPolygon.reduce((s, p) => s + p[1], 0) / surveyPolygon.length,
+      ]
+    : null;
+
+  // Corridor centroid for drag-to-move handle
+  const corridorCentroid: [number, number] | null = hasLine && corridorLine
+    ? [
+        corridorLine.reduce((s, p) => s + p[0], 0) / corridorLine.length,
+        corridorLine.reduce((s, p) => s + p[1], 0) / corridorLine.length,
+      ]
+    : null;
+
   return (
     <>
       {/* Survey polygon with draggable vertices + midpoint handles */}
@@ -797,10 +918,36 @@ export default function FlightPlanner({
               }}
             />
           ))}
+          {/* Drag-to-move whole polygon handle (centroid) — only in editing mode */}
+          {onPolygonEdit && drawState === "editing" && polygonCentroid && (
+            <Marker
+              position={polygonCentroid}
+              icon={moveHandleIcon}
+              draggable
+              eventHandlers={{
+                dragstart: () => {
+                  // Stash original centroid + vertices on the marker for delta computation
+                  (window as any).__polyDragStart = {
+                    centroid: polygonCentroid,
+                    verts: surveyPolygon!.map(p => [p[0], p[1]] as [number, number]),
+                  };
+                },
+                drag: (e) => {
+                  const start = (window as any).__polyDragStart;
+                  if (!start || !onPolygonEdit) return;
+                  const ll = e.target.getLatLng();
+                  const dLat = ll.lat - start.centroid[0];
+                  const dLng = ll.lng - start.centroid[1];
+                  onPolygonEdit(start.verts.map((p: [number, number]) => [p[0] + dLat, p[1] + dLng]));
+                },
+                dragend: () => { (window as any).__polyDragStart = null; },
+              }}
+            />
+          )}
         </>
       )}
 
-      {/* Partial polygon while drawing (fewer than 3 points) */}
+      {/* Partial polygon while drawing (1–2 placed points, no fill yet) */}
       {drawState === "drawing" && surveyPolygon && surveyPolygon.length > 0 && surveyPolygon.length < 3 && (flightMode === "grid" || flightMode === "perimeter") && (
         <>
           {surveyPolygon.length === 2 && (
@@ -811,6 +958,33 @@ export default function FlightPlanner({
               pathOptions={{ color: "#ffffff", fillColor: "#2563eb", fillOpacity: 1, weight: 2 }} />
           ))}
         </>
+      )}
+
+      {/* Rubber-band preview: from last placed vertex → cursor (and back to first vertex if we have ≥2 pts for polygon) */}
+      {drawState === "drawing" && cursorLatLng && (flightMode === "grid" || flightMode === "perimeter") && surveyPolygon && surveyPolygon.length > 0 && (
+        <>
+          <Polyline
+            positions={[
+              surveyPolygon[surveyPolygon.length - 1],
+              snapTarget ?? [cursorLatLng.lat, cursorLatLng.lng],
+            ]}
+            pathOptions={{ color: "#2563eb", weight: 2, dashArray: "2 6", opacity: 0.7 }}
+          />
+          {surveyPolygon.length >= 2 && (
+            <Polyline
+              positions={[
+                snapTarget ?? [cursorLatLng.lat, cursorLatLng.lng],
+                surveyPolygon[0],
+              ]}
+              pathOptions={{ color: "#2563eb", weight: 1.5, dashArray: "2 6", opacity: 0.4 }}
+            />
+          )}
+        </>
+      )}
+
+      {/* Snap indicator (orange ring on the vertex we'd snap to) */}
+      {drawState === "drawing" && snapTarget && (
+        <Marker position={snapTarget} icon={snapIndicatorIcon} interactive={false} />
       )}
 
       {/* Corridor line with vertex + midpoint handles */}
@@ -849,6 +1023,31 @@ export default function FlightPlanner({
               }}
             />
           ))}
+          {/* Drag-to-move whole corridor handle (centroid) */}
+          {onCorridorEdit && drawState === "editing" && corridorCentroid && (
+            <Marker
+              position={corridorCentroid}
+              icon={moveHandleIcon}
+              draggable
+              eventHandlers={{
+                dragstart: () => {
+                  (window as any).__corridorDragStart = {
+                    centroid: corridorCentroid,
+                    verts: corridorLine!.map(p => [p[0], p[1]] as [number, number]),
+                  };
+                },
+                drag: (e) => {
+                  const start = (window as any).__corridorDragStart;
+                  if (!start || !onCorridorEdit) return;
+                  const ll = e.target.getLatLng();
+                  const dLat = ll.lat - start.centroid[0];
+                  const dLng = ll.lng - start.centroid[1];
+                  onCorridorEdit(start.verts.map((p: [number, number]) => [p[0] + dLat, p[1] + dLng]));
+                },
+                dragend: () => { (window as any).__corridorDragStart = null; },
+              }}
+            />
+          )}
         </>
       )}
 
@@ -856,6 +1055,17 @@ export default function FlightPlanner({
       {drawState === "drawing" && corridorLine && corridorLine.length === 1 && flightMode === "corridor" && (
         <CircleMarker center={corridorLine[0]} radius={5}
           pathOptions={{ color: "#ffffff", fillColor: "#2563eb", fillOpacity: 1, weight: 2 }} />
+      )}
+
+      {/* Rubber-band preview for corridor (last vertex → cursor) */}
+      {drawState === "drawing" && cursorLatLng && flightMode === "corridor" && corridorLine && corridorLine.length > 0 && (
+        <Polyline
+          positions={[
+            corridorLine[corridorLine.length - 1],
+            snapTarget ?? [cursorLatLng.lat, cursorLatLng.lng],
+          ]}
+          pathOptions={{ color: "#2563eb", weight: 2, dashArray: "2 6", opacity: 0.7 }}
+        />
       )}
 
       {/* Orbit circle preview */}
@@ -1028,6 +1238,14 @@ export default function FlightPlanner({
                         ? "Draw a corridor line on the map"
                         : "Draw a polygon to define your survey area")}
                   </p>
+                  {drawState === "drawing" && (
+                    <div className="text-[10px] text-muted-foreground space-y-0.5 pt-1">
+                      <p><kbd className="px-1 py-0.5 rounded border border-border bg-secondary/50 font-mono">Z</kbd> undo last point · <kbd className="px-1 py-0.5 rounded border border-border bg-secondary/50 font-mono">Enter</kbd> finish · <kbd className="px-1 py-0.5 rounded border border-border bg-secondary/50 font-mono">Esc</kbd> cancel</p>
+                      {flightMode !== "corridor" && (
+                        <p>Click the first vertex (orange ring) to close the polygon</p>
+                      )}
+                    </div>
+                  )}
                   {drawState !== "drawing" && (
                     <Button size="sm" onClick={() => setDrawState("drawing")} className="gap-1.5 text-xs">
                       <Plus className="w-3 h-3" /> Start Drawing
