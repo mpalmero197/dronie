@@ -1068,6 +1068,42 @@ export default function FlightPlanner({
                 </Button>
               </div>
 
+              {/* Home / Takeoff & Return-to-Home */}
+              {flightMode !== "orbit" && (
+                <div className="rounded-lg border border-border bg-secondary/30 p-2 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <Home className="w-3.5 h-3.5 text-emerald-600" />
+                      <span className="text-xs font-semibold text-foreground">Takeoff / Home</span>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant={homeMode ? "default" : "outline"}
+                      onClick={() => setHomeMode(v => !v)}
+                      className="h-6 text-[10px] gap-1 px-2"
+                      title="Click on the map to place the takeoff / home point"
+                    >
+                      <MapPin className="w-3 h-3" />
+                      {homeMode ? "Click map…" : homePosition ? "Move home" : "Set home"}
+                    </Button>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground leading-snug">
+                    {homeMode
+                      ? "Click anywhere on the map to place the home point."
+                      : homePosition
+                        ? "Drag the green marker on the map to fine-tune. The drone takes off from and (optionally) returns to this point."
+                        : "Defaults to the first polygon vertex. Tap Set home to choose a custom takeoff point."}
+                  </p>
+                  <div className="flex items-center justify-between pt-1 border-t border-border/60">
+                    <div className="flex items-center gap-1.5">
+                      <CornerDownLeft className="w-3.5 h-3.5 text-emerald-600" />
+                      <span className="text-xs text-foreground">Return to Home</span>
+                    </div>
+                    <Switch checked={returnToHome} onCheckedChange={setReturnToHome} />
+                  </div>
+                </div>
+              )}
+
               {/* Drone Model */}
               <div className="space-y-1.5">
                 <span className="text-xs text-muted-foreground">Drone Model</span>
