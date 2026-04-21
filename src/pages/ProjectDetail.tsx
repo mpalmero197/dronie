@@ -502,7 +502,7 @@ export default function ProjectDetail() {
             </p>
           </div>
           <Button
-            onClick={() => navigate(`/viewer/${project.id}?mode=plan`)}
+            onClick={() => navigate(`/plan?project=${project.id}`)}
             className="gap-2 flex-shrink-0"
           >
             <MapPin className="w-4 h-4" />

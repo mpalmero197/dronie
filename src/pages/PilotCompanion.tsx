@@ -273,7 +273,7 @@ export default function PilotCompanion() {
           <Button
             variant={flightPlan ? "outline" : "default"}
             size="sm"
-            onClick={() => navigate(`/viewer/${job.project_id}?mode=plan`)}
+            onClick={() => navigate(`/plan?project=${job.project_id}`)}
             className="w-full gap-2"
           >
             <NavIcon className="w-4 h-4" />

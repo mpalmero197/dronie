@@ -590,7 +590,7 @@ export default function Dashboard() {
 
               {/* Quick actions: Plan a Flight */}
               <button
-                onClick={() => navigate(latestComplete ? `/viewer/${latestComplete.id}?mode=plan` : '/viewer/demo?mode=plan')}
+                onClick={() => navigate(latestComplete ? `/plan?project=${latestComplete.id}` : '/plan')}
                 className="w-full bg-gradient-to-br from-primary via-primary to-primary/80 text-primary-foreground rounded-2xl p-5 flex items-center gap-4 hover:shadow-lg hover:shadow-primary/30 hover:scale-[1.005] active:scale-[0.99] transition-all text-left"
               >
                 <div className="w-12 h-12 rounded-xl bg-primary-foreground/15 backdrop-blur flex items-center justify-center flex-shrink-0">
@@ -599,7 +599,7 @@ export default function Dashboard() {
                 <div className="flex-1 min-w-0">
                   <h3 className="font-display font-700 text-base">Plan a Flight</h3>
                   <p className="text-xs text-primary-foreground/80 mt-0.5">
-                    Draw your survey area on the map → get an automated flight path, KMZ for DJI Fly, and a PDF briefing.
+                    Step-by-step wizard: search address → outline area → export KMZ for DJI Fly and a PDF briefing.
                   </p>
                 </div>
                 <svg className="w-5 h-5 flex-shrink-0 opacity-70" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
