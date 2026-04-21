@@ -342,6 +342,10 @@ export default function FlightPlanner({
   // Corridor-specific state
   const [corridorWidth, setCorridorWidth] = useState(30);
 
+  // Home / Return-to-Home state
+  const [homeMode, setHomeMode] = useState(false);
+  const [returnToHome, setReturnToHome] = useState(true);
+
   // Perimeter-specific state
   const [perimeterLoops, setPerimeterLoops] = useState(1);
   const [perimeterInset, setPerimeterInset] = useState(0);
