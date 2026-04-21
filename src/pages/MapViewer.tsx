@@ -400,7 +400,7 @@ export default function MapViewer() {
             }}
           />
           <MousePositionDisplay />
-          <MapContextMenu onDropPin={handleDropPin} />
+          {!flightPlannerOpen && <MapContextMenu onDropPin={handleDropPin} />}
           <GeolocationButton />
           <WeatherWidget />
           <SunPositionWidget />
