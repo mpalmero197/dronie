@@ -351,6 +351,50 @@ export default function FlightPlanner({
   const [snapTarget, setSnapTarget] = useState<[number, number] | null>(null);
   const SNAP_PIXELS = 14;
 
+  // Keyboard shortcuts for drawing mode (ESC cancel, Z undo last point, Enter finish)
+  useEffect(() => {
+    if (!active) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key === "Escape") {
+        if (homeMode) {
+          setHomeMode(false);
+          return;
+        }
+        if (drawState === "drawing") {
+          if ((flightMode === "grid" || flightMode === "perimeter") && onPolygonEdit) {
+            onPolygonEdit([]);
+          } else if (flightMode === "corridor" && onCorridorEdit) {
+            onCorridorEdit([]);
+          }
+          setCursorLatLng(null);
+          setSnapTarget(null);
+        }
+        return;
+      }
+      if (e.key === "Enter" && drawState === "drawing") {
+        const polyOk = (flightMode === "grid" || flightMode === "perimeter") && surveyPolygon && surveyPolygon.length >= 3;
+        const lineOk = flightMode === "corridor" && corridorLine && corridorLine.length >= 2;
+        if (polyOk || lineOk) {
+          setDrawState("editing");
+          setCursorLatLng(null);
+          setSnapTarget(null);
+        }
+        return;
+      }
+      if ((e.key === "z" || e.key === "Z") && drawState === "drawing") {
+        if ((flightMode === "grid" || flightMode === "perimeter") && surveyPolygon && surveyPolygon.length > 0 && onPolygonEdit) {
+          onPolygonEdit(surveyPolygon.slice(0, -1));
+        } else if (flightMode === "corridor" && corridorLine && corridorLine.length > 0 && onCorridorEdit) {
+          onCorridorEdit(corridorLine.slice(0, -1));
+        }
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [active, drawState, flightMode, surveyPolygon, corridorLine, onPolygonEdit, onCorridorEdit, homeMode]);
+
   // Helper: find the closest existing vertex within SNAP_PIXELS, or null
   const findSnap = useCallback((latlng: L.LatLng): [number, number] | null => {
     const candidates: [number, number][] = [];
