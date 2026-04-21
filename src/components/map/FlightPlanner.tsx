@@ -858,6 +858,22 @@ export default function FlightPlanner({
     return [(pos[0] + next[0]) / 2, (pos[1] + next[1]) / 2] as [number, number];
   }) : [];
 
+  // Polygon centroid for drag-to-move handle
+  const polygonCentroid: [number, number] | null = hasPoly && surveyPolygon
+    ? [
+        surveyPolygon.reduce((s, p) => s + p[0], 0) / surveyPolygon.length,
+        surveyPolygon.reduce((s, p) => s + p[1], 0) / surveyPolygon.length,
+      ]
+    : null;
+
+  // Corridor centroid for drag-to-move handle
+  const corridorCentroid: [number, number] | null = hasLine && corridorLine
+    ? [
+        corridorLine.reduce((s, p) => s + p[0], 0) / corridorLine.length,
+        corridorLine.reduce((s, p) => s + p[1], 0) / corridorLine.length,
+      ]
+    : null;
+
   return (
     <>
       {/* Survey polygon with draggable vertices + midpoint handles */}
