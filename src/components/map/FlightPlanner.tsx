@@ -320,60 +320,18 @@ export default function FlightPlanner({
   useEffect(() => {
     if (!active) return;
     const handler = (e: KeyboardEvent) => {
-      // Don't hijack typing in inputs
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
         e.preventDefault();
         handleUndo();
-        return;
       }
       if ((e.ctrlKey || e.metaKey) && (e.key === "y" || (e.key === "z" && e.shiftKey))) {
         e.preventDefault();
         handleRedo();
-        return;
-      }
-      // Drawing-mode shortcuts (no modifier keys)
-      if (e.ctrlKey || e.metaKey || e.altKey) return;
-      if (e.key === "Escape") {
-        if (homeMode) {
-          setHomeMode(false);
-          return;
-        }
-        if (drawState === "drawing") {
-          // Cancel current drawing — clear in-progress shape
-          if ((flightMode === "grid" || flightMode === "perimeter") && onPolygonEdit) {
-            onPolygonEdit([]);
-          } else if (flightMode === "corridor" && onCorridorEdit) {
-            onCorridorEdit([]);
-          }
-          setCursorLatLng(null);
-          setSnapTarget(null);
-        }
-        return;
-      }
-      if (e.key === "Enter" && drawState === "drawing") {
-        // Finish drawing if we have enough points
-        const polyOk = (flightMode === "grid" || flightMode === "perimeter") && surveyPolygon && surveyPolygon.length >= 3;
-        const lineOk = flightMode === "corridor" && corridorLine && corridorLine.length >= 2;
-        if (polyOk || lineOk) {
-          setDrawState("editing");
-          setCursorLatLng(null);
-          setSnapTarget(null);
-        }
-        return;
-      }
-      if ((e.key === "z" || e.key === "Z") && drawState === "drawing") {
-        // Undo last placed point while drawing
-        if ((flightMode === "grid" || flightMode === "perimeter") && surveyPolygon && surveyPolygon.length > 0 && onPolygonEdit) {
-          onPolygonEdit(surveyPolygon.slice(0, -1));
-        } else if (flightMode === "corridor" && corridorLine && corridorLine.length > 0 && onCorridorEdit) {
-          onCorridorEdit(corridorLine.slice(0, -1));
-        }
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [active, handleUndo, handleRedo, drawState, flightMode, surveyPolygon, corridorLine, onPolygonEdit, onCorridorEdit, homeMode]);
+  }, [active, handleUndo, handleRedo]);
 
   // Orbit-specific state
   const [orbitPos, setOrbitPos] = useState<[number, number] | null>(orbitCenter || null);
