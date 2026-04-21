@@ -741,9 +741,9 @@ function Step2({ center, polygon, drawing, setDrawing, parcels, fetchParcels, au
           </div>
 
           {parcels.length > 0 && (
-            <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 space-y-1.5">
+            <div className="rounded-lg border border-accent/30 bg-accent/5 p-3 space-y-1.5">
               <div className="flex items-center gap-1.5">
-                <Building2 className="w-3.5 h-3.5 text-amber-600" />
+                <Building2 className="w-3.5 h-3.5 text-accent" />
                 <p className="text-xs font-semibold text-foreground">{parcels.length} suggestion(s)</p>
               </div>
               <p className="text-[11px] text-muted-foreground">Click an orange shape on the map to use it.</p>
