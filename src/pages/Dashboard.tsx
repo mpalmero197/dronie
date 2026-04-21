@@ -605,6 +605,21 @@ export default function Dashboard() {
                 <svg className="w-5 h-5 flex-shrink-0 opacity-70" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
               </button>
 
+              {/* Saved missions shortcut */}
+              <button
+                onClick={() => navigate('/missions')}
+                className="w-full bg-card border border-border text-foreground rounded-2xl p-4 flex items-center gap-3 hover:border-primary/40 hover:bg-secondary/40 transition-all text-left"
+              >
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-display font-700 text-sm">Saved Missions</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">Browse, re-export, or edit your flight plans.</p>
+                </div>
+                <svg className="w-4 h-4 flex-shrink-0 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+              </button>
+
               {/* Upload drop zone */}
               <div
                 onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
