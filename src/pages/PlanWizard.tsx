@@ -405,11 +405,26 @@ export default function PlanWizard() {
     if (!result || !stats) return;
     try {
       const blob = generateMissionPDF({
-        stats: { ...stats, photos: result.length, batteryPercent: Math.min(100, Math.round((stats.flightTime / (DRONE_MODELS[droneIdx].batteryMinutes * 60 * 0.85)) * 100)) },
-        params: { altitude, frontOverlap, sideOverlap, heading, speed, pattern: "single", crossHeadingOffset: 90, droneModelIdx: droneIdx, terrainFollow: false, gimbalPitchStart: -90, gimbalPitchEnd: -90 },
+        stats: {
+          waypoints: stats.waypoints,
+          distance: stats.distance,
+          area: stats.area,
+          flightTime: stats.flightTime,
+          gsd: stats.gsd,
+          photos: result.length,
+          batteriesNeeded: stats.batteries,
+          batteryPercent: Math.min(100, Math.round((stats.flightTime / (DRONE_MODELS[droneIdx].batteryMinutes * 60 * 0.85)) * 100)),
+          droneName: stats.droneName,
+        },
+        params: {
+          altitude, frontOverlap, sideOverlap, heading, speed,
+          pattern: "single", crossHeadingOffset: 90,
+          droneModelIdx: droneIdx, terrainFollow: false,
+        },
         waypoints: result,
         mapScreenshot: "",
         projectName: locationLabel || "Mission",
+        terrainData: null,
       });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a"); a.href = url; a.download = "mission-briefing.pdf"; a.click();
