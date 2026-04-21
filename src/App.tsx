@@ -21,6 +21,7 @@ import CookieConsent from "./components/CookieConsent.tsx";
 import Subscription from "./pages/Subscription.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import PlanWizard from "./pages/PlanWizard.tsx";
+import SavedMissions from "./pages/SavedMissions.tsx";
 
 const queryClient = new QueryClient();
 
@@ -47,6 +48,7 @@ const App = () => (
             <Route path="/subscription" element={<Subscription />} />
             <Route path="/terms" element={<TermsOfService />} />
             <Route path="/plan" element={<PlanWizard />} />
+            <Route path="/missions" element={<SavedMissions />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
