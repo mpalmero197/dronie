@@ -620,6 +620,21 @@ export default function Dashboard() {
                 <svg className="w-4 h-4 flex-shrink-0 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
               </button>
 
+              {/* Workflow pipeline shortcut */}
+              <button
+                onClick={() => navigate('/workflow')}
+                className="w-full bg-card border border-border text-foreground rounded-2xl p-4 flex items-center gap-3 hover:border-primary/40 hover:bg-secondary/40 transition-all text-left"
+              >
+                <div className="w-10 h-10 rounded-xl bg-accent/15 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-5 h-5 text-accent-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12h4l3-9 4 18 3-9h4"/></svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-display font-700 text-sm">Workflow Pipeline</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">Plan → capture → process → analyze in one guided flow.</p>
+                </div>
+                <svg className="w-4 h-4 flex-shrink-0 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+              </button>
+
               {/* Upload drop zone */}
               <div
                 onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
