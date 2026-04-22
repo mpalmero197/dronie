@@ -393,14 +393,56 @@ export default function PlanWizard() {
         name: locationLabel || "Mission",
         homePosition: homePosition ?? undefined,
       });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a"); a.href = url; a.download = "mission.kmz"; a.click();
-      URL.revokeObjectURL(url);
+      downloadBlob(blob, `${(locationLabel || "mission").replace(/[^\w-]+/g, "_")}.kmz`);
       toast({ title: "KMZ exported", description: "Import into DJI Fly." });
     } catch {
       toast({ title: "KMZ export failed", variant: "destructive" });
     }
   }, [result, altitude, speed, heading, homePosition, locationLabel, toast]);
+
+  const exportKML = useCallback(() => {
+    if (!result) return;
+    try {
+      const blob = generateKML({
+        waypoints: result, altitude, speed, heading,
+        name: locationLabel || "Mission",
+        homePosition, polygon,
+      });
+      downloadBlob(blob, `${(locationLabel || "mission").replace(/[^\w-]+/g, "_")}.kml`);
+      toast({ title: "KML exported", description: "Compatible with Google Earth, QGIS, Litchi, etc." });
+    } catch {
+      toast({ title: "KML export failed", variant: "destructive" });
+    }
+  }, [result, altitude, speed, heading, homePosition, polygon, locationLabel, toast]);
+
+  const exportGeoJSON = useCallback(() => {
+    if (!result) return;
+    try {
+      const blob = generateGeoJSON({
+        waypoints: result, altitude, speed, heading,
+        name: locationLabel || "Mission",
+        homePosition, polygon,
+      });
+      downloadBlob(blob, `${(locationLabel || "mission").replace(/[^\w-]+/g, "_")}.geojson`);
+      toast({ title: "GeoJSON exported" });
+    } catch {
+      toast({ title: "GeoJSON export failed", variant: "destructive" });
+    }
+  }, [result, altitude, speed, heading, homePosition, polygon, locationLabel, toast]);
+
+  const exportCSV = useCallback(() => {
+    if (!result) return;
+    try {
+      const blob = generateWaypointCSV({
+        waypoints: result, altitude, speed, heading,
+        name: locationLabel || "Mission",
+      });
+      downloadBlob(blob, `${(locationLabel || "mission").replace(/[^\w-]+/g, "_")}-waypoints.csv`);
+      toast({ title: "CSV waypoints exported" });
+    } catch {
+      toast({ title: "CSV export failed", variant: "destructive" });
+    }
+  }, [result, altitude, speed, heading, locationLabel, toast]);
 
   const exportPDF = useCallback(async () => {
     if (!result || !stats) return;
