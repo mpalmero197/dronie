@@ -479,18 +479,70 @@ export default function PlanWizard() {
   }, [result, stats, altitude, frontOverlap, sideOverlap, heading, speed, droneIdx, locationLabel, toast]);
 
   const saveToProject = useCallback(async () => {
-    if (!user || polygon.length < 3) return;
-    const { error } = await supabase.from("saved_flight_plans").insert({
-      user_id: user.id,
-      project_id: projectId,
-      name: locationLabel || `Mission ${new Date().toLocaleDateString()}`,
-      polygon: polygon as any,
-      home_position: homePosition as any,
-      params: { altitude, frontOverlap, sideOverlap, heading, speed, pattern: "single", crossHeadingOffset: 90, droneModelIdx: droneIdx, terrainFollow: false, gimbalPitchStart: -90, gimbalPitchEnd: -90 } as any,
-    });
-    if (error) toast({ title: "Save failed", variant: "destructive" });
-    else toast({ title: "Mission saved!", description: "View it in your project's flight plans." });
-  }, [user, polygon, homePosition, altitude, frontOverlap, sideOverlap, heading, speed, droneIdx, projectId, locationLabel, toast]);
+    if (!user || polygon.length < 3 || !result) return;
+    if (!projectId) {
+      toast({
+        title: "No project selected",
+        description: "Open this wizard from a project to attach the mission.",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      const baseName = (locationLabel || `Mission ${new Date().toLocaleDateString()}`).slice(0, 80);
+      const safeName = baseName.replace(/[^\w-]+/g, "_");
+
+      // 1. Save reusable copy into the planner library
+      const { error: libErr } = await supabase.from("saved_flight_plans").insert({
+        user_id: user.id,
+        project_id: projectId,
+        name: baseName,
+        polygon: polygon as any,
+        home_position: homePosition as any,
+        params: {
+          altitude, frontOverlap, sideOverlap, heading, speed,
+          pattern: "single", crossHeadingOffset: 90,
+          droneModelIdx: droneIdx, terrainFollow: false,
+          gimbalPitchStart: -90, gimbalPitchEnd: -90,
+        } as any,
+      });
+      if (libErr) throw libErr;
+
+      // 2. Generate a KMZ and upload it as an actual project flight plan
+      const blob = await generateDJIFlyKMZ({
+        waypoints: result, altitude, speed, heading,
+        name: baseName,
+        homePosition: homePosition ?? undefined,
+      });
+      const fileName = `${safeName}_${Date.now()}.kmz`;
+      const path = `${user.id}/${projectId}/${fileName}`;
+      const { error: upErr } = await supabase.storage
+        .from("flight-plans")
+        .upload(path, blob, { contentType: "application/vnd.google-earth.kmz", upsert: false });
+      if (upErr) throw upErr;
+
+      const { error: insErr } = await supabase.from("flight_plans").insert({
+        project_id: projectId,
+        user_id: user.id,
+        file_name: fileName,
+        file_path: path,
+        file_size: blob.size,
+        file_type: "kmz",
+      });
+      if (insErr) throw insErr;
+
+      toast({
+        title: "Mission saved to project",
+        description: "Available in the project's Flight Plans tab.",
+      });
+    } catch (err: any) {
+      toast({
+        title: "Save failed",
+        description: err?.message ?? "Something went wrong.",
+        variant: "destructive",
+      });
+    }
+  }, [user, polygon, result, homePosition, altitude, frontOverlap, sideOverlap, heading, speed, droneIdx, projectId, locationLabel, toast]);
 
   // ---------- Step gating ----------
   const canAdvance = step === 1 ? !!center : step === 2 ? polygon.length >= 3 : true;
