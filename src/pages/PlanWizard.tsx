@@ -880,7 +880,8 @@ function Step3({
   stats, altitude, setAltitude, frontOverlap, setFrontOverlap, sideOverlap, setSideOverlap,
   heading, setHeading, speed, setSpeed, droneIdx, setDroneIdx,
   returnToHome, setReturnToHome, hasHome,
-  exportKMZ, exportPDF, saveToProject, formatTime, formatDist, formatArea, userSignedIn,
+  exportKMZ, exportKML, exportGeoJSON, exportCSV, exportPDF,
+  saveToProject, hasProject, formatTime, formatDist, formatArea, userSignedIn,
 }: any) {
   return (
     <div className="space-y-3">
@@ -936,13 +937,29 @@ function Step3({
         <Button onClick={exportKMZ} className="w-full gap-2" size="sm">
           <Download className="w-3.5 h-3.5" /> KMZ for DJI Fly
         </Button>
+        <div className="grid grid-cols-3 gap-1.5">
+          <Button onClick={exportKML} variant="outline" size="sm" className="gap-1 text-[11px] px-2">
+            <Download className="w-3 h-3" /> KML
+          </Button>
+          <Button onClick={exportGeoJSON} variant="outline" size="sm" className="gap-1 text-[11px] px-2">
+            <Download className="w-3 h-3" /> GeoJSON
+          </Button>
+          <Button onClick={exportCSV} variant="outline" size="sm" className="gap-1 text-[11px] px-2">
+            <Download className="w-3 h-3" /> CSV
+          </Button>
+        </div>
         <Button onClick={exportPDF} variant="outline" className="w-full gap-2" size="sm">
           <FileText className="w-3.5 h-3.5" /> PDF briefing
         </Button>
-        {userSignedIn && (
+        {userSignedIn && hasProject && (
           <Button onClick={saveToProject} variant="outline" className="w-full gap-2" size="sm">
-            <MapIcon className="w-3.5 h-3.5" /> Save to my project
+            <MapIcon className="w-3.5 h-3.5" /> Attach to project
           </Button>
+        )}
+        {userSignedIn && !hasProject && (
+          <p className="text-[10px] text-muted-foreground text-center pt-1">
+            Open this wizard from a project to attach the mission to it.
+          </p>
         )}
       </div>
     </div>
