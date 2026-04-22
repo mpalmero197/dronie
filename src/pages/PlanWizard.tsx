@@ -21,6 +21,7 @@ import {
 } from "@/lib/flightPathGenerators";
 import { generateMissionPDF } from "@/lib/generateMissionPDF";
 import { generateDJIFlyKMZ } from "@/lib/generateDJIFlyKMZ";
+import { generateKML, generateGeoJSON, generateWaypointCSV, downloadBlob } from "@/lib/exportFlightPlan";
 
 // Fix Leaflet icons (Vite)
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -392,14 +393,56 @@ export default function PlanWizard() {
         name: locationLabel || "Mission",
         homePosition: homePosition ?? undefined,
       });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a"); a.href = url; a.download = "mission.kmz"; a.click();
-      URL.revokeObjectURL(url);
+      downloadBlob(blob, `${(locationLabel || "mission").replace(/[^\w-]+/g, "_")}.kmz`);
       toast({ title: "KMZ exported", description: "Import into DJI Fly." });
     } catch {
       toast({ title: "KMZ export failed", variant: "destructive" });
     }
   }, [result, altitude, speed, heading, homePosition, locationLabel, toast]);
+
+  const exportKML = useCallback(() => {
+    if (!result) return;
+    try {
+      const blob = generateKML({
+        waypoints: result, altitude, speed, heading,
+        name: locationLabel || "Mission",
+        homePosition, polygon,
+      });
+      downloadBlob(blob, `${(locationLabel || "mission").replace(/[^\w-]+/g, "_")}.kml`);
+      toast({ title: "KML exported", description: "Compatible with Google Earth, QGIS, Litchi, etc." });
+    } catch {
+      toast({ title: "KML export failed", variant: "destructive" });
+    }
+  }, [result, altitude, speed, heading, homePosition, polygon, locationLabel, toast]);
+
+  const exportGeoJSON = useCallback(() => {
+    if (!result) return;
+    try {
+      const blob = generateGeoJSON({
+        waypoints: result, altitude, speed, heading,
+        name: locationLabel || "Mission",
+        homePosition, polygon,
+      });
+      downloadBlob(blob, `${(locationLabel || "mission").replace(/[^\w-]+/g, "_")}.geojson`);
+      toast({ title: "GeoJSON exported" });
+    } catch {
+      toast({ title: "GeoJSON export failed", variant: "destructive" });
+    }
+  }, [result, altitude, speed, heading, homePosition, polygon, locationLabel, toast]);
+
+  const exportCSV = useCallback(() => {
+    if (!result) return;
+    try {
+      const blob = generateWaypointCSV({
+        waypoints: result, altitude, speed, heading,
+        name: locationLabel || "Mission",
+      });
+      downloadBlob(blob, `${(locationLabel || "mission").replace(/[^\w-]+/g, "_")}-waypoints.csv`);
+      toast({ title: "CSV waypoints exported" });
+    } catch {
+      toast({ title: "CSV export failed", variant: "destructive" });
+    }
+  }, [result, altitude, speed, heading, locationLabel, toast]);
 
   const exportPDF = useCallback(async () => {
     if (!result || !stats) return;
@@ -436,18 +479,70 @@ export default function PlanWizard() {
   }, [result, stats, altitude, frontOverlap, sideOverlap, heading, speed, droneIdx, locationLabel, toast]);
 
   const saveToProject = useCallback(async () => {
-    if (!user || polygon.length < 3) return;
-    const { error } = await supabase.from("saved_flight_plans").insert({
-      user_id: user.id,
-      project_id: projectId,
-      name: locationLabel || `Mission ${new Date().toLocaleDateString()}`,
-      polygon: polygon as any,
-      home_position: homePosition as any,
-      params: { altitude, frontOverlap, sideOverlap, heading, speed, pattern: "single", crossHeadingOffset: 90, droneModelIdx: droneIdx, terrainFollow: false, gimbalPitchStart: -90, gimbalPitchEnd: -90 } as any,
-    });
-    if (error) toast({ title: "Save failed", variant: "destructive" });
-    else toast({ title: "Mission saved!", description: "View it in your project's flight plans." });
-  }, [user, polygon, homePosition, altitude, frontOverlap, sideOverlap, heading, speed, droneIdx, projectId, locationLabel, toast]);
+    if (!user || polygon.length < 3 || !result) return;
+    if (!projectId) {
+      toast({
+        title: "No project selected",
+        description: "Open this wizard from a project to attach the mission.",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      const baseName = (locationLabel || `Mission ${new Date().toLocaleDateString()}`).slice(0, 80);
+      const safeName = baseName.replace(/[^\w-]+/g, "_");
+
+      // 1. Save reusable copy into the planner library
+      const { error: libErr } = await supabase.from("saved_flight_plans").insert({
+        user_id: user.id,
+        project_id: projectId,
+        name: baseName,
+        polygon: polygon as any,
+        home_position: homePosition as any,
+        params: {
+          altitude, frontOverlap, sideOverlap, heading, speed,
+          pattern: "single", crossHeadingOffset: 90,
+          droneModelIdx: droneIdx, terrainFollow: false,
+          gimbalPitchStart: -90, gimbalPitchEnd: -90,
+        } as any,
+      });
+      if (libErr) throw libErr;
+
+      // 2. Generate a KMZ and upload it as an actual project flight plan
+      const blob = await generateDJIFlyKMZ({
+        waypoints: result, altitude, speed, heading,
+        name: baseName,
+        homePosition: homePosition ?? undefined,
+      });
+      const fileName = `${safeName}_${Date.now()}.kmz`;
+      const path = `${user.id}/${projectId}/${fileName}`;
+      const { error: upErr } = await supabase.storage
+        .from("flight-plans")
+        .upload(path, blob, { contentType: "application/vnd.google-earth.kmz", upsert: false });
+      if (upErr) throw upErr;
+
+      const { error: insErr } = await supabase.from("flight_plans").insert({
+        project_id: projectId,
+        user_id: user.id,
+        file_name: fileName,
+        file_path: path,
+        file_size: blob.size,
+        file_type: "kmz",
+      });
+      if (insErr) throw insErr;
+
+      toast({
+        title: "Mission saved to project",
+        description: "Available in the project's Flight Plans tab.",
+      });
+    } catch (err: any) {
+      toast({
+        title: "Save failed",
+        description: err?.message ?? "Something went wrong.",
+        variant: "destructive",
+      });
+    }
+  }, [user, polygon, result, homePosition, altitude, frontOverlap, sideOverlap, heading, speed, droneIdx, projectId, locationLabel, toast]);
 
   // ---------- Step gating ----------
   const canAdvance = step === 1 ? !!center : step === 2 ? polygon.length >= 3 : true;
@@ -545,7 +640,10 @@ export default function PlanWizard() {
               droneIdx={droneIdx} setDroneIdx={setDroneIdx}
               returnToHome={returnToHome} setReturnToHome={setReturnToHome}
               hasHome={!!homePosition}
-              exportKMZ={exportKMZ} exportPDF={exportPDF} saveToProject={saveToProject}
+              exportKMZ={exportKMZ} exportKML={exportKML}
+              exportGeoJSON={exportGeoJSON} exportCSV={exportCSV}
+              exportPDF={exportPDF} saveToProject={saveToProject}
+              hasProject={!!projectId}
               formatTime={formatTime} formatDist={formatDist} formatArea={formatArea}
               userSignedIn={!!user}
             />
@@ -782,7 +880,8 @@ function Step3({
   stats, altitude, setAltitude, frontOverlap, setFrontOverlap, sideOverlap, setSideOverlap,
   heading, setHeading, speed, setSpeed, droneIdx, setDroneIdx,
   returnToHome, setReturnToHome, hasHome,
-  exportKMZ, exportPDF, saveToProject, formatTime, formatDist, formatArea, userSignedIn,
+  exportKMZ, exportKML, exportGeoJSON, exportCSV, exportPDF,
+  saveToProject, hasProject, formatTime, formatDist, formatArea, userSignedIn,
 }: any) {
   return (
     <div className="space-y-3">
@@ -838,13 +937,29 @@ function Step3({
         <Button onClick={exportKMZ} className="w-full gap-2" size="sm">
           <Download className="w-3.5 h-3.5" /> KMZ for DJI Fly
         </Button>
+        <div className="grid grid-cols-3 gap-1.5">
+          <Button onClick={exportKML} variant="outline" size="sm" className="gap-1 text-[11px] px-2">
+            <Download className="w-3 h-3" /> KML
+          </Button>
+          <Button onClick={exportGeoJSON} variant="outline" size="sm" className="gap-1 text-[11px] px-2">
+            <Download className="w-3 h-3" /> GeoJSON
+          </Button>
+          <Button onClick={exportCSV} variant="outline" size="sm" className="gap-1 text-[11px] px-2">
+            <Download className="w-3 h-3" /> CSV
+          </Button>
+        </div>
         <Button onClick={exportPDF} variant="outline" className="w-full gap-2" size="sm">
           <FileText className="w-3.5 h-3.5" /> PDF briefing
         </Button>
-        {userSignedIn && (
+        {userSignedIn && hasProject && (
           <Button onClick={saveToProject} variant="outline" className="w-full gap-2" size="sm">
-            <MapIcon className="w-3.5 h-3.5" /> Save to my project
+            <MapIcon className="w-3.5 h-3.5" /> Attach to project
           </Button>
+        )}
+        {userSignedIn && !hasProject && (
+          <p className="text-[10px] text-muted-foreground text-center pt-1">
+            Open this wizard from a project to attach the mission to it.
+          </p>
         )}
       </div>
     </div>
