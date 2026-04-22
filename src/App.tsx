@@ -22,6 +22,7 @@ import Subscription from "./pages/Subscription.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import PlanWizard from "./pages/PlanWizard.tsx";
 import SavedMissions from "./pages/SavedMissions.tsx";
+import Workflow from "./pages/Workflow.tsx";
 
 const queryClient = new QueryClient();
 
@@ -49,6 +50,7 @@ const App = () => (
             <Route path="/terms" element={<TermsOfService />} />
             <Route path="/plan" element={<PlanWizard />} />
             <Route path="/missions" element={<SavedMissions />} />
+            <Route path="/workflow" element={<Workflow />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
