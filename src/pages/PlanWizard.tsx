@@ -640,7 +640,10 @@ export default function PlanWizard() {
               droneIdx={droneIdx} setDroneIdx={setDroneIdx}
               returnToHome={returnToHome} setReturnToHome={setReturnToHome}
               hasHome={!!homePosition}
-              exportKMZ={exportKMZ} exportPDF={exportPDF} saveToProject={saveToProject}
+              exportKMZ={exportKMZ} exportKML={exportKML}
+              exportGeoJSON={exportGeoJSON} exportCSV={exportCSV}
+              exportPDF={exportPDF} saveToProject={saveToProject}
+              hasProject={!!projectId}
               formatTime={formatTime} formatDist={formatDist} formatArea={formatArea}
               userSignedIn={!!user}
             />
