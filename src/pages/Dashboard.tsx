@@ -635,6 +635,29 @@ export default function Dashboard() {
                 <svg className="w-4 h-4 flex-shrink-0 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
               </button>
 
+              {/* Advanced modules grid */}
+              <div className="grid grid-cols-2 gap-2.5">
+                {[
+                  { to: "/swarm",      title: "Swarm Ops",     desc: "Multi-drone autonomy",  emoji: "🛰️", tone: "bg-primary/10 text-primary" },
+                  { to: "/reality",    title: "Reality Capture", desc: "Live 3D mesh + AR",   emoji: "🎯", tone: "bg-highlight/15 text-highlight" },
+                  { to: "/rtk",        title: "RTK / GCP",     desc: "Smart alignment",        emoji: "📡", tone: "bg-accent/15 text-accent-foreground" },
+                  { to: "/insights",   title: "AI Insights",   desc: "Auto metrics + PDF",     emoji: "🧠", tone: "bg-primary/10 text-primary" },
+                  { to: "/compliance", title: "Compliance",    desc: "Part 107 + LAANC",       emoji: "🛡️", tone: "bg-secondary text-foreground" },
+                ].map((m) => (
+                  <button
+                    key={m.to}
+                    onClick={() => navigate(m.to)}
+                    className="bg-card border border-border rounded-xl p-3 text-left hover:border-primary/40 hover:bg-secondary/40 transition-all"
+                  >
+                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-base mb-2 ${m.tone}`}>
+                      <span aria-hidden>{m.emoji}</span>
+                    </div>
+                    <p className="font-display font-700 text-sm leading-tight">{m.title}</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5 leading-tight">{m.desc}</p>
+                  </button>
+                ))}
+              </div>
+
               {/* Upload drop zone */}
               <div
                 onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
