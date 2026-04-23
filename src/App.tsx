@@ -23,6 +23,11 @@ import NotFound from "./pages/NotFound.tsx";
 import PlanWizard from "./pages/PlanWizard.tsx";
 import SavedMissions from "./pages/SavedMissions.tsx";
 import Workflow from "./pages/Workflow.tsx";
+import SwarmOrchestration from "./pages/SwarmOrchestration.tsx";
+import RealityCapture from "./pages/RealityCapture.tsx";
+import RtkAlignment from "./pages/RtkAlignment.tsx";
+import AiInsights from "./pages/AiInsights.tsx";
+import Compliance from "./pages/Compliance.tsx";
 
 const queryClient = new QueryClient();
 
@@ -51,6 +56,11 @@ const App = () => (
             <Route path="/plan" element={<PlanWizard />} />
             <Route path="/missions" element={<SavedMissions />} />
             <Route path="/workflow" element={<Workflow />} />
+            <Route path="/swarm" element={<SwarmOrchestration />} />
+            <Route path="/reality" element={<RealityCapture />} />
+            <Route path="/rtk" element={<RtkAlignment />} />
+            <Route path="/insights" element={<AiInsights />} />
+            <Route path="/compliance" element={<Compliance />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
