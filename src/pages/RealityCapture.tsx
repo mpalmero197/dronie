@@ -1,90 +1,132 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
-import { Canvas, useFrame } from "@react-three/fiber";
-import { OrbitControls, Grid, Stats } from "@react-three/drei";
+import { Link, useNavigate } from "react-router-dom";
+import { Canvas, useLoader } from "@react-three/fiber";
+import { OrbitControls, Grid, useGLTF } from "@react-three/drei";
+import { PLYLoader } from "three/examples/jsm/loaders/PLYLoader.js";
 import * as THREE from "three";
 import {
-  ArrowLeft, Camera, Eye, EyeOff, Layers, Maximize2, RefreshCw, Sparkles, Wifi,
+  ArrowLeft, FolderOpen, Layers, Loader2, RefreshCw, FileBox, Eye, EyeOff,
+  AlertCircle, Download, Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
-// Live-growing point cloud → simulates edge meshing arriving in chunks
-function GrowingCloud({ density, speed, color }: { density: number; speed: number; color: string }) {
-  const ref = useRef<THREE.Points>(null);
-  const totalRef = useRef(0);
+interface ProjectOpt { id: string; name: string; }
+interface Asset { name: string; url: string; size: number; mime: string; kind: "ply" | "glb" | "obj" | "other"; }
 
-  // pre-generate a deterministic terrain-like cloud
-  const { positions, colors } = useMemo(() => {
-    const N = 12000;
-    const positions = new Float32Array(N * 3);
-    const colors = new Float32Array(N * 3);
-    const c = new THREE.Color(color);
-    for (let i = 0; i < N; i++) {
-      const x = (Math.random() - 0.5) * 20;
-      const z = (Math.random() - 0.5) * 20;
-      // gentle terrain noise
-      const y =
-        Math.sin(x * 0.4) * 0.6 +
-        Math.cos(z * 0.5) * 0.5 +
-        Math.sin((x + z) * 0.18) * 0.9;
-      positions[i * 3] = x;
-      positions[i * 3 + 1] = y;
-      positions[i * 3 + 2] = z;
-      const shade = 0.55 + (y + 2) / 6;
-      colors[i * 3] = c.r * shade;
-      colors[i * 3 + 1] = c.g * shade;
-      colors[i * 3 + 2] = c.b * shade;
-    }
-    return { positions, colors };
-  }, [color]);
+function detectKind(name: string): Asset["kind"] {
+  const lower = name.toLowerCase();
+  if (lower.endsWith(".ply")) return "ply";
+  if (lower.endsWith(".glb") || lower.endsWith(".gltf")) return "glb";
+  if (lower.endsWith(".obj")) return "obj";
+  return "other";
+}
 
-  useFrame((_, delta) => {
-    if (!ref.current) return;
-    totalRef.current = Math.min(positions.length / 3, totalRef.current + delta * 1500 * speed);
-    const target = Math.floor(totalRef.current * (density / 100));
-    const geom = ref.current.geometry as THREE.BufferGeometry;
-    geom.setDrawRange(0, target);
-  });
+function PlyCloud({ url, pointSize, color }: { url: string; pointSize: number; color: string }) {
+  const geom = useLoader(PLYLoader as unknown as typeof THREE.Loader, url) as unknown as THREE.BufferGeometry;
+  const positions = geom.getAttribute("position");
+  const hasColors = geom.hasAttribute("color");
 
+  // recenter
+  const centered = useMemo(() => {
+    geom.computeBoundingBox();
+    const c = new THREE.Vector3();
+    geom.boundingBox?.getCenter(c);
+    geom.translate(-c.x, -c.y, -c.z);
+    geom.computeBoundingSphere();
+    return geom;
+  }, [geom]);
+
+  if (!positions) return null;
   return (
-    <points ref={ref}>
-      <bufferGeometry>
-        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
-        <bufferAttribute attach="attributes-color" args={[colors, 3]} />
-      </bufferGeometry>
-      <pointsMaterial vertexColors size={0.06} sizeAttenuation />
+    <points>
+      <primitive object={centered} attach="geometry" />
+      <pointsMaterial
+        vertexColors={hasColors}
+        color={hasColors ? undefined : new THREE.Color(color)}
+        size={pointSize}
+        sizeAttenuation
+      />
     </points>
   );
 }
 
-function CameraRig({ rotate }: { rotate: boolean }) {
-  useFrame(({ camera, clock }) => {
-    if (!rotate) return;
-    const t = clock.getElapsedTime() * 0.15;
-    camera.position.x = Math.sin(t) * 18;
-    camera.position.z = Math.cos(t) * 18;
-    camera.lookAt(0, 0, 0);
-  });
-  return null;
+function GlbModel({ url }: { url: string }) {
+  const gltf = useGLTF(url);
+  return <primitive object={gltf.scene} />;
 }
 
 export default function RealityCapture() {
-  const [density, setDensity] = useState([85]);
-  const [speed, setSpeed] = useState([1]);
-  const [showGrid, setShowGrid] = useState(true);
-  const [arMode, setArMode] = useState(false);
-  const [autoRotate, setAutoRotate] = useState(false);
-  const [reset, setReset] = useState(0);
-  const [meshColor, setMeshColor] = useState("hsl(152 52% 42%)");
-  const [latency, setLatency] = useState(120);
+  const { user, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
 
-  // simulated network latency / coverage gauges
+  const [projects, setProjects] = useState<ProjectOpt[]>([]);
+  const [projectId, setProjectId] = useState<string>("");
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [pointSize, setPointSize] = useState([0.04]);
+  const [showGrid, setShowGrid] = useState(true);
+  const [meshColor, setMeshColor] = useState("hsl(152 52% 42%)");
+  const [renderError, setRenderError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  // Fetch user projects
   useEffect(() => {
-    const id = setInterval(() => setLatency(80 + Math.round(Math.random() * 220)), 1500);
-    return () => clearInterval(id);
-  }, []);
+    if (!user) return;
+    (async () => {
+      const { data } = await supabase
+        .from("projects")
+        .select("id, name")
+        .order("created_at", { ascending: false });
+      setProjects((data ?? []) as ProjectOpt[]);
+      if (data && data.length > 0 && !projectId) setProjectId(data[0].id);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  // Fetch project-outputs assets for selected project
+  const refresh = async (pid: string) => {
+    if (!pid) { setAssets([]); setSelectedAsset(null); return; }
+    setLoading(true);
+    setRenderError(null);
+    const { data, error } = await supabase.storage
+      .from("project-outputs")
+      .list(pid, { limit: 100, sortBy: { column: "name", order: "asc" } });
+    if (error || !data) {
+      setAssets([]);
+      setLoading(false);
+      return;
+    }
+    const eligible = data
+      .filter((f) => /\.(ply|glb|gltf|obj)$/i.test(f.name))
+      .map((f): Asset => {
+        const url = supabase.storage.from("project-outputs").getPublicUrl(`${pid}/${f.name}`).data.publicUrl;
+        return {
+          name: f.name,
+          url,
+          size: f.metadata?.size ?? 0,
+          mime: f.metadata?.mimetype ?? "application/octet-stream",
+          kind: detectKind(f.name),
+        };
+      });
+    setAssets(eligible);
+    setSelectedAsset(eligible[0] ?? null);
+    setLoading(false);
+  };
+
+  useEffect(() => { refresh(projectId); }, [projectId]);
+
+  if (authLoading) {
+    return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading…</div>;
+  }
+  if (!user) { navigate("/auth"); return null; }
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -95,171 +137,219 @@ export default function RealityCapture() {
               <ArrowLeft className="w-5 h-5" />
             </Link>
             <div className="min-w-0">
-              <h1 className="text-base sm:text-lg font-display font-700 truncate">Reality Capture · Live Mesh</h1>
-              <p className="text-xs text-muted-foreground truncate">Edge-computed point cloud streaming with AR verification</p>
+              <h1 className="text-base sm:text-lg font-display font-700 truncate">Reality Capture · 3D Viewer</h1>
+              <p className="text-xs text-muted-foreground truncate">Real point clouds and meshes from your project outputs</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" onClick={() => { setReset((r) => r + 1); }} className="gap-1.5">
-              <RefreshCw className="w-4 h-4" /> Restart
-            </Button>
-            <Button size="sm" onClick={() => setArMode((v) => !v)} variant={arMode ? "default" : "outline"} className="gap-1.5">
-              {arMode ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              {arMode ? "Exit AR" : "AR View"}
-            </Button>
-          </div>
+          <Button size="sm" variant="outline" onClick={() => { refresh(projectId); setReloadKey((k) => k + 1); }} disabled={loading} className="gap-1.5">
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} /> Refresh
+          </Button>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5 grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-5">
-        {/* 3D + AR viewport */}
-        <div className="space-y-4">
-          <div className="relative rounded-2xl border border-border overflow-hidden bg-[hsl(220_30%_8%)] aspect-[16/10] sm:aspect-[16/9]">
-            {/* Simulated AR camera background */}
-            {arMode && <ARBackdrop />}
-            <Canvas key={reset} camera={{ position: [12, 8, 14], fov: 50 }} className="absolute inset-0">
-              <ambientLight intensity={0.55} />
-              <directionalLight position={[10, 15, 8]} intensity={1.1} />
-              <Suspense fallback={null}>
-                <GrowingCloud density={density[0]} speed={speed[0]} color={meshColor} />
-              </Suspense>
-              {showGrid && !arMode && (
-                <Grid
-                  args={[40, 40]}
-                  cellSize={1}
-                  cellColor={"#3a4a5e"}
-                  sectionColor={"#5a7d8c"}
-                  fadeDistance={32}
-                  position={[0, -2, 0]}
-                  infiniteGrid
-                />
-              )}
-              <CameraRig rotate={autoRotate} />
-              <OrbitControls enableDamping makeDefault enabled={!autoRotate} />
-            </Canvas>
-
-            {/* HUD overlays */}
-            <div className="absolute top-3 left-3 right-3 flex justify-between items-start pointer-events-none">
-              <div className="bg-black/55 backdrop-blur text-white text-[11px] font-mono rounded-lg px-2.5 py-1.5 space-y-0.5">
-                <p>📡 Edge link · {latency} ms</p>
-                <p>📐 Cloud density · {density[0]}%</p>
-              </div>
-              {arMode && (
-                <div className="bg-accent/90 text-accent-foreground text-[11px] font-bold rounded-lg px-2.5 py-1.5 flex items-center gap-1.5 animate-pulse">
-                  <Camera className="w-3.5 h-3.5" /> AR ACTIVE
-                </div>
-              )}
-            </div>
-            <div className="absolute bottom-3 left-3 right-3 flex justify-between items-end pointer-events-none">
-              <div className="bg-black/55 backdrop-blur text-white text-[11px] font-mono rounded-lg px-2.5 py-1.5 flex items-center gap-1.5">
-                <Wifi className="w-3.5 h-3.5 text-primary" /> Signal: strong
-              </div>
-              <div className="bg-black/55 backdrop-blur text-white text-[11px] font-mono rounded-lg px-2.5 py-1.5">
-                Drag to orbit · Scroll to zoom
-              </div>
-            </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5 space-y-5">
+        {/* Project + asset picker */}
+        <div className="rounded-2xl border border-border bg-card p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5 mb-1.5">
+              <FolderOpen className="w-3.5 h-3.5 text-primary" /> Project
+            </label>
+            {projects.length === 0 ? (
+              <Button size="sm" variant="outline" onClick={() => navigate("/dashboard")} className="w-full">
+                Create your first project
+              </Button>
+            ) : (
+              <Select value={projectId} onValueChange={setProjectId}>
+                <SelectTrigger><SelectValue placeholder="Select project" /></SelectTrigger>
+                <SelectContent>
+                  {projects.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            )}
           </div>
-
-          {/* Coverage strip */}
-          <div className="rounded-2xl border border-border bg-card p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold text-sm flex items-center gap-2"><Sparkles className="w-4 h-4 text-accent" /> Spatial coverage</h3>
-              <span className="text-xs text-muted-foreground">Updates as the mesh grows</span>
-            </div>
-            <CoverageStrip percent={Math.min(100, density[0])} />
+          <div>
+            <label className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5 mb-1.5">
+              <FileBox className="w-3.5 h-3.5 text-primary" /> 3D output
+            </label>
+            {assets.length === 0 ? (
+              <div className="h-9 px-3 flex items-center text-sm text-muted-foreground border border-dashed border-border rounded-md">
+                {loading ? "Loading…" : "No .ply / .glb / .obj outputs yet"}
+              </div>
+            ) : (
+              <Select value={selectedAsset?.name ?? ""} onValueChange={(n) => setSelectedAsset(assets.find((a) => a.name === n) ?? null)}>
+                <SelectTrigger><SelectValue placeholder="Select asset" /></SelectTrigger>
+                <SelectContent>
+                  {assets.map((a) => (
+                    <SelectItem key={a.name} value={a.name}>
+                      {a.name} · {(a.size / 1024 / 1024).toFixed(1)} MB
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
         </div>
 
-        {/* Controls */}
-        <aside className="space-y-4">
-          <div className="rounded-2xl border border-border bg-card p-4 space-y-5">
-            <h3 className="font-semibold text-sm flex items-center gap-2"><Layers className="w-4 h-4 text-primary" /> Viewer</h3>
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Show ground grid</span>
-              <Switch checked={showGrid} onCheckedChange={setShowGrid} />
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-5">
+          {/* 3D viewport */}
+          <div className="space-y-4">
+            <div className="relative rounded-2xl border border-border overflow-hidden bg-[hsl(220_30%_8%)] aspect-[16/10] sm:aspect-[16/9]">
+              {!selectedAsset ? (
+                <EmptyState projectId={projectId} navigate={navigate} />
+              ) : (
+                <Canvas key={`${selectedAsset.url}-${reloadKey}`} camera={{ position: [4, 3, 6], fov: 55 }} className="absolute inset-0">
+                  <ambientLight intensity={0.6} />
+                  <directionalLight position={[10, 12, 8]} intensity={1.0} />
+                  <Suspense fallback={null}>
+                    {selectedAsset.kind === "ply" && (
+                      <ErrorBoundary onError={setRenderError}>
+                        <PlyCloud url={selectedAsset.url} pointSize={pointSize[0]} color={meshColor} />
+                      </ErrorBoundary>
+                    )}
+                    {selectedAsset.kind === "glb" && (
+                      <ErrorBoundary onError={setRenderError}>
+                        <GlbModel url={selectedAsset.url} />
+                      </ErrorBoundary>
+                    )}
+                    {selectedAsset.kind !== "ply" && selectedAsset.kind !== "glb" && (
+                      <PlaceholderBox color={meshColor} />
+                    )}
+                  </Suspense>
+                  {showGrid && (
+                    <Grid args={[40, 40]} cellSize={1} cellColor={"#3a4a5e"} sectionColor={"#5a7d8c"} fadeDistance={32} position={[0, -2, 0]} infiniteGrid />
+                  )}
+                  <OrbitControls enableDamping makeDefault />
+                </Canvas>
+              )}
+
+              {selectedAsset && (
+                <div className="absolute top-3 left-3 right-3 flex justify-between pointer-events-none">
+                  <div className="bg-black/55 backdrop-blur text-white text-[11px] font-mono rounded-lg px-2.5 py-1.5 max-w-[60%] truncate">
+                    📦 {selectedAsset.name}
+                  </div>
+                  <div className="bg-black/55 backdrop-blur text-white text-[11px] font-mono rounded-lg px-2.5 py-1.5 uppercase">
+                    {selectedAsset.kind}
+                  </div>
+                </div>
+              )}
+
+              {renderError && (
+                <div className="absolute bottom-3 left-3 right-3 bg-destructive/90 text-destructive-foreground text-xs rounded-lg px-3 py-2 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  Couldn't render this file: {renderError}
+                </div>
+              )}
+
+              {selectedAsset && !renderError && (
+                <div className="absolute bottom-3 right-3 bg-black/55 backdrop-blur text-white text-[11px] font-mono rounded-lg px-2.5 py-1.5 pointer-events-none">
+                  Drag to orbit · Scroll to zoom
+                </div>
+              )}
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Auto-orbit</span>
-              <Switch checked={autoRotate} onCheckedChange={setAutoRotate} />
-            </div>
-            <div>
-              <div className="flex items-center justify-between text-xs mb-2">
-                <span className="text-muted-foreground">Density</span>
-                <span className="font-mono font-semibold">{density[0]}%</span>
+
+            {selectedAsset && (
+              <div className="rounded-2xl border border-border bg-card p-4 flex items-center justify-between">
+                <div className="text-xs text-muted-foreground">
+                  {(selectedAsset.size / 1024 / 1024).toFixed(2)} MB · streamed from your project storage
+                </div>
+                <a href={selectedAsset.url} download={selectedAsset.name}>
+                  <Button size="sm" variant="outline" className="gap-1.5">
+                    <Download className="w-4 h-4" /> Download
+                  </Button>
+                </a>
               </div>
-              <Slider value={density} onValueChange={setDensity} min={20} max={100} step={5} />
-            </div>
-            <div>
-              <div className="flex items-center justify-between text-xs mb-2">
-                <span className="text-muted-foreground">Stream rate</span>
-                <span className="font-mono font-semibold">{speed[0].toFixed(1)}×</span>
-              </div>
-              <Slider value={speed} onValueChange={setSpeed} min={0.2} max={3} step={0.1} />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground mb-2">Point color</p>
-              <div className="flex gap-2">
-                {[
-                  ["Forest", "hsl(152 52% 42%)"],
-                  ["Amber", "hsl(38 95% 52%)"],
-                  ["Sky", "hsl(202 85% 48%)"],
-                  ["Mono", "hsl(220 5% 75%)"],
-                ].map(([n, c]) => (
-                  <button
-                    key={n}
-                    onClick={() => setMeshColor(c)}
-                    className={`flex-1 h-8 rounded-md border-2 transition-all ${meshColor === c ? "border-foreground scale-105" : "border-transparent opacity-70"}`}
-                    style={{ background: c }}
-                    title={n}
-                  />
-                ))}
-              </div>
-            </div>
+            )}
           </div>
 
-          <div className="rounded-2xl border border-border bg-secondary/40 p-4 text-xs text-muted-foreground space-y-1.5">
-            <p className="font-semibold text-foreground text-sm">Edge meshing</p>
-            <p>Point chunks arrive over the air, are densified on-device, then streamed back as a low-res preview while the cloud is still being captured.</p>
-          </div>
-        </aside>
+          {/* Controls */}
+          <aside className="space-y-4">
+            <div className="rounded-2xl border border-border bg-card p-4 space-y-5">
+              <h3 className="font-semibold text-sm flex items-center gap-2"><Layers className="w-4 h-4 text-primary" /> Viewer</h3>
+              <div className="flex items-center justify-between">
+                <span className="text-sm">Show ground grid</span>
+                <Switch checked={showGrid} onCheckedChange={setShowGrid} />
+              </div>
+              {selectedAsset?.kind === "ply" && (
+                <>
+                  <div>
+                    <div className="flex items-center justify-between text-xs mb-2">
+                      <span className="text-muted-foreground">Point size</span>
+                      <span className="font-mono font-semibold">{pointSize[0].toFixed(2)}</span>
+                    </div>
+                    <Slider value={pointSize} onValueChange={setPointSize} min={0.01} max={0.2} step={0.01} />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-2">Tint (when PLY has no vertex color)</p>
+                    <div className="flex gap-2">
+                      {[
+                        ["Forest", "hsl(152 52% 42%)"],
+                        ["Amber", "hsl(38 95% 52%)"],
+                        ["Sky", "hsl(202 85% 48%)"],
+                        ["Mono", "hsl(220 5% 75%)"],
+                      ].map(([n, c]) => (
+                        <button
+                          key={n}
+                          onClick={() => setMeshColor(c)}
+                          className={`flex-1 h-8 rounded-md border-2 transition-all ${meshColor === c ? "border-foreground scale-105" : "border-transparent opacity-70"}`}
+                          style={{ background: c }}
+                          title={n}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="rounded-2xl border border-border bg-secondary/40 p-4 text-xs text-muted-foreground space-y-1.5">
+              <p className="font-semibold text-foreground text-sm">What's loaded</p>
+              <p>This viewer reads <code>.ply</code>, <code>.glb</code>, <code>.gltf</code>, and <code>.obj</code> files from your project's <code>project-outputs</code> bucket. Run a project through processing to generate them, or drop an output file in via the Project Detail page.</p>
+              <Link to={projectId ? `/project/${projectId}` : "/dashboard"} className="inline-flex items-center gap-1.5 text-primary mt-2 hover:underline">
+                <Upload className="w-3.5 h-3.5" /> Open project
+              </Link>
+            </div>
+          </aside>
+        </div>
       </div>
     </div>
   );
 }
 
-function ARBackdrop() {
-  // simulated camera feed: scrolling gradient bars to feel like a viewfinder
+function EmptyState({ projectId, navigate }: { projectId: string; navigate: (p: string) => void }) {
   return (
-    <div className="absolute inset-0 overflow-hidden">
-      <div className="absolute inset-0 bg-[linear-gradient(180deg,hsl(202_85%_30%)_0%,hsl(152_52%_22%)_60%,hsl(38_95%_22%)_100%)]" />
-      <div className="absolute inset-0 opacity-40 mix-blend-overlay bg-[repeating-linear-gradient(0deg,transparent_0_3px,rgba(255,255,255,0.08)_3px_4px)]" />
-      <div className="absolute inset-0 ring-2 ring-accent/40 ring-inset" />
-      {/* corner brackets */}
-      {[
-        "top-3 left-3 border-t-2 border-l-2",
-        "top-3 right-3 border-t-2 border-r-2",
-        "bottom-3 left-3 border-b-2 border-l-2",
-        "bottom-3 right-3 border-b-2 border-r-2",
-      ].map((c) => (
-        <span key={c} className={`absolute w-6 h-6 border-accent ${c}`} />
-      ))}
+    <div className="absolute inset-0 flex items-center justify-center text-center p-6">
+      <div className="space-y-3 max-w-sm">
+        <FileBox className="w-12 h-12 mx-auto text-muted-foreground" />
+        <h3 className="font-display font-700 text-foreground">No 3D output yet</h3>
+        <p className="text-sm text-muted-foreground">
+          When this project finishes processing, generated <code>.ply</code> point clouds and <code>.glb</code> meshes will appear here automatically.
+        </p>
+        {projectId && (
+          <Button size="sm" variant="outline" onClick={() => navigate(`/project/${projectId}`)}>
+            Open project
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
 
-function CoverageStrip({ percent }: { percent: number }) {
-  const cells = 30;
-  const filled = Math.round((percent / 100) * cells);
+function PlaceholderBox({ color }: { color: string }) {
   return (
-    <div className="grid grid-cols-15 sm:grid-cols-30 gap-1" style={{ gridTemplateColumns: `repeat(${cells}, minmax(0, 1fr))` }}>
-      {Array.from({ length: cells }).map((_, i) => (
-        <div
-          key={i}
-          className={`h-3 rounded-sm transition-colors ${
-            i < filled ? "bg-primary" : "bg-secondary"
-          }`}
-        />
-      ))}
-    </div>
+    <mesh>
+      <boxGeometry args={[2, 2, 2]} />
+      <meshStandardMaterial color={color} />
+    </mesh>
   );
+}
+
+// Minimal error boundary to prevent the whole canvas from crashing on a bad file
+import React from "react";
+class ErrorBoundary extends React.Component<{ children: React.ReactNode; onError: (m: string) => void }, { failed: boolean }> {
+  state = { failed: false };
+  componentDidCatch(err: Error) {
+    this.props.onError(err.message);
+    this.setState({ failed: true });
+  }
+  render() { return this.state.failed ? null : this.props.children; }
 }
