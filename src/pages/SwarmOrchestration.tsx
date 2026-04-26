@@ -2,10 +2,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Battery, BatteryWarning, Plane, RefreshCw, Wifi, WifiOff,
-  Zap, Radio, Satellite,
+  Zap, Radio, Satellite, Globe2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -35,6 +36,18 @@ const STATUS_COLORS: Record<string, string> = {
   offline: "hsl(220 8% 50%)",
 };
 
+interface LiveAircraft {
+  icao24: string;
+  callsign: string;
+  origin_country: string;
+  latitude: number | null;
+  longitude: number | null;
+  altitude_m: number | null;
+  velocity_ms: number | null;
+  heading_deg: number | null;
+  on_ground: boolean;
+}
+
 export default function SwarmOrchestration() {
   const VIEW_W = 720;
   const VIEW_H = 460;
@@ -48,6 +61,12 @@ export default function SwarmOrchestration() {
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [realtimeConnected, setRealtimeConnected] = useState(false);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
+  // Live air traffic (OpenSky Network)
+  const [liveTraffic, setLiveTraffic] = useState(false);
+  const [aircraft, setAircraft] = useState<LiveAircraft[]>([]);
+  const [trafficError, setTrafficError] = useState<string | null>(null);
+  const [trafficUpdate, setTrafficUpdate] = useState<Date | null>(null);
 
   // Initial fetch — admin sees all drones, pilots see assigned (RLS handles it)
   const fetchDrones = async () => {
@@ -118,8 +137,8 @@ export default function SwarmOrchestration() {
     const minLng = Math.min(...lngs);
     const maxLng = Math.max(...lngs);
     // pad bounds so a single drone isn't pinned to a corner
-    const padLat = Math.max(0.002, (maxLat - minLat) * 0.25);
-    const padLng = Math.max(0.002, (maxLng - minLng) * 0.25);
+    const padLat = Math.max(0.05, (maxLat - minLat) * 0.5);
+    const padLng = Math.max(0.05, (maxLng - minLng) * 0.5);
     return {
       minLat: minLat - padLat,
       maxLat: maxLat + padLat,
@@ -127,6 +146,42 @@ export default function SwarmOrchestration() {
       maxLng: maxLng + padLng,
     };
   }, [located]);
+
+  // Poll OpenSky via our edge function whenever live traffic is on
+  useEffect(() => {
+    if (!liveTraffic) {
+      setAircraft([]);
+      setTrafficError(null);
+      return;
+    }
+    let cancelled = false;
+    const fn = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/live-telemetry`;
+    const fetchOnce = async () => {
+      try {
+        const qs = new URLSearchParams({
+          lamin: bounds.minLat.toFixed(4),
+          lomin: bounds.minLng.toFixed(4),
+          lamax: bounds.maxLat.toFixed(4),
+          lomax: bounds.maxLng.toFixed(4),
+        });
+        const resp = await fetch(`${fn}?${qs}`, {
+          headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+        });
+        const json = await resp.json();
+        if (cancelled) return;
+        if (!resp.ok) throw new Error(json.error ?? `HTTP ${resp.status}`);
+        setAircraft(json.aircraft ?? []);
+        setTrafficUpdate(new Date());
+        setTrafficError(null);
+      } catch (e) {
+        if (cancelled) return;
+        setTrafficError(e instanceof Error ? e.message : "Failed to fetch live traffic");
+      }
+    };
+    fetchOnce();
+    const id = setInterval(fetchOnce, 12000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [liveTraffic, bounds]);
 
   const toggleSelect = (id: string) => {
     setSelectedIds((cur) => {
@@ -224,9 +279,16 @@ export default function SwarmOrchestration() {
                 <Satellite className="w-4 h-4 text-primary" />
                 <h2 className="font-semibold text-sm">Live fleet positions</h2>
               </div>
-              <span className="text-xs text-muted-foreground">
-                {lastUpdate ? `Updated ${lastUpdate.toLocaleTimeString()}` : "—"}
-              </span>
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-1.5 text-xs cursor-pointer select-none">
+                  <Globe2 className="w-3.5 h-3.5 text-accent" />
+                  <span className="hidden sm:inline">Live air traffic</span>
+                  <Switch checked={liveTraffic} onCheckedChange={setLiveTraffic} />
+                </label>
+                <span className="text-xs text-muted-foreground hidden md:inline">
+                  {lastUpdate ? `Fleet ${lastUpdate.toLocaleTimeString()}` : "—"}
+                </span>
+              </div>
             </div>
             <div className="bg-secondary relative">
               <svg viewBox={`0 0 ${VIEW_W} ${VIEW_H}`} className="w-full h-auto block">
@@ -236,6 +298,22 @@ export default function SwarmOrchestration() {
                   </pattern>
                 </defs>
                 <rect width={VIEW_W} height={VIEW_H} fill="url(#swarm-grid)" />
+
+                {/* Live air traffic (OpenSky) */}
+                {liveTraffic && aircraft.map((a) => {
+                  if (a.latitude == null || a.longitude == null) return null;
+                  // skip aircraft outside the visible bounds (shouldn't happen but defensive)
+                  if (a.latitude < bounds.minLat || a.latitude > bounds.maxLat) return null;
+                  if (a.longitude < bounds.minLng || a.longitude > bounds.maxLng) return null;
+                  const { x, y } = project(a.latitude, a.longitude, bounds, VIEW_W, VIEW_H);
+                  const heading = a.heading_deg ?? 0;
+                  return (
+                    <g key={a.icao24} transform={`translate(${x} ${y}) rotate(${heading})`} opacity={a.on_ground ? 0.4 : 0.9}>
+                      <title>{`${a.callsign} · ${a.origin_country}${a.altitude_m ? ` · ${Math.round(a.altitude_m)}m` : ""}`}</title>
+                      <path d="M 0,-6 L 4,4 L 0,2 L -4,4 Z" fill="hsl(38 95% 60%)" stroke="hsl(38 95% 30%)" strokeWidth="0.5" />
+                    </g>
+                  );
+                })}
 
                 {/* lat/lng frame */}
                 <text x={20} y={18} fontSize="9" fill="hsl(var(--muted-foreground))" fontFamily="monospace">
@@ -285,6 +363,25 @@ export default function SwarmOrchestration() {
                   </text>
                 )}
               </svg>
+
+              {/* Live traffic status bar */}
+              {liveTraffic && (
+                <div className="absolute top-2 right-2 bg-card/90 backdrop-blur border border-border rounded-lg px-2.5 py-1.5 text-[11px] flex items-center gap-2 pointer-events-none">
+                  <Globe2 className="w-3 h-3 text-accent" />
+                  {trafficError ? (
+                    <span className="text-destructive">{trafficError}</span>
+                  ) : (
+                    <>
+                      <span className="font-semibold">{aircraft.length}</span>
+                      <span className="text-muted-foreground">aircraft</span>
+                      {trafficUpdate && (
+                        <span className="text-muted-foreground font-mono">· {trafficUpdate.toLocaleTimeString()}</span>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+
               <div className="absolute bottom-2 left-2 right-2 flex justify-between text-[10px] text-muted-foreground font-mono pointer-events-none">
                 <span>Tap a drone to select for swarm launch</span>
                 <span>{selectedIds.size} selected</span>
@@ -352,6 +449,20 @@ export default function SwarmOrchestration() {
               Selecting drones and pressing <strong>Launch</strong> creates a real <code>job</code> per aircraft assigned to you as pilot.
               Each pilot then opens the job in <Link to="/jobs" className="text-primary underline">Active Jobs</Link> to fly its segment.
               Telemetry updates from any source (manual, API, or future ground-station bridge) flow back here in realtime.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-border bg-card p-4 text-xs space-y-2">
+            <p className="font-semibold text-foreground text-sm flex items-center gap-1.5">
+              <Globe2 className="w-4 h-4 text-accent" /> Live air traffic
+            </p>
+            <p className="text-muted-foreground">
+              Toggle <strong>Live air traffic</strong> on the map to overlay real aircraft in your area, sourced from the
+              {" "}<a href="https://openskynetwork.github.io/opensky-api/rest.html" target="_blank" rel="noreferrer" className="text-primary underline">OpenSky Network API</a>.
+              Use it to spot conflicting traffic before launching a swarm.
+            </p>
+            <p className="text-muted-foreground">
+              The same edge function (<code>/functions/v1/live-telemetry</code>) is the hook to plug in DJI Cloud / Skydio webhooks when those accounts are available.
             </p>
           </div>
         </aside>
