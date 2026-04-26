@@ -1,236 +1,185 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
-  ArrowLeft, Battery, BatteryWarning, Pause, Play, Plane, RotateCcw,
-  Shuffle, Wind, CloudRain, Sun, Layers, Zap,
+  ArrowLeft, Battery, BatteryWarning, Plane, RefreshCw, Wifi, WifiOff,
+  Zap, Radio, Satellite,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
-import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import type { Drone } from "@/lib/fleet-types";
+import DroneStatusBadge from "@/components/fleet/DroneStatusBadge";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Types
-// ─────────────────────────────────────────────────────────────────────────────
-
-type Phase = "ready" | "flying" | "rtb" | "landed";
-
-interface SwarmDrone {
-  id: string;
-  name: string;
-  color: string;
-  battery: number;
-  phase: Phase;
-  pathIndex: number;          // current waypoint index along its assigned segment
-  segmentStart: number;       // global waypoint start index
-  segmentEnd: number;         // global waypoint end index (exclusive)
-  pos: { x: number; y: number };
-  failoverFrom?: string | null;
+// Project a lat/lng cluster onto a fixed SVG viewport using min/max bounds
+function project(
+  lat: number,
+  lng: number,
+  bounds: { minLat: number; maxLat: number; minLng: number; maxLng: number },
+  w: number,
+  h: number,
+  pad = 40,
+) {
+  const dLat = bounds.maxLat - bounds.minLat || 0.001;
+  const dLng = bounds.maxLng - bounds.minLng || 0.001;
+  const x = pad + ((lng - bounds.minLng) / dLng) * (w - pad * 2);
+  const y = pad + (1 - (lat - bounds.minLat) / dLat) * (h - pad * 2);
+  return { x, y };
 }
 
-interface Waypoint { x: number; y: number; }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Path generation – serpentine grid inside a polygon area
-// ─────────────────────────────────────────────────────────────────────────────
-
-function buildSerpentine(width: number, height: number, lines: number, padding = 24): Waypoint[] {
-  const inner = { x: padding, y: padding, w: width - padding * 2, h: height - padding * 2 };
-  const stepY = inner.h / (lines - 1);
-  const pts: Waypoint[] = [];
-  for (let i = 0; i < lines; i++) {
-    const y = inner.y + i * stepY;
-    const ltr = i % 2 === 0;
-    const a = { x: inner.x, y };
-    const b = { x: inner.x + inner.w, y };
-    // sample each line into ~24 sub-points for smoother motion
-    const samples = 24;
-    for (let s = 0; s <= samples; s++) {
-      const t = s / samples;
-      pts.push({
-        x: ltr ? a.x + (b.x - a.x) * t : b.x + (a.x - b.x) * t,
-        y,
-      });
-    }
-  }
-  return pts;
-}
-
-const PALETTE = [
-  "hsl(152 52% 32%)",      // primary green
-  "hsl(38 95% 52%)",       // amber
-  "hsl(202 85% 48%)",      // sky
-  "hsl(280 60% 55%)",      // purple
-];
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Component
-// ─────────────────────────────────────────────────────────────────────────────
+const STATUS_COLORS: Record<string, string> = {
+  active: "hsl(152 52% 42%)",
+  idle: "hsl(202 75% 50%)",
+  maintenance: "hsl(38 95% 52%)",
+  offline: "hsl(220 8% 50%)",
+};
 
 export default function SwarmOrchestration() {
   const VIEW_W = 720;
   const VIEW_H = 460;
+  const { user, loading: authLoading } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
 
-  const [running, setRunning] = useState(true);
-  const [speed, setSpeed] = useState([1.5]);
-  const [windKts, setWindKts] = useState([8]);
-  const [precip, setPrecip] = useState([10]);
-  const [autoFailover, setAutoFailover] = useState(true);
-  const [dynamicReplan, setDynamicReplan] = useState(true);
-  const [lines, setLines] = useState([6]);
+  const [drones, setDrones] = useState<Drone[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [realtimeConnected, setRealtimeConnected] = useState(false);
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
-  const waypoints = useMemo(() => buildSerpentine(VIEW_W, VIEW_H, lines[0]), [lines]);
+  // Initial fetch — admin sees all drones, pilots see assigned (RLS handles it)
+  const fetchDrones = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("drones")
+      .select("*")
+      .order("name");
+    if (error) {
+      toast({ title: "Failed to load fleet", description: error.message, variant: "destructive" });
+      setLoading(false);
+      return;
+    }
+    setDrones((data ?? []) as Drone[]);
+    setLastUpdate(new Date());
+    setLoading(false);
+  };
 
-  // segment splitting per drone
-  const initialDrones = (count: number): SwarmDrone[] => {
-    const per = Math.floor(waypoints.length / count);
-    return Array.from({ length: count }).map((_, i) => {
-      const start = i * per;
-      const end = i === count - 1 ? waypoints.length : start + per;
-      return {
-        id: `D-${i + 1}`,
-        name: `Hawk-${i + 1}`,
-        color: PALETTE[i % PALETTE.length],
-        battery: 100 - i * 5,
-        phase: "flying" as Phase,
-        pathIndex: start,
-        segmentStart: start,
-        segmentEnd: end,
-        pos: waypoints[start],
-        failoverFrom: null,
-      };
+  useEffect(() => {
+    if (!user) return;
+    fetchDrones();
+    // Realtime subscription on drones
+    const channel = supabase
+      .channel("swarm:drones")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "drones" },
+        (payload) => {
+          setLastUpdate(new Date());
+          setDrones((cur) => {
+            if (payload.eventType === "INSERT") {
+              return [...cur, payload.new as Drone];
+            }
+            if (payload.eventType === "UPDATE") {
+              return cur.map((d) => (d.id === (payload.new as Drone).id ? (payload.new as Drone) : d));
+            }
+            if (payload.eventType === "DELETE") {
+              return cur.filter((d) => d.id !== (payload.old as Drone).id);
+            }
+            return cur;
+          });
+        },
+      )
+      .subscribe((status) => {
+        setRealtimeConnected(status === "SUBSCRIBED");
+      });
+    channelRef.current = channel;
+    return () => {
+      supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  // Compute lat/lng bounds for plotting
+  const located = useMemo(
+    () => drones.filter((d) => d.latitude != null && d.longitude != null),
+    [drones],
+  );
+
+  const bounds = useMemo(() => {
+    if (located.length === 0) {
+      return { minLat: 37.74, maxLat: 37.79, minLng: -122.45, maxLng: -122.39 };
+    }
+    const lats = located.map((d) => d.latitude as number);
+    const lngs = located.map((d) => d.longitude as number);
+    const minLat = Math.min(...lats);
+    const maxLat = Math.max(...lats);
+    const minLng = Math.min(...lngs);
+    const maxLng = Math.max(...lngs);
+    // pad bounds so a single drone isn't pinned to a corner
+    const padLat = Math.max(0.002, (maxLat - minLat) * 0.25);
+    const padLng = Math.max(0.002, (maxLng - minLng) * 0.25);
+    return {
+      minLat: minLat - padLat,
+      maxLat: maxLat + padLat,
+      minLng: minLng - padLng,
+      maxLng: maxLng + padLng,
+    };
+  }, [located]);
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((cur) => {
+      const next = new Set(cur);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
     });
   };
 
-  const [drones, setDrones] = useState<SwarmDrone[]>(() => initialDrones(3));
-  const dronesRef = useRef(drones);
-  useEffect(() => { dronesRef.current = drones; }, [drones]);
+  const launchSwarmJobs = async () => {
+    if (!user) return;
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) {
+      toast({ title: "Select at least one drone", variant: "destructive" });
+      return;
+    }
+    const rows = ids.map((drone_id) => ({
+      drone_id,
+      pilot_id: user.id,
+      mission_type: "swarm-survey",
+      status: "active" as const,
+      notes: `Swarm launch · ${ids.length} aircraft`,
+    }));
+    const { data, error } = await supabase.from("jobs").insert(rows).select("id");
+    if (error) {
+      toast({ title: "Failed to launch", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({
+      title: `Launched ${data?.length ?? ids.length} swarm jobs`,
+      description: "Open Active Jobs to coordinate from the pilot side.",
+    });
+    setSelectedIds(new Set());
+  };
 
-  // re-split when waypoints change (lines slider) – preserve count
-  useEffect(() => {
-    setDrones((cur) => initialDrones(cur.length));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [waypoints]);
+  const flying = drones.filter((d) => d.status === "active").length;
+  const lowBat = drones.filter((d) => d.battery_level < 25).length;
+  const offline = drones.filter((d) => d.status === "offline").length;
+  const totalBat = drones.length
+    ? Math.round(drones.reduce((s, d) => s + d.battery_level, 0) / drones.length)
+    : 0;
 
-  // simulation tick
-  useEffect(() => {
-    if (!running) return;
-    let raf: number;
-    let last = performance.now();
-    const tick = (t: number) => {
-      const dt = (t - last) / 1000;
-      last = t;
-      const windFactor = 1 + windKts[0] / 60;       // wind slows progress
-      const precipFactor = 1 - precip[0] / 220;     // rain slows + drains battery faster
-      const advance = Math.max(1, Math.round(speed[0] * 8 * dt / windFactor));
-      const drainPerSec = (0.6 + windKts[0] / 40 + precip[0] / 80) * dt;
-
-      setDrones((cur) => {
-        let next = cur.map((d) => {
-          if (d.phase !== "flying") return { ...d, battery: Math.max(0, d.battery - drainPerSec * 0.4) };
-          let pi = d.pathIndex + advance;
-          let phase: Phase = "flying";
-          if (pi >= d.segmentEnd) {
-            pi = d.segmentEnd - 1;
-            phase = "rtb";
-          }
-          // jitter for wind realism (lateral)
-          const base = waypoints[Math.min(pi, waypoints.length - 1)];
-          const jitter = Math.sin(t / 400 + d.pathIndex) * (windKts[0] / 8);
-          const newBat = Math.max(0, d.battery - drainPerSec * (1 / Math.max(0.4, precipFactor)));
-          return {
-            ...d,
-            pathIndex: pi,
-            phase,
-            battery: newBat,
-            pos: { x: base.x + jitter, y: base.y + jitter * 0.4 },
-          };
-        });
-
-        // failover: if a drone <22% battery, hand its remaining segment to the highest-battery flying peer
-        if (autoFailover) {
-          const low = next.find((d) => d.phase === "flying" && d.battery < 22);
-          if (low) {
-            const helpers = next
-              .filter((d) => d.id !== low.id && d.phase === "flying" && d.battery > 55)
-              .sort((a, b) => b.battery - a.battery);
-            if (helpers[0]) {
-              const helper = helpers[0];
-              const remaining = low.segmentEnd - low.pathIndex;
-              if (remaining > 4) {
-                next = next.map((d) => {
-                  if (d.id === low.id) return { ...d, phase: "rtb" as Phase, segmentEnd: d.pathIndex + 1 };
-                  if (d.id === helper.id) {
-                    return {
-                      ...d,
-                      segmentEnd: helper.segmentEnd + remaining,
-                      failoverFrom: low.id,
-                    };
-                  }
-                  return d;
-                });
-              }
-            }
-          }
-        }
-
-        // dynamic replan: redistribute when one drone falls way behind progress
-        if (dynamicReplan) {
-          const flyers = next.filter((d) => d.phase === "flying");
-          if (flyers.length >= 2) {
-            const progresses = flyers.map((d) => (d.pathIndex - d.segmentStart) / Math.max(1, d.segmentEnd - d.segmentStart));
-            const max = Math.max(...progresses);
-            const min = Math.min(...progresses);
-            if (max - min > 0.55) {
-              const slow = flyers[progresses.indexOf(min)];
-              const fast = flyers[progresses.indexOf(max)];
-              const giveBack = Math.floor((slow.segmentEnd - slow.pathIndex) * 0.25);
-              if (giveBack > 6) {
-                next = next.map((d) => {
-                  if (d.id === slow.id) return { ...d, segmentEnd: d.segmentEnd - giveBack };
-                  if (d.id === fast.id) return { ...d, segmentEnd: d.segmentEnd + giveBack };
-                  return d;
-                });
-              }
-            }
-          }
-        }
-
-        return next;
-      });
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [running, speed, windKts, precip, autoFailover, dynamicReplan, waypoints]);
-
-  function reset() {
-    setDrones(initialDrones(drones.length));
+  if (authLoading) {
+    return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading…</div>;
   }
-
-  function addDrone() {
-    if (drones.length >= 4) return;
-    setDrones(initialDrones(drones.length + 1));
-  }
-
-  function removeDrone() {
-    if (drones.length <= 1) return;
-    setDrones(initialDrones(drones.length - 1));
-  }
-
-  // path SVG segments per drone
-  function segmentPath(d: SwarmDrone) {
-    const slice = waypoints.slice(d.segmentStart, Math.min(d.segmentEnd, waypoints.length));
-    return slice.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
-  }
-  function flownPath(d: SwarmDrone) {
-    const slice = waypoints.slice(d.segmentStart, Math.min(d.pathIndex + 1, waypoints.length));
-    return slice.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
+  if (!user) {
+    navigate("/auth");
+    return null;
   }
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* Header */}
       <header className="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
@@ -239,166 +188,171 @@ export default function SwarmOrchestration() {
             </Link>
             <div className="min-w-0">
               <h1 className="text-base sm:text-lg font-display font-700 truncate">Swarm Orchestration</h1>
-              <p className="text-xs text-muted-foreground truncate">Multi-drone autonomy with live failover</p>
+              <p className="text-xs text-muted-foreground truncate flex items-center gap-1.5">
+                {realtimeConnected ? (
+                  <><Wifi className="w-3 h-3 text-primary" /> Live · {drones.length} aircraft in fleet</>
+                ) : (
+                  <><WifiOff className="w-3 h-3 text-destructive" /> Realtime offline</>
+                )}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" onClick={reset} className="gap-1.5"><RotateCcw className="w-4 h-4" /> Reset</Button>
-            <Button size="sm" onClick={() => setRunning((r) => !r)} className="gap-1.5">
-              {running ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-              {running ? "Pause" : "Resume"}
+            <Button size="sm" variant="outline" onClick={fetchDrones} disabled={loading} className="gap-1.5">
+              <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} /> Refresh
+            </Button>
+            <Button size="sm" onClick={launchSwarmJobs} disabled={selectedIds.size === 0} className="gap-1.5">
+              <Zap className="w-4 h-4" /> Launch ({selectedIds.size})
             </Button>
           </div>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5 grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-5">
-        {/* Map / Mission visualization */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5 grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-5">
+        {/* Live map */}
         <div className="space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            <Stat icon={<Plane className="w-4 h-4" />} label="Active" value={`${flying}`} accent="text-primary" />
+            <Stat icon={<BatteryWarning className="w-4 h-4" />} label="Low battery" value={`${lowBat}`} accent={lowBat > 0 ? "text-destructive" : "text-muted-foreground"} />
+            <Stat icon={<WifiOff className="w-4 h-4" />} label="Offline" value={`${offline}`} accent="text-muted-foreground" />
+            <Stat icon={<Battery className="w-4 h-4" />} label="Avg battery" value={`${totalBat}%`} accent="text-foreground" />
+          </div>
+
           <div className="rounded-2xl border border-border bg-card overflow-hidden">
             <div className="px-4 py-3 border-b border-border flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Layers className="w-4 h-4 text-primary" />
-                <h2 className="font-semibold text-sm">Mission Map · Live Coordination</h2>
+                <Satellite className="w-4 h-4 text-primary" />
+                <h2 className="font-semibold text-sm">Live fleet positions</h2>
               </div>
-              <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1"><Wind className="w-3.5 h-3.5" /> {windKts[0]} kt</span>
-                <span className="flex items-center gap-1"><CloudRain className="w-3.5 h-3.5" /> {precip[0]}%</span>
-                <span className="flex items-center gap-1"><Sun className="w-3.5 h-3.5" /> Day VFR</span>
-              </div>
+              <span className="text-xs text-muted-foreground">
+                {lastUpdate ? `Updated ${lastUpdate.toLocaleTimeString()}` : "—"}
+              </span>
             </div>
-            <div className="bg-[hsl(var(--secondary))] relative">
+            <div className="bg-secondary relative">
               <svg viewBox={`0 0 ${VIEW_W} ${VIEW_H}`} className="w-full h-auto block">
-                {/* grid background */}
                 <defs>
-                  <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                  <pattern id="swarm-grid" width="40" height="40" patternUnits="userSpaceOnUse">
                     <path d="M 40 0 L 0 0 0 40" fill="none" stroke="hsl(var(--border))" strokeWidth="0.5" />
                   </pattern>
-                  <linearGradient id="aoi" x1="0" x2="1" y1="0" y2="1">
-                    <stop offset="0%" stopColor="hsl(var(--primary) / 0.04)" />
-                    <stop offset="100%" stopColor="hsl(var(--primary) / 0.12)" />
-                  </linearGradient>
                 </defs>
-                <rect width={VIEW_W} height={VIEW_H} fill="url(#grid)" />
-                <rect x="20" y="20" width={VIEW_W - 40} height={VIEW_H - 40} rx="14" fill="url(#aoi)" stroke="hsl(var(--primary) / 0.4)" strokeDasharray="6 4" />
+                <rect width={VIEW_W} height={VIEW_H} fill="url(#swarm-grid)" />
 
-                {/* segment plans (faded full path per drone) */}
-                {drones.map((d) => (
-                  <path key={`plan-${d.id}`} d={segmentPath(d)} fill="none" stroke={d.color} strokeOpacity="0.25" strokeWidth="2" strokeDasharray="4 4" />
-                ))}
-                {/* flown path */}
-                {drones.map((d) => (
-                  <path key={`flown-${d.id}`} d={flownPath(d)} fill="none" stroke={d.color} strokeWidth="2.5" strokeLinecap="round" />
-                ))}
+                {/* lat/lng frame */}
+                <text x={20} y={18} fontSize="9" fill="hsl(var(--muted-foreground))" fontFamily="monospace">
+                  {bounds.maxLat.toFixed(4)}°N
+                </text>
+                <text x={20} y={VIEW_H - 8} fontSize="9" fill="hsl(var(--muted-foreground))" fontFamily="monospace">
+                  {bounds.minLat.toFixed(4)}°N
+                </text>
+                <text x={VIEW_W - 80} y={VIEW_H - 8} fontSize="9" fill="hsl(var(--muted-foreground))" fontFamily="monospace">
+                  {bounds.maxLng.toFixed(4)}°E
+                </text>
+
                 {/* drones */}
-                {drones.map((d) => (
-                  <g key={d.id} transform={`translate(${d.pos.x} ${d.pos.y})`}>
-                    {d.battery < 25 && (
-                      <circle r="14" fill="none" stroke="hsl(var(--destructive))" strokeOpacity="0.8" strokeWidth="1.5">
-                        <animate attributeName="r" values="10;18;10" dur="1.4s" repeatCount="indefinite" />
-                        <animate attributeName="stroke-opacity" values="0.8;0;0.8" dur="1.4s" repeatCount="indefinite" />
-                      </circle>
-                    )}
-                    <circle r="9" fill={d.color} stroke="white" strokeWidth="2" />
-                    <text y="-14" textAnchor="middle" fontSize="10" fontWeight="700" fill="hsl(var(--foreground))">{d.name}</text>
-                    <text y="22" textAnchor="middle" fontSize="9" fill={d.color} fontWeight="600">{Math.round(d.battery)}%</text>
-                  </g>
-                ))}
-              </svg>
-              {/* environmental overlay shimmer (rain) */}
-              {precip[0] > 30 && (
-                <div className="pointer-events-none absolute inset-0 opacity-30 bg-[repeating-linear-gradient(110deg,transparent_0_6px,hsl(var(--highlight)/0.4)_6px_7px)]" />
-              )}
-            </div>
-          </div>
+                {located.map((d) => {
+                  const { x, y } = project(d.latitude!, d.longitude!, bounds, VIEW_W, VIEW_H);
+                  const color = STATUS_COLORS[d.status] ?? STATUS_COLORS.idle;
+                  const isSelected = selectedIds.has(d.id);
+                  const lowBat = d.battery_level < 25;
+                  return (
+                    <g key={d.id} transform={`translate(${x} ${y})`} onClick={() => toggleSelect(d.id)} className="cursor-pointer">
+                      {isSelected && (
+                        <circle r="22" fill="none" stroke="hsl(var(--primary))" strokeWidth="2" strokeDasharray="3 3" />
+                      )}
+                      {lowBat && d.status === "active" && (
+                        <circle r="14" fill="none" stroke="hsl(var(--destructive))" strokeWidth="1.5">
+                          <animate attributeName="r" values="10;18;10" dur="1.4s" repeatCount="indefinite" />
+                          <animate attributeName="stroke-opacity" values="0.8;0;0.8" dur="1.4s" repeatCount="indefinite" />
+                        </circle>
+                      )}
+                      <circle r="9" fill={color} stroke="white" strokeWidth="2" />
+                      {/* heading indicator */}
+                      <line
+                        x1="0" y1="0"
+                        x2={Math.sin((d.heading * Math.PI) / 180) * 14}
+                        y2={-Math.cos((d.heading * Math.PI) / 180) * 14}
+                        stroke={color} strokeWidth="2" strokeLinecap="round"
+                      />
+                      <text y="-14" textAnchor="middle" fontSize="10" fontWeight="700" fill="hsl(var(--foreground))">{d.name}</text>
+                      <text y="24" textAnchor="middle" fontSize="9" fill={color} fontWeight="600">{d.battery_level}%</text>
+                    </g>
+                  );
+                })}
 
-          {/* Drone roster */}
-          <div className="rounded-2xl border border-border bg-card">
-            <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-              <h2 className="font-semibold text-sm flex items-center gap-2"><Plane className="w-4 h-4 text-primary" /> Active Fleet</h2>
-              <div className="flex items-center gap-1">
-                <Button size="sm" variant="outline" onClick={removeDrone} disabled={drones.length <= 1}>−</Button>
-                <span className="text-xs w-8 text-center font-mono">{drones.length}</span>
-                <Button size="sm" variant="outline" onClick={addDrone} disabled={drones.length >= 4}>+</Button>
+                {located.length === 0 && (
+                  <text x={VIEW_W / 2} y={VIEW_H / 2} textAnchor="middle" fill="hsl(var(--muted-foreground))" fontSize="13">
+                    No drones with GPS coordinates yet
+                  </text>
+                )}
+              </svg>
+              <div className="absolute bottom-2 left-2 right-2 flex justify-between text-[10px] text-muted-foreground font-mono pointer-events-none">
+                <span>Tap a drone to select for swarm launch</span>
+                <span>{selectedIds.size} selected</span>
               </div>
-            </div>
-            <div className="divide-y divide-border">
-              {drones.map((d) => {
-                const progress = ((d.pathIndex - d.segmentStart) / Math.max(1, d.segmentEnd - d.segmentStart)) * 100;
-                const lowBat = d.battery < 25;
-                return (
-                  <div key={d.id} className="px-4 py-3 grid grid-cols-[auto_1fr_auto] sm:grid-cols-[auto_1fr_auto_auto] gap-3 items-center">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="w-3 h-3 rounded-full ring-2 ring-background" style={{ background: d.color }} />
-                      <div className="min-w-0">
-                        <p className="font-semibold text-sm truncate">{d.name}</p>
-                        <p className="text-[11px] text-muted-foreground">{d.id}</p>
-                      </div>
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-1">
-                        <span className="capitalize">{d.failoverFrom ? `Took over ${d.failoverFrom}` : d.phase}</span>
-                        <span>{Math.min(100, Math.round(progress))}%</span>
-                      </div>
-                      <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
-                        <div className="h-full rounded-full transition-[width] duration-200" style={{ width: `${Math.min(100, progress)}%`, background: d.color }} />
-                      </div>
-                    </div>
-                    <div className={`flex items-center gap-1 text-xs font-semibold ${lowBat ? "text-destructive" : d.battery < 50 ? "text-accent-foreground" : "text-primary"}`}>
-                      {lowBat ? <BatteryWarning className="w-4 h-4" /> : <Battery className="w-4 h-4" />}
-                      {Math.round(d.battery)}%
-                    </div>
-                    <div className="hidden sm:block">
-                      <Badge variant="outline" className="text-[10px]">
-                        {d.failoverFrom ? "Failover" : d.phase === "rtb" ? "RTB" : "Active"}
-                      </Badge>
-                    </div>
-                  </div>
-                );
-              })}
             </div>
           </div>
         </div>
 
-        {/* Sidebar controls */}
+        {/* Sidebar fleet roster */}
         <aside className="space-y-4">
-          <div className="rounded-2xl border border-border bg-card p-4 space-y-4">
-            <h3 className="font-semibold text-sm flex items-center gap-2"><Zap className="w-4 h-4 text-accent" /> Autonomy</h3>
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-medium">Auto failover</p>
-                <p className="text-[11px] text-muted-foreground">Reassign segments on low battery</p>
-              </div>
-              <Switch checked={autoFailover} onCheckedChange={setAutoFailover} />
+          <div className="rounded-2xl border border-border bg-card">
+            <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+              <h2 className="font-semibold text-sm flex items-center gap-2"><Plane className="w-4 h-4 text-primary" /> Fleet roster</h2>
+              <Badge variant="outline" className="text-[10px]">{drones.length}</Badge>
             </div>
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-medium">Dynamic replan</p>
-                <p className="text-[11px] text-muted-foreground">Rebalance lagging segments</p>
-              </div>
-              <Switch checked={dynamicReplan} onCheckedChange={setDynamicReplan} />
+            <div className="divide-y divide-border max-h-[520px] overflow-auto">
+              {loading && (
+                <p className="text-xs text-center text-muted-foreground py-6">Loading fleet…</p>
+              )}
+              {!loading && drones.length === 0 && (
+                <div className="p-5 text-center space-y-2">
+                  <p className="text-sm text-muted-foreground">No drones in your fleet yet.</p>
+                  <Button size="sm" variant="outline" onClick={() => navigate("/fleet")}>Manage fleet</Button>
+                </div>
+              )}
+              {drones.map((d) => {
+                const isSelected = selectedIds.has(d.id);
+                const lowBat = d.battery_level < 25;
+                return (
+                  <button
+                    key={d.id}
+                    onClick={() => toggleSelect(d.id)}
+                    className={`w-full text-left px-4 py-3 grid grid-cols-[auto_1fr_auto] gap-3 items-center transition-colors ${
+                      isSelected ? "bg-primary/10" : "hover:bg-secondary"
+                    }`}
+                  >
+                    <span
+                      className="w-3 h-3 rounded-full ring-2 ring-background flex-shrink-0"
+                      style={{ background: STATUS_COLORS[d.status] ?? STATUS_COLORS.idle }}
+                    />
+                    <div className="min-w-0">
+                      <p className="font-semibold text-sm truncate">{d.name}</p>
+                      <p className="text-[11px] text-muted-foreground truncate">
+                        {d.model || "—"} · {d.latitude != null ? `${d.latitude.toFixed(4)}, ${d.longitude!.toFixed(4)}` : "no GPS"}
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <DroneStatusBadge status={d.status} />
+                      <span className={`flex items-center gap-1 text-[11px] font-semibold ${lowBat ? "text-destructive" : "text-muted-foreground"}`}>
+                        {lowBat ? <BatteryWarning className="w-3 h-3" /> : <Battery className="w-3 h-3" />}
+                        {d.battery_level}%
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
-          </div>
-
-          <div className="rounded-2xl border border-border bg-card p-4 space-y-5">
-            <h3 className="font-semibold text-sm flex items-center gap-2"><Shuffle className="w-4 h-4 text-primary" /> Mission tuning</h3>
-            <Labeled label="Sim speed" value={`${speed[0].toFixed(1)}×`}>
-              <Slider value={speed} onValueChange={setSpeed} min={0.5} max={4} step={0.1} />
-            </Labeled>
-            <Labeled label="Survey lines" value={`${lines[0]}`}>
-              <Slider value={lines} onValueChange={setLines} min={3} max={10} step={1} />
-            </Labeled>
-            <Labeled label="Wind" value={`${windKts[0]} kt`}>
-              <Slider value={windKts} onValueChange={setWindKts} min={0} max={25} step={1} />
-            </Labeled>
-            <Labeled label="Precipitation" value={`${precip[0]}%`}>
-              <Slider value={precip} onValueChange={setPrecip} min={0} max={90} step={5} />
-            </Labeled>
           </div>
 
           <div className="rounded-2xl border border-border bg-secondary/40 p-4 text-xs text-muted-foreground space-y-1.5">
-            <p className="font-semibold text-foreground text-sm">How it works</p>
-            <p>Waypoints are split per drone. As wind/rain rise, motion slows and battery drains faster. Below 22% battery, segments transfer to the strongest peer.</p>
+            <p className="font-semibold text-foreground text-sm flex items-center gap-1.5">
+              <Radio className="w-4 h-4 text-primary" /> How swarm launch works
+            </p>
+            <p>
+              Selecting drones and pressing <strong>Launch</strong> creates a real <code>job</code> per aircraft assigned to you as pilot.
+              Each pilot then opens the job in <Link to="/jobs" className="text-primary underline">Active Jobs</Link> to fly its segment.
+              Telemetry updates from any source (manual, API, or future ground-station bridge) flow back here in realtime.
+            </p>
           </div>
         </aside>
       </div>
@@ -406,14 +360,11 @@ export default function SwarmOrchestration() {
   );
 }
 
-function Labeled({ label, value, children }: { label: string; value: string; children: React.ReactNode }) {
+function Stat({ icon, label, value, accent }: { icon: React.ReactNode; label: string; value: string; accent: string }) {
   return (
-    <div>
-      <div className="flex items-center justify-between text-xs mb-2">
-        <span className="text-muted-foreground">{label}</span>
-        <span className="font-mono font-semibold">{value}</span>
-      </div>
-      {children}
+    <div className="rounded-xl border border-border bg-card p-3">
+      <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold flex items-center gap-1.5">{icon} {label}</p>
+      <p className={`text-xl font-display font-700 mt-0.5 ${accent}`}>{value}</p>
     </div>
   );
 }
