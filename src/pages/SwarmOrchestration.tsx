@@ -2,10 +2,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Battery, BatteryWarning, Plane, RefreshCw, Wifi, WifiOff,
-  Zap, Radio, Satellite,
+  Zap, Radio, Satellite, Globe2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -35,6 +36,18 @@ const STATUS_COLORS: Record<string, string> = {
   offline: "hsl(220 8% 50%)",
 };
 
+interface LiveAircraft {
+  icao24: string;
+  callsign: string;
+  origin_country: string;
+  latitude: number | null;
+  longitude: number | null;
+  altitude_m: number | null;
+  velocity_ms: number | null;
+  heading_deg: number | null;
+  on_ground: boolean;
+}
+
 export default function SwarmOrchestration() {
   const VIEW_W = 720;
   const VIEW_H = 460;
@@ -48,6 +61,12 @@ export default function SwarmOrchestration() {
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [realtimeConnected, setRealtimeConnected] = useState(false);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
+  // Live air traffic (OpenSky Network)
+  const [liveTraffic, setLiveTraffic] = useState(false);
+  const [aircraft, setAircraft] = useState<LiveAircraft[]>([]);
+  const [trafficError, setTrafficError] = useState<string | null>(null);
+  const [trafficUpdate, setTrafficUpdate] = useState<Date | null>(null);
 
   // Initial fetch — admin sees all drones, pilots see assigned (RLS handles it)
   const fetchDrones = async () => {
@@ -118,8 +137,8 @@ export default function SwarmOrchestration() {
     const minLng = Math.min(...lngs);
     const maxLng = Math.max(...lngs);
     // pad bounds so a single drone isn't pinned to a corner
-    const padLat = Math.max(0.002, (maxLat - minLat) * 0.25);
-    const padLng = Math.max(0.002, (maxLng - minLng) * 0.25);
+    const padLat = Math.max(0.05, (maxLat - minLat) * 0.5);
+    const padLng = Math.max(0.05, (maxLng - minLng) * 0.5);
     return {
       minLat: minLat - padLat,
       maxLat: maxLat + padLat,
@@ -127,6 +146,42 @@ export default function SwarmOrchestration() {
       maxLng: maxLng + padLng,
     };
   }, [located]);
+
+  // Poll OpenSky via our edge function whenever live traffic is on
+  useEffect(() => {
+    if (!liveTraffic) {
+      setAircraft([]);
+      setTrafficError(null);
+      return;
+    }
+    let cancelled = false;
+    const fn = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/live-telemetry`;
+    const fetchOnce = async () => {
+      try {
+        const qs = new URLSearchParams({
+          lamin: bounds.minLat.toFixed(4),
+          lomin: bounds.minLng.toFixed(4),
+          lamax: bounds.maxLat.toFixed(4),
+          lomax: bounds.maxLng.toFixed(4),
+        });
+        const resp = await fetch(`${fn}?${qs}`, {
+          headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+        });
+        const json = await resp.json();
+        if (cancelled) return;
+        if (!resp.ok) throw new Error(json.error ?? `HTTP ${resp.status}`);
+        setAircraft(json.aircraft ?? []);
+        setTrafficUpdate(new Date());
+        setTrafficError(null);
+      } catch (e) {
+        if (cancelled) return;
+        setTrafficError(e instanceof Error ? e.message : "Failed to fetch live traffic");
+      }
+    };
+    fetchOnce();
+    const id = setInterval(fetchOnce, 12000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [liveTraffic, bounds]);
 
   const toggleSelect = (id: string) => {
     setSelectedIds((cur) => {
