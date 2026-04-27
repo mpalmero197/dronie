@@ -1,9 +1,8 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
-  Plane, MapPin, Cpu, Mountain, Upload, Plus, Trash2, Play, Pause,
-  CheckCircle2, Circle, Loader2, Image as ImageIcon, Layers, Ruler,
-  Box, Activity, ArrowLeft,
+  Plane, MapPin, Cpu, Mountain, Upload, Plus, Trash2,
+  CheckCircle2, Loader2, Image as ImageIcon, Activity, ArrowLeft, Eye, FolderOpen,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,13 +10,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import exifr from "exifr";
 
 const CAMERAS = {
   "mavic-3e": { label: "DJI Mavic 3E (4/3 CMOS)", sensorW: 17.3, focal: 12.29, imgW: 5280 },
@@ -174,46 +174,85 @@ function StageFlightPlanning() {
   );
 }
 
-interface GCP { id: string; name: string; lat: number; lng: number; elev: number; marked: boolean; }
-interface CapturedImage { id: string; name: string; size: number; lat: number; lng: number; alt: number; pitch: number; roll: number; yaw: number; }
+interface GCP { id: string; name: string; latitude: number; longitude: number; elevation: number | null; }
+interface CapturedImage { id: string; name: string; size: number; lat: number | null; lng: number | null; alt: number | null; }
+interface ProjectOpt { id: string; name: string; status: string; progress: number; }
 
 function StageGroundControl() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const fileRef = useRef<HTMLInputElement>(null);
-  const [gcps, setGcps] = useState<GCP[]>([
-    { id: "g1", name: "GCP-01", lat: 45.5231, lng: -122.6765, elev: 42.18, marked: true },
-    { id: "g2", name: "GCP-02", lat: 45.5238, lng: -122.6749, elev: 41.92, marked: true },
-    { id: "g3", name: "GCP-03", lat: 45.5224, lng: -122.6741, elev: 43.05, marked: false },
-  ]);
+  const [projects, setProjects] = useState<ProjectOpt[]>([]);
+  const [projectId, setProjectId] = useState<string>("");
+  const [gcps, setGcps] = useState<GCP[]>([]);
   const [images, setImages] = useState<CapturedImage[]>([]);
   const [draft, setDraft] = useState({ name: "", lat: "", lng: "", elev: "" });
+  const [parsing, setParsing] = useState(false);
 
-  const addGcp = () => {
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("projects").select("id, name, status, progress").eq("user_id", user.id).order("created_at", { ascending: false })
+      .then(({ data }) => {
+        const rows = (data ?? []) as ProjectOpt[];
+        setProjects(rows);
+        if (rows[0]) setProjectId(rows[0].id);
+      });
+  }, [user]);
+
+  useEffect(() => {
+    if (!projectId) return;
+    supabase.from("ground_control_points").select("id, name, latitude, longitude, elevation").eq("project_id", projectId)
+      .then(({ data }) => setGcps((data ?? []) as GCP[]));
+  }, [projectId]);
+
+  const addGcp = async () => {
+    if (!user || !projectId) {
+      toast({ title: "Select a project first", variant: "destructive" });
+      return;
+    }
     if (!draft.name || !draft.lat || !draft.lng) {
       toast({ title: "Missing fields", description: "Name, lat and lng are required", variant: "destructive" });
       return;
     }
-    setGcps((prev) => [...prev, {
-      id: `g${Date.now()}`, name: draft.name,
-      lat: Number(draft.lat), lng: Number(draft.lng),
-      elev: Number(draft.elev) || 0, marked: false,
-    }]);
+    const { data, error } = await supabase.from("ground_control_points").insert({
+      user_id: user.id, project_id: projectId, name: draft.name,
+      latitude: Number(draft.lat), longitude: Number(draft.lng),
+      elevation: draft.elev ? Number(draft.elev) : null,
+    }).select("id, name, latitude, longitude, elevation").single();
+    if (error) { toast({ title: "Failed to save", description: error.message, variant: "destructive" }); return; }
+    setGcps((p) => [...p, data as GCP]);
     setDraft({ name: "", lat: "", lng: "", elev: "" });
   };
 
-  const handleFiles = (files: FileList | null) => {
-    if (!files) return;
-    const next: CapturedImage[] = Array.from(files).map((f, i) => ({
-      id: `${Date.now()}-${i}`, name: f.name, size: f.size,
-      lat: 45.5231 + (Math.random() - 0.5) * 0.005,
-      lng: -122.6765 + (Math.random() - 0.5) * 0.005,
-      alt: 78 + Math.random() * 8,
-      pitch: -90 + (Math.random() - 0.5) * 4,
-      roll: (Math.random() - 0.5) * 2,
-      yaw: Math.random() * 360,
-    }));
-    setImages((prev) => [...prev, ...next]);
-    toast({ title: "EXIF extracted", description: `Read metadata from ${next.length} image(s)` });
+  const removeGcp = async (id: string) => {
+    await supabase.from("ground_control_points").delete().eq("id", id);
+    setGcps((p) => p.filter((g) => g.id !== id));
+  };
+
+  const handleFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setParsing(true);
+    try {
+      const next: CapturedImage[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const f = files[i];
+        let lat: number | null = null, lng: number | null = null, alt: number | null = null;
+        try {
+          const meta = await exifr.parse(f, { gps: true });
+          if (meta) {
+            lat = (meta.latitude as number) ?? null;
+            lng = (meta.longitude as number) ?? null;
+            alt = (meta.GPSAltitude as number) ?? null;
+          }
+        } catch { /* no EXIF — leave nulls */ }
+        next.push({ id: `${Date.now()}-${i}`, name: f.name, size: f.size, lat, lng, alt });
+      }
+      setImages((prev) => [...prev, ...next]);
+      const withGps = next.filter((i) => i.lat != null).length;
+      toast({ title: "EXIF parsed", description: `${withGps}/${next.length} image(s) had GPS metadata` });
+    } finally {
+      setParsing(false);
+    }
   };
 
   return (
@@ -221,9 +260,15 @@ function StageGroundControl() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg"><MapPin className="h-5 w-5 text-primary" />Ground Control Points</CardTitle>
-          <CardDescription>GNSS rover coordinates (WGS84)</CardDescription>
+          <CardDescription>GNSS rover coordinates (WGS84) saved per project</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <Select value={projectId} onValueChange={setProjectId}>
+            <SelectTrigger><SelectValue placeholder={projects.length ? "Select project" : "No projects yet"} /></SelectTrigger>
+            <SelectContent>
+              {projects.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
             <Input placeholder="Name" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
             <Input placeholder="Lat" inputMode="decimal" value={draft.lat} onChange={(e) => setDraft({ ...draft, lat: e.target.value })} />
@@ -235,29 +280,24 @@ function StageGroundControl() {
             <Table>
               <TableHeader><TableRow>
                 <TableHead>Name</TableHead><TableHead>Lat</TableHead><TableHead>Lng</TableHead>
-                <TableHead>Elev</TableHead><TableHead>Status</TableHead><TableHead></TableHead>
+                <TableHead>Elev</TableHead><TableHead></TableHead>
               </TableRow></TableHeader>
               <TableBody>
                 {gcps.map((g) => (
                   <TableRow key={g.id}>
                     <TableCell className="font-medium">{g.name}</TableCell>
-                    <TableCell className="font-mono text-xs">{g.lat.toFixed(5)}</TableCell>
-                    <TableCell className="font-mono text-xs">{g.lng.toFixed(5)}</TableCell>
-                    <TableCell className="font-mono text-xs">{g.elev.toFixed(2)}</TableCell>
+                    <TableCell className="font-mono text-xs">{g.latitude.toFixed(5)}</TableCell>
+                    <TableCell className="font-mono text-xs">{g.longitude.toFixed(5)}</TableCell>
+                    <TableCell className="font-mono text-xs">{g.elevation?.toFixed(2) ?? "—"}</TableCell>
                     <TableCell>
-                      {g.marked ? (
-                        <Badge className="bg-primary/15 text-primary hover:bg-primary/20">Marked</Badge>
-                      ) : (<Badge variant="outline">Pending</Badge>)}
-                    </TableCell>
-                    <TableCell>
-                      <Button size="icon" variant="ghost" onClick={() => setGcps((p) => p.filter((x) => x.id !== g.id))}>
+                      <Button size="icon" variant="ghost" onClick={() => removeGcp(g.id)}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </TableCell>
                   </TableRow>
                 ))}
                 {gcps.length === 0 && (
-                  <TableRow><TableCell colSpan={6} className="text-center text-sm text-muted-foreground">No GCPs yet</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={5} className="text-center text-sm text-muted-foreground">No GCPs yet</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>
@@ -267,8 +307,8 @@ function StageGroundControl() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg"><ImageIcon className="h-5 w-5 text-primary" />Image Capture</CardTitle>
-          <CardDescription>EXIF / XMP metadata extraction</CardDescription>
+          <CardTitle className="flex items-center gap-2 text-lg"><ImageIcon className="h-5 w-5 text-primary" />Image EXIF Inspector</CardTitle>
+          <CardDescription>Read GPS / altitude tags from JPEG / TIFF files (in-browser)</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div
@@ -277,29 +317,27 @@ function StageGroundControl() {
             onDrop={(e) => { e.preventDefault(); handleFiles(e.dataTransfer.files); }}
             className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/30 p-8 text-center transition-colors hover:border-primary hover:bg-primary/5"
           >
-            <Upload className="mb-2 h-8 w-8 text-muted-foreground" />
-            <p className="text-sm font-medium">Drop images or click to browse</p>
-            <p className="text-xs text-muted-foreground">JPEG / TIFF — GPS, altitude, gimbal extracted</p>
+            {parsing ? <Loader2 className="mb-2 h-8 w-8 animate-spin text-primary" /> : <Upload className="mb-2 h-8 w-8 text-muted-foreground" />}
+            <p className="text-sm font-medium">{parsing ? "Reading EXIF…" : "Drop images or click to browse"}</p>
+            <p className="text-xs text-muted-foreground">JPEG / TIFF — GPS, altitude</p>
             <input ref={fileRef} type="file" multiple accept="image/*" className="hidden" onChange={(e) => handleFiles(e.target.files)} />
           </div>
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Captured</span>
+            <span className="text-muted-foreground">Inspected</span>
             <span className="font-mono font-semibold">{images.length} images</span>
           </div>
           {images.length > 0 && (
             <div className="max-h-64 overflow-y-auto rounded-md border border-border">
               <Table>
                 <TableHeader><TableRow>
-                  <TableHead>File</TableHead><TableHead>Lat / Lng</TableHead>
-                  <TableHead>Alt</TableHead><TableHead>Pitch / Roll</TableHead>
+                  <TableHead>File</TableHead><TableHead>Lat / Lng</TableHead><TableHead>Alt</TableHead>
                 </TableRow></TableHeader>
                 <TableBody>
                   {images.slice(-25).reverse().map((img) => (
                     <TableRow key={img.id}>
                       <TableCell className="max-w-[120px] truncate text-xs">{img.name}</TableCell>
-                      <TableCell className="font-mono text-[10px]">{img.lat.toFixed(4)}, {img.lng.toFixed(4)}</TableCell>
-                      <TableCell className="font-mono text-xs">{img.alt.toFixed(1)}m</TableCell>
-                      <TableCell className="font-mono text-[10px]">{img.pitch.toFixed(1)}° / {img.roll.toFixed(1)}°</TableCell>
+                      <TableCell className="font-mono text-[10px]">{img.lat != null && img.lng != null ? `${img.lat.toFixed(4)}, ${img.lng.toFixed(4)}` : "—"}</TableCell>
+                      <TableCell className="font-mono text-xs">{img.alt != null ? `${img.alt.toFixed(1)}m` : "—"}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -312,274 +350,101 @@ function StageGroundControl() {
   );
 }
 
-interface PStage { id: string; name: string; description: string; weight: number; }
-const PIPELINE: PStage[] = [
-  { id: "feat", name: "Feature Extraction & Matching", description: "SIFT/AKAZE keypoints across image pairs", weight: 1.5 },
-  { id: "sfm", name: "Structure from Motion (SfM)", description: "Sparse point cloud + camera poses", weight: 2 },
-  { id: "mvs", name: "Multi-View Stereo (MVS)", description: "Dense point cloud reconstruction", weight: 3 },
-  { id: "mesh", name: "Meshing & Texturing", description: "Triangulation + UV-mapped textures", weight: 2 },
-  { id: "ortho", name: "Orthorectification", description: "DEM-based projection to orthomosaic", weight: 1.5 },
-];
-
 function StageProcessing() {
-  const [running, setRunning] = useState(false);
-  const [progress, setProgress] = useState<Record<string, number>>(Object.fromEntries(PIPELINE.map((s) => [s.id, 0])));
-  const totalWeight = PIPELINE.reduce((s, x) => s + x.weight, 0);
+  const { user } = useAuth();
+  const [project, setProject] = useState<ProjectOpt | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!running) return;
-    const t = setInterval(() => {
-      setProgress((prev) => {
-        const next = { ...prev };
-        const idx = PIPELINE.findIndex((s) => next[s.id] < 100);
-        if (idx === -1) { setRunning(false); return prev; }
-        const stage = PIPELINE[idx];
-        next[stage.id] = Math.min(100, next[stage.id] + 100 / (stage.weight * 20));
-        return next;
-      });
-    }, 150);
-    return () => clearInterval(t);
-  }, [running]);
+    if (!user) return;
+    let cancelled = false;
+    async function load() {
+      const { data } = await supabase.from("projects")
+        .select("id, name, status, progress")
+        .eq("user_id", user.id)
+        .in("status", ["queued", "processing"])
+        .order("created_at", { ascending: false }).limit(1).maybeSingle();
+      if (cancelled) return;
+      setProject((data as ProjectOpt) ?? null);
+      setLoading(false);
+    }
+    load();
+    const channel = supabase.channel("workflow:processing")
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "projects" }, (payload) => {
+        const next = payload.new as ProjectOpt;
+        setProject((cur) => cur && cur.id === next.id ? next : cur);
+      })
+      .subscribe();
+    return () => { cancelled = true; supabase.removeChannel(channel); };
+  }, [user]);
 
-  const overall = useMemo(() => {
-    let acc = 0;
-    PIPELINE.forEach((s) => (acc += (progress[s.id] / 100) * s.weight));
-    return Math.round((acc / totalWeight) * 100);
-  }, [progress, totalWeight]);
-
-  const reset = () => setProgress(Object.fromEntries(PIPELINE.map((s) => [s.id, 0])));
+  if (loading) return <Card><CardContent className="py-12 text-center text-sm text-muted-foreground"><Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />Loading…</CardContent></Card>;
+  if (!project) return (
+    <Card>
+      <CardContent className="py-12 text-center">
+        <Cpu className="w-8 h-8 text-muted-foreground/60 mx-auto mb-3" />
+        <p className="font-display font-700">No project currently processing</p>
+        <p className="text-xs text-muted-foreground mt-1.5 max-w-md mx-auto">Upload imagery from the Dashboard to start a real photogrammetry pipeline.</p>
+        <Link to="/dashboard"><Button size="sm" className="mt-4 gap-2"><FolderOpen className="w-4 h-4" /> Open Dashboard</Button></Link>
+      </CardContent>
+    </Card>
+  );
 
   return (
     <Card>
       <CardHeader>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <CardTitle className="flex items-center gap-2 text-lg"><Cpu className="h-5 w-5 text-primary" />Reconstruction Pipeline</CardTitle>
-            <CardDescription>2D imagery → 3D point cloud → mesh → orthomosaic</CardDescription>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={reset} disabled={running}>Reset</Button>
-            <Button size="sm" onClick={() => setRunning((v) => !v)}>
-              {running ? (<><Pause className="mr-1 h-4 w-4" />Pause</>) : (<><Play className="mr-1 h-4 w-4" />Start</>)}
-            </Button>
-          </div>
-        </div>
+        <CardTitle className="flex items-center gap-2 text-lg"><Cpu className="h-5 w-5 text-primary" />Reconstruction Pipeline · {project.name}</CardTitle>
+        <CardDescription>Live progress from the processing backend</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-5">
+      <CardContent className="space-y-4">
         <div className="rounded-lg border border-border bg-gradient-to-r from-primary/5 to-accent/5 p-4">
           <div className="mb-2 flex items-center justify-between">
-            <span className="text-sm font-medium">Overall Progress</span>
-            <span className="font-mono text-2xl font-bold text-primary">{overall}%</span>
+            <span className="text-sm font-medium">Overall · {project.status}</span>
+            <span className="font-mono text-2xl font-bold text-primary">{project.progress}%</span>
           </div>
-          <Progress value={overall} className="h-3" />
+          <Progress value={project.progress} className="h-3" />
         </div>
-        <div className="space-y-3">
-          {PIPELINE.map((s, i) => {
-            const p = progress[s.id];
-            const status: "done" | "active" | "queued" = p >= 100 ? "done" : p > 0 ? "active" : "queued";
-            return (
-              <div key={s.id} className="rounded-lg border border-border p-3">
-                <div className="mb-2 flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    <div className="mt-0.5">
-                      {status === "done" && <CheckCircle2 className="h-5 w-5 text-primary" />}
-                      {status === "active" && <Loader2 className="h-5 w-5 animate-spin text-accent" />}
-                      {status === "queued" && <Circle className="h-5 w-5 text-muted-foreground" />}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-mono text-muted-foreground">{String(i + 1).padStart(2, "0")}</span>
-                        <span className="font-medium">{s.name}</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground">{s.description}</p>
-                    </div>
-                  </div>
-                  <span className="font-mono text-sm tabular-nums text-muted-foreground">{Math.round(p)}%</span>
-                </div>
-                <Progress value={p} className="h-1.5" />
-              </div>
-            );
-          })}
-        </div>
+        <Link to={`/project/${project.id}`}><Button size="sm" variant="outline" className="gap-2"><Eye className="w-4 h-4" />View project details</Button></Link>
       </CardContent>
     </Card>
   );
 }
 
-function GeoCanvas({ layer, contours, classify, contourInterval }: { layer: "ortho" | "dem" | "dtm"; contours: boolean; classify: boolean; contourInterval: number; }) {
-  const lines: { d: string; opacity: number }[] = [];
-  const count = Math.max(4, Math.round(20 / contourInterval));
-  for (let i = 0; i < count; i++) {
-    const r = 30 + i * (160 / count);
-    lines.push({
-      d: `M ${200 + r} 180 Q ${200} ${180 - r * 0.6}, ${200 - r} 180 Q ${200} ${180 + r * 0.4}, ${200 + r} 180 Z`,
-      opacity: 0.15 + (i / count) * 0.5,
-    });
-  }
-  const fill = layer === "ortho" ? "url(#orthoGrad)" : layer === "dem" ? "url(#demGrad)" : "url(#dtmGrad)";
-  return (
-    <div className="aspect-[16/10] overflow-hidden rounded-lg border border-border bg-muted/20">
-      <svg viewBox="0 0 400 250" className="h-full w-full">
-        <defs>
-          <linearGradient id="orthoGrad" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="hsl(85 35% 45%)" />
-            <stop offset="0.5" stopColor="hsl(70 40% 55%)" />
-            <stop offset="1" stopColor="hsl(35 30% 60%)" />
-          </linearGradient>
-          <linearGradient id="demGrad" x1="0" y1="1" x2="1" y2="0">
-            <stop offset="0" stopColor="hsl(220 70% 30%)" />
-            <stop offset="0.5" stopColor="hsl(150 60% 45%)" />
-            <stop offset="1" stopColor="hsl(20 80% 55%)" />
-          </linearGradient>
-          <linearGradient id="dtmGrad" x1="0" y1="1" x2="1" y2="0">
-            <stop offset="0" stopColor="hsl(30 40% 35%)" />
-            <stop offset="0.5" stopColor="hsl(35 50% 55%)" />
-            <stop offset="1" stopColor="hsl(40 60% 75%)" />
-          </linearGradient>
-        </defs>
-        <rect width="400" height="250" fill={fill} />
-        {classify && (
-          <>
-            <circle cx="100" cy="80" r="35" fill="hsl(120 50% 35% / 0.5)" />
-            <circle cx="280" cy="60" r="28" fill="hsl(120 50% 35% / 0.5)" />
-            <rect x="220" y="160" width="60" height="40" fill="hsl(0 0% 30% / 0.6)" />
-            <rect x="60" y="180" width="40" height="30" fill="hsl(0 0% 30% / 0.6)" />
-          </>
-        )}
-        {contours && lines.map((l, i) => (
-          <path key={i} d={l.d} fill="none" stroke="hsl(var(--foreground))" strokeWidth={0.6} opacity={l.opacity} />
-        ))}
-        <g>
-          {[[80, 60], [320, 100], [180, 200]].map(([x, y], i) => (
-            <circle key={i} cx={x} cy={y} r={4} fill="hsl(var(--accent))" stroke="white" strokeWidth={1} />
-          ))}
-        </g>
-      </svg>
-    </div>
-  );
-}
-
-function CrossSectionSVG() {
-  const w = 280, h = 80;
-  const points: string[] = [];
-  for (let x = 0; x <= w; x += 4) {
-    const y = 60 - Math.sin(x / 18) * 18 - Math.sin(x / 7) * 4;
-    points.push(`${x},${y}`);
-  }
-  return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="w-full">
-      <defs>
-        <linearGradient id="terrainFill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="hsl(var(--primary) / 0.4)" />
-          <stop offset="1" stopColor="hsl(var(--primary) / 0.05)" />
-        </linearGradient>
-      </defs>
-      <polyline points={`0,${h} ${points.join(" ")} ${w},${h}`} fill="url(#terrainFill)" stroke="hsl(var(--primary))" strokeWidth={1.2} />
-    </svg>
-  );
-}
-
 function StageGeospatial() {
-  const [layer, setLayer] = useState<"ortho" | "dem" | "dtm">("ortho");
-  const [contours, setContours] = useState(true);
-  const [classify, setClassify] = useState(false);
-  const [contourInterval, setContourInterval] = useState(1);
-  const [cutFill, setCutFill] = useState(0.5);
-  const cutVolume = (cutFill * 12_438).toFixed(0);
-  const fillVolume = ((1 - cutFill) * 8_921).toFixed(0);
-  const net = (Number(cutVolume) - Number(fillVolume)).toFixed(0);
+  const { user } = useAuth();
+  const [project, setProject] = useState<ProjectOpt | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("projects").select("id, name, status, progress").eq("user_id", user.id).eq("status", "complete").order("created_at", { ascending: false }).limit(1).maybeSingle()
+      .then(({ data }) => { setProject((data as ProjectOpt) ?? null); setLoading(false); });
+  }, [user]);
+
+  if (loading) return <Card><CardContent className="py-12 text-center text-sm text-muted-foreground"><Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />Loading…</CardContent></Card>;
+  if (!project) return (
+    <Card>
+      <CardContent className="py-12 text-center">
+        <Mountain className="w-8 h-8 text-muted-foreground/60 mx-auto mb-3" />
+        <p className="font-display font-700">No completed projects yet</p>
+        <p className="text-xs text-muted-foreground mt-1.5 max-w-md mx-auto">Geospatial outputs (orthomosaics, DEMs, contours) appear here once a project finishes processing.</p>
+        <Link to="/dashboard"><Button size="sm" className="mt-4 gap-2"><FolderOpen className="w-4 h-4" /> Open Dashboard</Button></Link>
+      </CardContent>
+    </Card>
+  );
 
   return (
-    <div className="grid gap-4 lg:grid-cols-3">
-      <Card className="lg:col-span-2">
-        <CardHeader>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <CardTitle className="flex items-center gap-2 text-lg"><Mountain className="h-5 w-5 text-primary" />Geospatial Viewer</CardTitle>
-              <CardDescription>Orthomosaic, DEM and bare-earth DTM</CardDescription>
-            </div>
-            <Tabs value={layer} onValueChange={(v) => setLayer(v as typeof layer)}>
-              <TabsList>
-                <TabsTrigger value="ortho">Ortho</TabsTrigger>
-                <TabsTrigger value="dem">DEM</TabsTrigger>
-                <TabsTrigger value="dtm">DTM</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <GeoCanvas layer={layer} contours={contours} classify={classify} contourInterval={contourInterval} />
-          <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-            <span>Pixel: 2.4 cm/px</span><span>·</span>
-            <span>Coverage: 5.2 ha</span><span>·</span>
-            <span>Mesh: 1.8M triangles</span>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="space-y-4">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base"><Layers className="h-4 w-4" />Analysis Layers</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div><Label className="text-sm">Contour Lines</Label><p className="text-xs text-muted-foreground">Iso-elevation curves</p></div>
-              <Switch checked={contours} onCheckedChange={setContours} />
-            </div>
-            {contours && (
-              <div className="space-y-2 pl-2">
-                <div className="flex justify-between text-xs"><span className="text-muted-foreground">Interval</span><span className="font-mono">{contourInterval} m</span></div>
-                <Slider value={[contourInterval]} min={0.5} max={10} step={0.5} onValueChange={(v) => setContourInterval(v[0])} />
-              </div>
-            )}
-            <div className="flex items-center justify-between">
-              <div><Label className="text-sm">Point Cloud Classification</Label><p className="text-xs text-muted-foreground">Ground / vegetation / built</p></div>
-              <Switch checked={classify} onCheckedChange={setClassify} />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base"><Box className="h-4 w-4" />Volumetrics</CardTitle>
-            <CardDescription>Earthwork cut & fill estimate</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="space-y-2">
-              <div className="flex justify-between text-xs"><span className="text-muted-foreground">Cut / Fill ratio</span><span className="font-mono">{Math.round(cutFill * 100)} / {Math.round((1 - cutFill) * 100)}</span></div>
-              <Slider value={[cutFill]} min={0} max={1} step={0.05} onValueChange={(v) => setCutFill(v[0])} />
-            </div>
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="rounded-md bg-destructive/10 p-2">
-                <div className="text-[10px] uppercase text-muted-foreground">Cut</div>
-                <div className="font-mono text-sm font-bold text-destructive">{cutVolume} m³</div>
-              </div>
-              <div className="rounded-md bg-primary/10 p-2">
-                <div className="text-[10px] uppercase text-muted-foreground">Fill</div>
-                <div className="font-mono text-sm font-bold text-primary">{fillVolume} m³</div>
-              </div>
-              <div className="rounded-md bg-accent/10 p-2">
-                <div className="text-[10px] uppercase text-muted-foreground">Net</div>
-                <div className="font-mono text-sm font-bold">{net} m³</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base"><Ruler className="h-4 w-4" />Cross-Section</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <CrossSectionSVG />
-            <div className="mt-2 flex justify-between text-xs text-muted-foreground">
-              <span>0 m</span><span>Δh: 12.4 m</span><span>240 m</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-lg"><Mountain className="h-5 w-5 text-primary" />Geospatial Outputs · {project.name}</CardTitle>
+        <CardDescription>Inspect orthomosaic, DEM and 3D outputs in the dedicated viewers</CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-wrap gap-2">
+        <Link to={`/viewer/${project.id}`}><Button size="sm" className="gap-2"><Eye className="w-4 h-4" />Open Map Viewer</Button></Link>
+        <Link to="/reality"><Button size="sm" variant="outline" className="gap-2"><Mountain className="w-4 h-4" />3D Reality Capture</Button></Link>
+        <Link to="/insights"><Button size="sm" variant="outline" className="gap-2"><Activity className="w-4 h-4" />AI Insights</Button></Link>
+      </CardContent>
+    </Card>
   );
 }
 

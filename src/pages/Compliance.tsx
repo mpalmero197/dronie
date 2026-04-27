@@ -1,99 +1,139 @@
-import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
-  ArrowLeft, Award, Battery, BookCheck, Calendar, CheckCircle2, ClipboardList, Plane, Plus,
-  ShieldCheck, Wrench, Clock, AlertTriangle, MapPin, Send,
+  ArrowLeft, Award, Battery, BookCheck, Calendar, ClipboardList,
+  Plane, Plus, ShieldCheck, Wrench, Clock, AlertTriangle, Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
-interface FlightLog {
+interface FlightLogRow {
   id: string;
-  date: string;
-  aircraft: string;
-  duration: number; // minutes
-  type: "training" | "commercial" | "recreational";
-  location: string;
-  notes?: string;
+  recorded_at: string;
+  job_id: string;
+  event_type: string;
+  payload: Record<string, unknown>;
+  latitude: number | null;
+  longitude: number | null;
 }
-
-interface MaintItem {
+interface MaintRow {
   id: string;
-  drone: string;
+  drone_id: string;
   task: string;
-  due: string;
-  cyclesLeft: number;
-  health: number;
+  due_date: string;
+  cycles_left: number;
+  health_pct: number;
+  status: string;
 }
-
-interface AirspaceZone {
+interface CertRow {
   id: string;
-  label: string;
-  type: "Class B" | "Class C" | "Class D" | "Class E" | "Restricted";
-  ceiling: number;
-  status: "ok" | "auth-required" | "no-fly";
+  cert_type: string;
+  issued_at: string;
+  expires_at: string;
+  notes: string | null;
 }
-
-const SEED_LOGS: FlightLog[] = [
-  { id: "L1", date: today(-1), aircraft: "Hawk-1 (M3E)", duration: 38, type: "commercial", location: "37.7749, −122.4194", notes: "Stockpile survey" },
-  { id: "L2", date: today(-3), aircraft: "Hawk-2 (M3M)", duration: 24, type: "commercial", location: "37.7681, −122.4220" },
-  { id: "L3", date: today(-9), aircraft: "Hawk-1 (M3E)", duration: 51, type: "training", location: "37.8044, −122.2711", notes: "Loiter recovery drills" },
-  { id: "L4", date: today(-30), aircraft: "Hawk-3 (Mavic)", duration: 14, type: "recreational", location: "37.8716, −122.2727" },
-];
-
-const SEED_MAINT: MaintItem[] = [
-  { id: "M1", drone: "Hawk-1", task: "Battery #4 calibration", due: today(2), cyclesLeft: 38, health: 86 },
-  { id: "M2", drone: "Hawk-2", task: "Propeller inspection",   due: today(7), cyclesLeft: 12, health: 71 },
-  { id: "M3", drone: "Hawk-3", task: "Firmware update v8.4",   due: today(-1), cyclesLeft: 0, health: 95 },
-];
-
-const SEED_AIRSPACE: AirspaceZone[] = [
-  { id: "A1", label: "SFO Class B (KSFO)",   type: "Class B", ceiling: 100, status: "auth-required" },
-  { id: "A2", label: "OAK Class C (KOAK)",   type: "Class C", ceiling: 200, status: "auth-required" },
-  { id: "A3", label: "Hayward Class D",       type: "Class D", ceiling: 300, status: "auth-required" },
-  { id: "A4", label: "GG National Recreation",type: "Restricted", ceiling: 0, status: "no-fly" },
-  { id: "A5", label: "Open countryside (G)",  type: "Class E", ceiling: 400, status: "ok" },
-];
-
-function today(offset = 0): string {
-  const d = new Date();
-  d.setDate(d.getDate() + offset);
-  return d.toISOString().slice(0, 10);
-}
+interface JobRow { id: string; mission_type: string; started_at: string; ended_at: string | null; }
+interface DroneRow { id: string; name: string; }
 
 export default function Compliance() {
+  const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
-  const [logs] = useState<FlightLog[]>(SEED_LOGS);
-  const [maint] = useState<MaintItem[]>(SEED_MAINT);
-  const [airspace] = useState<AirspaceZone[]>(SEED_AIRSPACE);
-  const [submitting, setSubmitting] = useState<string | null>(null);
-  const [autoSubmit, setAutoSubmit] = useState(true);
+  const navigate = useNavigate();
 
-  // Part 107 currency: 90-day rolling, 3 takeoffs/landings = recent.
-  // Cert valid for 24 calendar months from issuance.
+  const [logs, setLogs] = useState<FlightLogRow[]>([]);
+  const [jobs, setJobs] = useState<JobRow[]>([]);
+  const [maint, setMaint] = useState<MaintRow[]>([]);
+  const [drones, setDrones] = useState<DroneRow[]>([]);
+  const [certs, setCerts] = useState<CertRow[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // New cert dialog
+  const [certOpen, setCertOpen] = useState(false);
+  const [certDraft, setCertDraft] = useState({ cert_type: "Part 107", issued_at: "", expires_at: "", notes: "" });
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    async function load() {
+      setLoading(true);
+      const [logsRes, jobsRes, dronesRes, maintRes, certsRes] = await Promise.all([
+        supabase.from("mission_logs").select("id, recorded_at, job_id, event_type, payload, latitude, longitude")
+          .eq("pilot_id", user.id).order("recorded_at", { ascending: false }).limit(100),
+        supabase.from("jobs").select("id, mission_type, started_at, ended_at").eq("pilot_id", user.id).order("started_at", { ascending: false }).limit(50),
+        supabase.from("drones").select("id, name"),
+        supabase.from("drone_maintenance").select("id, drone_id, task, due_date, cycles_left, health_pct, status").order("due_date", { ascending: true }),
+        supabase.from("pilot_certifications").select("id, cert_type, issued_at, expires_at, notes").eq("user_id", user.id).order("expires_at", { ascending: true }),
+      ]);
+      if (cancelled) return;
+      setLogs((logsRes.data ?? []) as FlightLogRow[]);
+      setJobs((jobsRes.data ?? []) as JobRow[]);
+      setDrones((dronesRes.data ?? []) as DroneRow[]);
+      setMaint((maintRes.data ?? []) as MaintRow[]);
+      setCerts((certsRes.data ?? []) as CertRow[]);
+      setLoading(false);
+    }
+    load();
+  }, [user]);
+
+  // Compute jobs durations + totals from real rows
   const stats = useMemo(() => {
     const ms90 = Date.now() - 90 * 86400 * 1000;
-    const last90 = logs.filter((l) => +new Date(l.date) >= ms90);
-    const totalHours = logs.reduce((s, l) => s + l.duration, 0) / 60;
-    const flights90 = last90.length;
-    const certIssued = "2024-09-12";
-    const certExpires = "2026-09-30";
-    const daysToExpiry = Math.ceil((+new Date(certExpires) - Date.now()) / 86400000);
-    return { totalHours, flights90, certIssued, certExpires, daysToExpiry };
-  }, [logs]);
+    let totalMin = 0;
+    let last90 = 0;
+    for (const j of jobs) {
+      const start = +new Date(j.started_at);
+      const end = j.ended_at ? +new Date(j.ended_at) : Date.now();
+      const mins = Math.max(0, (end - start) / 60000);
+      totalMin += mins;
+      if (start >= ms90) last90 += 1;
+    }
+    const part107 = certs.find((c) => /107/.test(c.cert_type));
+    const daysToExpiry = part107
+      ? Math.ceil((+new Date(part107.expires_at) - Date.now()) / 86400000)
+      : null;
+    return {
+      totalHours: totalMin / 60,
+      flights90: last90,
+      part107,
+      daysToExpiry,
+    };
+  }, [jobs, certs]);
 
-  function submitLAANC(zoneId: string) {
-    setSubmitting(zoneId);
-    setTimeout(() => {
-      setSubmitting(null);
-      toast({
-        title: "LAANC authorization submitted",
-        description: "Approval received instantly · valid for 12 hours · ceiling honored.",
-      });
-    }, 1200);
+  const droneById = useMemo(() => Object.fromEntries(drones.map((d) => [d.id, d.name])), [drones]);
+
+  async function addCert() {
+    if (!user) return;
+    if (!certDraft.cert_type || !certDraft.issued_at || !certDraft.expires_at) {
+      toast({ title: "Missing fields", description: "Cert type, issued and expiry dates are required", variant: "destructive" });
+      return;
+    }
+    const { error } = await supabase.from("pilot_certifications").insert({
+      user_id: user.id,
+      cert_type: certDraft.cert_type,
+      issued_at: certDraft.issued_at,
+      expires_at: certDraft.expires_at,
+      notes: certDraft.notes || null,
+    });
+    if (error) {
+      toast({ title: "Failed to save", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Certification saved" });
+    setCertOpen(false);
+    setCertDraft({ cert_type: "Part 107", issued_at: "", expires_at: "", notes: "" });
+    // refresh
+    const { data } = await supabase.from("pilot_certifications").select("id, cert_type, issued_at, expires_at, notes").eq("user_id", user.id).order("expires_at", { ascending: true });
+    setCerts((data ?? []) as CertRow[]);
   }
+
+  if (authLoading) return <CenteredSpinner />;
+  if (!user) { navigate("/auth"); return null; }
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -108,139 +148,170 @@ export default function Compliance() {
               <p className="text-xs text-muted-foreground truncate">Airspace · maintenance · pilot currency</p>
             </div>
           </div>
-          <Badge variant="outline" className="hidden sm:flex gap-1 text-[10px]"><ShieldCheck className="w-3 h-3 text-primary" /> Compliant</Badge>
+          <Badge variant="outline" className="hidden sm:flex gap-1 text-[10px]">
+            <ShieldCheck className="w-3 h-3 text-primary" />
+            {stats.part107 && (stats.daysToExpiry ?? 0) > 0 ? "Compliant" : "Action needed"}
+          </Badge>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5 space-y-5">
-        {/* Top KPI strip */}
-        <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <Kpi icon={Award} label="Part 107 expiry" value={`${stats.daysToExpiry}d`} sub={stats.certExpires} tone={stats.daysToExpiry < 60 ? "warn" : "ok"} />
-          <Kpi icon={Plane} label="Total flight time" value={`${stats.totalHours.toFixed(1)}h`} sub={`${logs.length} sorties`} tone="ok" />
-          <Kpi icon={Clock} label="90-day currency" value={`${stats.flights90}`} sub="≥ 3 to stay current" tone={stats.flights90 >= 3 ? "ok" : "warn"} />
-          <Kpi icon={Wrench} label="Open maintenance" value={`${maint.length}`} sub="items pending" tone={maint.some((m) => +new Date(m.due) < Date.now()) ? "warn" : "ok"} />
-        </section>
-
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-          {/* Airspace + LAANC */}
-          <section className="rounded-2xl border border-border bg-card overflow-hidden">
-            <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-              <h2 className="font-semibold text-sm flex items-center gap-2"><MapPin className="w-4 h-4 text-primary" /> Airspace & LAANC</h2>
-              <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                <Switch checked={autoSubmit} onCheckedChange={setAutoSubmit} />
-                Auto-submit eligible
-              </div>
-            </div>
-            <div className="divide-y divide-border">
-              {airspace.map((z) => (
-                <div key={z.id} className="px-4 py-3 flex items-center gap-3">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold truncate">{z.label}</p>
-                    <p className="text-[11px] text-muted-foreground">{z.type} · ceiling {z.ceiling || "—"} ft AGL</p>
-                  </div>
-                  {z.status === "ok" && <Badge className="bg-primary/15 text-primary border-primary/20 text-[10px]">OK to fly</Badge>}
-                  {z.status === "auth-required" && (
-                    <Button size="sm" onClick={() => submitLAANC(z.id)} disabled={submitting === z.id} className="gap-1.5 h-8 text-[11px]">
-                      <Send className="w-3.5 h-3.5" /> {submitting === z.id ? "Submitting…" : "LAANC"}
-                    </Button>
-                  )}
-                  {z.status === "no-fly" && <Badge variant="destructive" className="text-[10px]"><AlertTriangle className="w-3 h-3 mr-1" /> No-fly</Badge>}
-                </div>
-              ))}
-            </div>
+      {loading ? <CenteredSpinner /> : (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5 space-y-5">
+          {/* KPI strip */}
+          <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <Kpi
+              icon={Award}
+              label="Part 107 expiry"
+              value={stats.daysToExpiry != null ? `${stats.daysToExpiry}d` : "—"}
+              sub={stats.part107?.expires_at ?? "Add certification"}
+              tone={stats.part107 == null ? "warn" : (stats.daysToExpiry ?? 0) < 60 ? "warn" : "ok"}
+            />
+            <Kpi icon={Plane} label="Total flight time" value={`${stats.totalHours.toFixed(1)}h`} sub={`${jobs.length} sorties`} tone="ok" />
+            <Kpi icon={Clock} label="90-day currency" value={`${stats.flights90}`} sub="≥ 3 to stay current" tone={stats.flights90 >= 3 ? "ok" : "warn"} />
+            <Kpi
+              icon={Wrench}
+              label="Open maintenance"
+              value={`${maint.length}`}
+              sub="items pending"
+              tone={maint.some((m) => +new Date(m.due_date) < Date.now()) ? "warn" : "ok"}
+            />
           </section>
 
-          {/* Pilot currency */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+            {/* Pilot certifications */}
+            <section className="rounded-2xl border border-border bg-card overflow-hidden">
+              <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+                <h2 className="font-semibold text-sm flex items-center gap-2"><Award className="w-4 h-4 text-accent" /> Pilot certifications</h2>
+                <Dialog open={certOpen} onOpenChange={setCertOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" variant="outline" className="gap-1.5"><Plus className="w-3.5 h-3.5" /> Add</Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader><DialogTitle>Add certification</DialogTitle></DialogHeader>
+                    <div className="space-y-3">
+                      <div><Label>Cert type</Label><Input value={certDraft.cert_type} onChange={(e) => setCertDraft({ ...certDraft, cert_type: e.target.value })} /></div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div><Label>Issued</Label><Input type="date" value={certDraft.issued_at} onChange={(e) => setCertDraft({ ...certDraft, issued_at: e.target.value })} /></div>
+                        <div><Label>Expires</Label><Input type="date" value={certDraft.expires_at} onChange={(e) => setCertDraft({ ...certDraft, expires_at: e.target.value })} /></div>
+                      </div>
+                      <div><Label>Notes (optional)</Label><Input value={certDraft.notes} onChange={(e) => setCertDraft({ ...certDraft, notes: e.target.value })} /></div>
+                    </div>
+                    <DialogFooter><Button onClick={addCert}>Save</Button></DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
+              <div className="divide-y divide-border">
+                {certs.length === 0 && (
+                  <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+                    <BookCheck className="w-6 h-6 mx-auto mb-2 text-muted-foreground/60" />
+                    No certifications on file. Add your Part 107 to track expiry.
+                  </div>
+                )}
+                {certs.map((c) => {
+                  const days = Math.ceil((+new Date(c.expires_at) - Date.now()) / 86400000);
+                  return (
+                    <div key={c.id} className="px-4 py-3 flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold truncate">{c.cert_type}</p>
+                        <p className="text-[11px] text-muted-foreground">Issued {c.issued_at} · expires {c.expires_at}</p>
+                        {c.notes && <p className="text-[11px] text-muted-foreground truncate">{c.notes}</p>}
+                      </div>
+                      {days < 0
+                        ? <Badge variant="destructive" className="text-[10px]"><AlertTriangle className="w-3 h-3 mr-1" /> Expired</Badge>
+                        : days < 60
+                          ? <Badge className="bg-accent/15 text-accent border-accent/20 text-[10px]">{days}d left</Badge>
+                          : <Badge className="bg-primary/15 text-primary border-primary/20 text-[10px]">{days}d</Badge>}
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+
+            {/* Maintenance */}
+            <section className="rounded-2xl border border-border bg-card overflow-hidden">
+              <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+                <h2 className="font-semibold text-sm flex items-center gap-2"><Wrench className="w-4 h-4 text-primary" /> Maintenance</h2>
+                <Badge variant="outline" className="text-[10px]">{maint.length} open</Badge>
+              </div>
+              <div className="divide-y divide-border">
+                {maint.length === 0 && (
+                  <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+                    No scheduled maintenance. Admins can add tasks from Fleet Management.
+                  </div>
+                )}
+                {maint.map((m) => {
+                  const overdue = +new Date(m.due_date) < Date.now();
+                  return (
+                    <div key={m.id} className="px-4 py-3 grid grid-cols-1 sm:grid-cols-[1fr_auto_auto_auto] gap-3 items-center">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold truncate">{m.task}</p>
+                        <p className="text-[11px] text-muted-foreground">{droneById[m.drone_id] ?? "—"} · due {m.due_date}</p>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <Battery className="w-4 h-4 text-primary" />
+                        <span className="font-mono">{m.health_pct}%</span>
+                      </div>
+                      <span className="text-[11px] text-muted-foreground font-mono">{m.cycles_left} cycles</span>
+                      {overdue
+                        ? <Badge variant="destructive" className="text-[10px]"><AlertTriangle className="w-3 h-3 mr-1" /> Overdue</Badge>
+                        : <Badge className="bg-primary/15 text-primary border-primary/20 text-[10px]">Scheduled</Badge>}
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          </div>
+
+          {/* Flight log */}
           <section className="rounded-2xl border border-border bg-card overflow-hidden">
             <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-              <h2 className="font-semibold text-sm flex items-center gap-2"><Award className="w-4 h-4 text-accent" /> Pilot · Part 107 currency</h2>
-              <Badge variant="outline" className="text-[10px]">Cert {stats.certIssued}</Badge>
+              <h2 className="font-semibold text-sm flex items-center gap-2"><ClipboardList className="w-4 h-4 text-primary" /> Flight log (last 100 events)</h2>
+              <span className="text-[11px] text-muted-foreground">{logs.length} events</span>
             </div>
-            <div className="p-4 space-y-4">
-              <CurrencyBar
-                label="Recurrent training (every 24mo)"
-                completed={Math.max(0, 24 - Math.floor(stats.daysToExpiry / 30))}
-                total={24}
-                unit="mo"
-              />
-              <CurrencyBar label="90-day takeoffs / landings" completed={stats.flights90} total={3} unit="" tone="accent" />
-              <CurrencyBar label="Logged hours (rolling year)" completed={Math.round(stats.totalHours)} total={20} unit="h" tone="primary" />
-              <div className="rounded-lg bg-secondary/40 border border-border p-3 text-xs flex items-start gap-2">
-                <BookCheck className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-semibold">Online recurrent training due in {Math.max(0, stats.daysToExpiry - 60)} days.</p>
-                  <p className="text-muted-foreground">Reminder will be sent 30 days prior. ATPs and Knowledge Tests are tracked here automatically.</p>
+            <div className="overflow-x-auto">
+              {logs.length === 0 ? (
+                <div className="px-4 py-12 text-center text-sm text-muted-foreground">
+                  <Calendar className="w-6 h-6 mx-auto mb-2 text-muted-foreground/60" />
+                  No flight log entries yet. Start a job from Active Jobs to record events.
                 </div>
-              </div>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead className="bg-secondary/40 text-muted-foreground text-[11px] uppercase tracking-wide">
+                    <tr>
+                      <th className="text-left px-4 py-2 font-semibold">When</th>
+                      <th className="text-left px-4 py-2 font-semibold">Event</th>
+                      <th className="text-left px-4 py-2 font-semibold hidden md:table-cell">Coordinates</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {logs.map((l) => (
+                      <tr key={l.id} className="hover:bg-secondary/30">
+                        <td className="px-4 py-2.5 font-mono text-[12px]">{new Date(l.recorded_at).toLocaleString()}</td>
+                        <td className="px-4 py-2.5">
+                          <Badge variant="outline" className="capitalize text-[10px]">{l.event_type}</Badge>
+                        </td>
+                        <td className="px-4 py-2.5 text-[11px] text-muted-foreground hidden md:table-cell font-mono">
+                          {l.latitude != null && l.longitude != null
+                            ? `${l.latitude.toFixed(4)}, ${l.longitude.toFixed(4)}`
+                            : "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           </section>
         </div>
+      )}
+    </div>
+  );
+}
 
-        {/* Flight log */}
-        <section className="rounded-2xl border border-border bg-card overflow-hidden">
-          <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-            <h2 className="font-semibold text-sm flex items-center gap-2"><ClipboardList className="w-4 h-4 text-primary" /> Flight log</h2>
-            <Button size="sm" variant="outline" className="gap-1.5"><Plus className="w-3.5 h-3.5" /> Manual entry</Button>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-secondary/40 text-muted-foreground text-[11px] uppercase tracking-wide">
-                <tr>
-                  <th className="text-left px-4 py-2 font-semibold">Date</th>
-                  <th className="text-left px-4 py-2 font-semibold">Aircraft</th>
-                  <th className="text-left px-4 py-2 font-semibold">Type</th>
-                  <th className="text-right px-4 py-2 font-semibold">Duration</th>
-                  <th className="text-left px-4 py-2 font-semibold hidden md:table-cell">Location</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {logs.map((l) => (
-                  <tr key={l.id} className="hover:bg-secondary/30">
-                    <td className="px-4 py-2.5 font-mono text-[12px]">{l.date}</td>
-                    <td className="px-4 py-2.5">{l.aircraft}</td>
-                    <td className="px-4 py-2.5">
-                      <Badge variant="outline" className="capitalize text-[10px]">{l.type}</Badge>
-                    </td>
-                    <td className="px-4 py-2.5 text-right font-mono">{l.duration}m</td>
-                    <td className="px-4 py-2.5 text-[11px] text-muted-foreground hidden md:table-cell font-mono">{l.location}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        {/* Maintenance schedule */}
-        <section className="rounded-2xl border border-border bg-card overflow-hidden">
-          <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-            <h2 className="font-semibold text-sm flex items-center gap-2"><Wrench className="w-4 h-4 text-primary" /> Maintenance & battery health</h2>
-            <Badge variant="outline" className="text-[10px]">{maint.length} open</Badge>
-          </div>
-          <div className="divide-y divide-border">
-            {maint.map((m) => {
-              const overdue = +new Date(m.due) < Date.now();
-              return (
-                <div key={m.id} className="px-4 py-3 grid grid-cols-1 sm:grid-cols-[1fr_auto_auto_auto] gap-3 items-center">
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold">{m.task}</p>
-                    <p className="text-[11px] text-muted-foreground">{m.drone} · due {m.due}</p>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs">
-                    <Battery className="w-4 h-4 text-primary" />
-                    <span className="font-mono">{m.health}%</span>
-                  </div>
-                  <span className="text-[11px] text-muted-foreground font-mono">{m.cyclesLeft} cycles left</span>
-                  {overdue ? (
-                    <Badge variant="destructive" className="text-[10px]"><AlertTriangle className="w-3 h-3 mr-1" /> Overdue</Badge>
-                  ) : (
-                    <Badge className="bg-primary/15 text-primary border-primary/20 text-[10px]"><CheckCircle2 className="w-3 h-3 mr-1" /> Scheduled</Badge>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      </div>
+function CenteredSpinner() {
+  return (
+    <div className="min-h-screen flex items-center justify-center text-muted-foreground">
+      <Loader2 className="w-5 h-5 animate-spin mr-2" /> Loading…
     </div>
   );
 }
@@ -255,24 +326,6 @@ function Kpi({
       </div>
       <p className="font-display font-700 text-2xl mt-1">{value}</p>
       <p className={`text-[11px] mt-0.5 ${tone === "warn" ? "text-accent-foreground" : "text-muted-foreground"}`}>{sub}</p>
-    </div>
-  );
-}
-
-function CurrencyBar({
-  label, completed, total, unit, tone = "primary",
-}: { label: string; completed: number; total: number; unit: string; tone?: "primary" | "accent" }) {
-  const pct = Math.min(100, (completed / total) * 100);
-  const color = tone === "accent" ? "bg-accent" : "bg-primary";
-  return (
-    <div>
-      <div className="flex items-center justify-between text-xs mb-1.5">
-        <span className="font-medium">{label}</span>
-        <span className="font-mono text-muted-foreground">{completed}{unit} / {total}{unit}</span>
-      </div>
-      <div className="h-2 bg-secondary rounded-full overflow-hidden">
-        <div className={`h-full ${color} transition-[width] duration-500`} style={{ width: `${pct}%` }} />
-      </div>
     </div>
   );
 }

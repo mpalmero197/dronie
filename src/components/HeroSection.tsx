@@ -122,7 +122,7 @@ export default function HeroSection() {
               <Button
                 size="lg"
                 variant="outline"
-                onClick={() => navigate("/viewer/demo")}
+                onClick={() => navigate("/gallery")}
                 className="bg-primary-foreground text-primary border-primary-foreground hover:bg-primary-foreground/90 hover:text-primary gap-2 transition-all active:scale-[0.97] font-semibold"
               >
                 See Example Maps

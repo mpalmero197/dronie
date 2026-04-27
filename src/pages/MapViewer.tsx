@@ -43,24 +43,6 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
 });
 
-const DEMO_PROJECT: Project = {
-  id: "demo",
-  user_id: "demo",
-  name: "Example: Farm Survey Block 4",
-  description: "Demonstration orthomosaic — Rio Grande Valley, TX",
-  image_count: 842,
-  area_ha: 47.3,
-  status: "complete",
-  progress: 100,
-  outputs: ["GeoTIFF", "LAZ Point Cloud", "DSM", "DTM", "Contours SHP", "Flight Report PDF"],
-  outputs_urls: null,
-  gps_points: null,
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString(),
-};
-
-const DEMO_CENTER: [number, number] = [26.2034, -98.2300];
-
 const TILE_URLS: Record<BaseLayer, { url: string; attribution: string }> = {
   satellite: {
     url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
@@ -151,8 +133,14 @@ export default function MapViewer() {
     setShowCoachmark(true);
   }, []);
 
-  const isDemo = projectId === "demo";
   const prevOverlayRef = useRef<string | null>(null);
+
+  // Old /viewer/demo links now point at the curated gallery.
+  useEffect(() => {
+    if (projectId === "demo") {
+      navigate("/gallery", { replace: true });
+    }
+  }, [projectId, navigate]);
 
   // Auto-launch planner when arriving with ?mode=plan
   useEffect(() => {
@@ -182,11 +170,7 @@ export default function MapViewer() {
   }, [activeTool]);
 
   useEffect(() => {
-    if (isDemo) {
-      setProject(DEMO_PROJECT);
-      setLoading(false);
-      return;
-    }
+    if (!projectId || projectId === "demo") return;
     async function fetchProject() {
       const { data, error } = await supabase
         .from("projects").select("*").eq("id", projectId!).single();
@@ -195,7 +179,7 @@ export default function MapViewer() {
       setLoading(false);
     }
     fetchProject();
-  }, [projectId, isDemo]);
+  }, [projectId]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -273,7 +257,7 @@ export default function MapViewer() {
     drawingLayerRef.current?.addMarkerAt(pos);
   }, []);
 
-  const center: [number, number] = isDemo ? DEMO_CENTER : [37.7749, -122.4194];
+  const center: [number, number] = [37.7749, -122.4194];
   const tile = TILE_URLS[baseLayer];
 
   if (loading) {
@@ -296,7 +280,7 @@ export default function MapViewer() {
     );
   }
 
-  if (project.status !== "complete" && !isDemo) {
+  if (project.status !== "complete") {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-4">
         <Loader2 className="w-12 h-12 text-primary animate-spin" />
@@ -326,7 +310,7 @@ export default function MapViewer() {
           <div className="min-w-0">
             <p className="font-display font-700 text-foreground text-sm truncate">{project.name}</p>
             <p className="text-xs text-muted-foreground hidden sm:block">
-              {isDemo ? "Demo · Public viewer" : "Interactive map viewer"}
+              Interactive map viewer
             </p>
           </div>
           {project.status === "complete" && (
@@ -360,7 +344,7 @@ export default function MapViewer() {
 
       {/* Map */}
       <div className="flex-1 relative overflow-hidden" ref={mapContainerRef}>
-        <MapContainer center={center} zoom={isDemo ? 14 : 12} className="w-full h-full" zoomControl={true}>
+        <MapContainer center={center} zoom={12} className="w-full h-full" zoomControl={true}>
           <TileLayer attribution={tile.attribution} url={tile.url} />
           {baseLayer === "hybrid" && (
             <TileLayer
