@@ -1,9 +1,8 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
-  Plane, MapPin, Cpu, Mountain, Upload, Plus, Trash2, Play, Pause,
-  CheckCircle2, Circle, Loader2, Image as ImageIcon, Layers, Ruler,
-  Box, Activity, ArrowLeft,
+  Plane, MapPin, Cpu, Mountain, Upload, Plus, Trash2,
+  CheckCircle2, Loader2, Image as ImageIcon, Activity, ArrowLeft, Eye, FolderOpen,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,13 +10,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import exifr from "exifr";
 
 const CAMERAS = {
   "mavic-3e": { label: "DJI Mavic 3E (4/3 CMOS)", sensorW: 17.3, focal: 12.29, imgW: 5280 },
