@@ -75,7 +75,26 @@ export default function TermsOfService() {
 
           <section>
             <h2 className="text-lg font-semibold text-foreground">8. Limitation of Liability</h2>
-            <p>To the maximum extent permitted by law, Dronie shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including loss of data, profits, or business opportunities arising from your use of the Service.</p>
+            <p>To the maximum extent permitted by law, Dronie, its operators, employees, contractors, affiliates, and partners shall not be liable for any direct, indirect, incidental, special, consequential, or punitive damages, including loss of data, profits, equipment, or business opportunities arising from your use of the Service.</p>
+            <p className="mt-2">Dronie operates as a listing and introduction platform between independent drone pilots, organizations, and clients. We do not employ pilots, do not operate aircraft, and do not independently verify every credential listed on the Service. The Service is provided "as is" and "as available" without warranties of any kind.</p>
+            <p className="mt-2">You acknowledge that Dronie is <strong>not responsible</strong> for: (a) any pilot's or organization's conduct, performance, deliverables, equipment failure, accidents, injuries, property damage, regulatory violations, or insurance coverage; (b) any disputes between clients and pilots or organizations, including payment disputes, contract disputes, or quality disputes; (c) any losses, damages, or claims arising from work arranged through the Service; or (d) the accuracy of credentials, certifications, insurance status, or other information provided by users.</p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-foreground">8a. Pilot Certification & Compliance Responsibility</h2>
+            <p>Pilots and organizations are <strong>solely responsible</strong> for obtaining, maintaining, and renewing all required certifications, licenses, registrations, and insurance, including but not limited to FAA Part 107, recurrent training, aircraft registration, Remote ID compliance, LAANC authorizations, and any local, state, or international permits.</p>
+            <p className="mt-2">Dronie may surface certification expiration reminders and recertification confirmation flows as a convenience, but these are <strong>not</strong> a substitute for the pilot's or organization's own recordkeeping. Self-attested information is not verified by Dronie and is provided at the user's own risk.</p>
+            <p className="mt-2">Operating without current certification or in violation of applicable regulations is strictly prohibited. Any consequences — including but not limited to fines, criminal charges, civil liability, loss of insurance coverage, or third-party damages — are borne entirely by the operator and never by Dronie.</p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-foreground">8b. Indemnification</h2>
+            <p>You agree to indemnify, defend, and hold harmless Dronie, its operators, employees, contractors, affiliates, and partners from and against any and all claims, liabilities, damages, losses, costs, and expenses (including reasonable attorneys' fees) arising from or related to: (a) your use of the Service; (b) your operations as a pilot, organization, or client; (c) your violation of these Terms or any law; or (d) your infringement of any third-party rights.</p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-foreground">8c. Privacy and Pilot Location</h2>
+            <p>Pilot service-area pin locations displayed on the public pilot map may be intentionally shifted by approximately five miles in a random direction to protect the pilot's privacy, unless the pilot has opted out of location privacy. The exact location shown is therefore an approximation and should not be relied upon for any operational, legal, or safety purpose.</p>
           </section>
 
           <section>
