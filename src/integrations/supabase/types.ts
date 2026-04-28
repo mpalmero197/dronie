@@ -857,6 +857,70 @@ export type Database = {
         }
         Relationships: []
       }
+      request_message_reads: {
+        Row: {
+          last_read_at: string
+          pilot_id: string
+          request_id: string
+          user_id: string
+        }
+        Insert: {
+          last_read_at?: string
+          pilot_id: string
+          request_id: string
+          user_id: string
+        }
+        Update: {
+          last_read_at?: string
+          pilot_id?: string
+          request_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "request_message_reads_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "service_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      request_messages: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          pilot_id: string
+          request_id: string
+          sender_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          pilot_id: string
+          request_id: string
+          sender_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          pilot_id?: string
+          request_id?: string
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "request_messages_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "service_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       saved_flight_plans: {
         Row: {
           created_at: string
@@ -1028,6 +1092,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_access_request_thread: {
+        Args: { _pilot_id: string; _request_id: string; _user_id: string }
+        Returns: boolean
+      }
       find_matching_pilots: {
         Args: { _request_id: string }
         Returns: {
@@ -1084,6 +1152,15 @@ export type Database = {
         Returns: boolean
       }
       is_reserved_username: { Args: { _name: string }; Returns: boolean }
+      unread_thread_counts: {
+        Args: { _user_id: string }
+        Returns: {
+          last_message_at: string
+          pilot_id: string
+          request_id: string
+          unread: number
+        }[]
+      }
     }
     Enums: {
       account_type: "pilot" | "client" | "both"
