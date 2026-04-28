@@ -71,29 +71,8 @@ interface GCP {
   created_at: string;
 }
 
-interface ProcessingSettings {
-  quality: "low" | "medium" | "high" | "ultra";
-  meshType: "3d" | "2.5d" | "none";
-  dsmEnabled: boolean;
-  dtmEnabled: boolean;
-  contoursEnabled: boolean;
-  contourInterval: number;
-  outputFormat: "geotiff" | "ecw" | "jpg2000";
-  pointDensity: number[];
-  crs: string;
-}
-
-const DEFAULT_SETTINGS: ProcessingSettings = {
-  quality: "high",
-  meshType: "2.5d",
-  dsmEnabled: true,
-  dtmEnabled: true,
-  contoursEnabled: true,
-  contourInterval: 1,
-  outputFormat: "geotiff",
-  pointDensity: [75],
-  crs: "EPSG:4326",
-};
+type ProcessingSettings = PgSettings;
+const DEFAULT_SETTINGS: ProcessingSettings = PG_DEFAULT_SETTINGS;
 
 /* ────── Pipeline Steps ────── */
 
