@@ -28,6 +28,7 @@ import RealityCapture from "./pages/RealityCapture.tsx";
 import RtkAlignment from "./pages/RtkAlignment.tsx";
 import AiInsights from "./pages/AiInsights.tsx";
 import Compliance from "./pages/Compliance.tsx";
+import GaussianSplats from "./pages/GaussianSplats.tsx";
 
 const queryClient = new QueryClient();
 
@@ -61,6 +62,7 @@ const App = () => (
             <Route path="/rtk" element={<RtkAlignment />} />
             <Route path="/insights" element={<AiInsights />} />
             <Route path="/compliance" element={<Compliance />} />
+            <Route path="/splats" element={<GaussianSplats />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
