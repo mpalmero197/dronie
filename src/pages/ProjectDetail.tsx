@@ -197,6 +197,10 @@ export default function ProjectDetail() {
   const [loadingGcps, setLoadingGcps] = useState(false);
   const [description, setDescription] = useState("");
   const [savingDesc, setSavingDesc] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [presetId, setPresetId] = useState<PresetId>(
+    (DEFAULT_SETTINGS.preset as PresetId) || "mapping"
+  );
 
   const fpInputRef = useRef<HTMLInputElement>(null);
   const imgInputRef = useRef<HTMLInputElement>(null);
