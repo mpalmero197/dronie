@@ -510,56 +510,67 @@ export default function Dashboard() {
       {/* Main */}
       <main className="flex-1 flex flex-col min-h-screen">
         {/* Top bar */}
-        <header className="sticky top-0 z-10 bg-card/95 backdrop-blur-md border-b border-border px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <header className="sticky top-0 z-10 bg-card/95 backdrop-blur-md border-b border-border px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-2 min-w-0">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
             <button
               onClick={() => setMobileNavOpen(true)}
-              className="lg:hidden p-2 -ml-2 rounded-lg hover:bg-secondary transition-colors"
+              className="lg:hidden p-2 -ml-1 rounded-lg hover:bg-secondary transition-colors flex-shrink-0"
               aria-label="Open menu"
             >
               <Menu className="w-5 h-5 text-muted-foreground" />
             </button>
             {/* Mobile tier badge */}
-            <div className={`lg:hidden flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold ${isSubscribed ? "bg-accent/15 text-accent border border-accent/20" : "bg-secondary text-muted-foreground border border-border"}`}>
+            <div className={`hidden sm:flex lg:hidden items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold flex-shrink-0 ${isSubscribed ? "bg-accent/15 text-accent border border-accent/20" : "bg-secondary text-muted-foreground border border-border"}`}>
               <Zap className="w-3 h-3" />
               {tierLimits.tierLabel}
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="font-display font-700 text-foreground">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 min-w-0">
+                <h1 className="font-display font-700 text-foreground text-base sm:text-lg truncate">
                   {sidebarView === "projects" ? "Projects" : sidebarView === "analytics" ? "Analytics" : "Storage"}
                 </h1>
                 {isAdmin && (
-                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-accent text-accent-foreground">
+                  <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-accent text-accent-foreground flex-shrink-0">
                     <Shield className="w-2.5 h-2.5" />
                     Admin
                   </span>
                 )}
               </div>
               {sidebarView === "projects" && (
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-xs text-muted-foreground mt-0.5 truncate">
                   {completeCount} complete · {processingCount} in queue
                 </p>
               )}
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-shrink-0">
             {sidebarView === "projects" && (
-              <Button
-                onClick={handleNewProject}
-                className="bg-primary text-primary-foreground hover:bg-primary/90 gap-2 shadow-sm hover:shadow-md transition-all active:scale-[0.97]"
-              >
-                <Plus className="w-4 h-4" />
-                New Project
-                {projectsRemaining !== Infinity && (
-                  <span className="ml-1 text-[10px] opacity-70">({projectsRemaining} left)</span>
-                )}
-              </Button>
+              <>
+                {/* Compact icon-only button on mobile */}
+                <Button
+                  onClick={handleNewProject}
+                  size="icon"
+                  className="sm:hidden bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm active:scale-[0.97]"
+                  aria-label="New project"
+                >
+                  <Plus className="w-5 h-5" />
+                </Button>
+                <Button
+                  onClick={handleNewProject}
+                  className="hidden sm:inline-flex bg-primary text-primary-foreground hover:bg-primary/90 gap-2 shadow-sm hover:shadow-md transition-all active:scale-[0.97]"
+                >
+                  <Plus className="w-4 h-4" />
+                  New Project
+                  {projectsRemaining !== Infinity && (
+                    <span className="ml-1 text-[10px] opacity-70">({projectsRemaining} left)</span>
+                  )}
+                </Button>
+              </>
             )}
           </div>
         </header>
 
-        <div className="flex-1 p-6 space-y-6">
+        <div className="flex-1 p-4 sm:p-6 space-y-6 min-w-0">
           {sidebarView === "analytics" && <AnalyticsPanel projects={projects} />}
           {sidebarView === "storage" && <StoragePanel projects={projects} tierLimits={tierLimits} />}
 
