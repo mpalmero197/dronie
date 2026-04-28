@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Loader2, Plane, MapPin, Briefcase, Shield } from "lucide-react";
+import { ArrowLeft, Loader2, Plane, MapPin, Briefcase, Shield, Plus, X } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import PilotVerificationBanner from "@/components/PilotVerificationBanner";
 import { Button } from "@/components/ui/button";
@@ -337,7 +337,15 @@ export default function PilotSignup() {
                 </button>
               ))}
             </div>
-            <h2 className="font-display font-700 text-foreground pt-2">Equipment</h2>
+            <div className="flex items-center justify-between pt-2">
+              <h2 className="font-display font-700 text-foreground">Your fleet</h2>
+              <span className="text-xs text-muted-foreground">
+                {equipment.length} drone{equipment.length === 1 ? "" : "s"} selected
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground -mt-1">
+              Pick every drone you fly — clients see your full fleet on your profile.
+            </p>
             <div className="flex flex-wrap gap-2">
               {EQUIPMENT_OPTIONS.map((s) => (
                 <button
@@ -351,7 +359,41 @@ export default function PilotSignup() {
                   {s}
                 </button>
               ))}
+              <CustomDronePicker
+                onAdd={(name) => {
+                  const trimmed = name.trim();
+                  if (!trimmed) return;
+                  setEquipment((p) => (p.includes(trimmed) ? p : [...p, trimmed]));
+                }}
+              />
             </div>
+            {/* Custom drones the pilot has added (not in the preset list) */}
+            {equipment.filter((e) => !EQUIPMENT_OPTIONS.includes(e)).length > 0 && (
+              <div className="space-y-1.5">
+                <p className="text-xs uppercase tracking-wider text-muted-foreground">Your custom drones</p>
+                <div className="flex flex-wrap gap-2">
+                  {equipment
+                    .filter((e) => !EQUIPMENT_OPTIONS.includes(e))
+                    .map((s) => (
+                      <span
+                        key={s}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-primary/15 text-primary border border-primary/30"
+                      >
+                        <Plane className="w-3 h-3" />
+                        {s}
+                        <button
+                          type="button"
+                          onClick={() => setEquipment((p) => p.filter((x) => x !== s))}
+                          className="hover:text-destructive transition-colors"
+                          aria-label={`Remove ${s}`}
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                </div>
+              </div>
+            )}
           </section>
 
           {/* Compliance + Availability */}
