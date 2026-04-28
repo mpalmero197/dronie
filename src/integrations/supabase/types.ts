@@ -398,6 +398,78 @@ export type Database = {
         }
         Relationships: []
       }
+      pilot_profiles: {
+        Row: {
+          available: boolean
+          bio: string | null
+          contact_email: string | null
+          created_at: string
+          display_name: string
+          equipment: string[]
+          hourly_rate_cents: number | null
+          id: string
+          insured: boolean
+          part_107: boolean
+          phone: string | null
+          portfolio_url: string | null
+          service_area_label: string | null
+          service_lat: number | null
+          service_lng: number | null
+          service_radius_km: number
+          skills: string[]
+          updated_at: string
+          user_id: string
+          verticals: Database["public"]["Enums"]["industry_vertical"][]
+          years_experience: number
+        }
+        Insert: {
+          available?: boolean
+          bio?: string | null
+          contact_email?: string | null
+          created_at?: string
+          display_name: string
+          equipment?: string[]
+          hourly_rate_cents?: number | null
+          id?: string
+          insured?: boolean
+          part_107?: boolean
+          phone?: string | null
+          portfolio_url?: string | null
+          service_area_label?: string | null
+          service_lat?: number | null
+          service_lng?: number | null
+          service_radius_km?: number
+          skills?: string[]
+          updated_at?: string
+          user_id: string
+          verticals?: Database["public"]["Enums"]["industry_vertical"][]
+          years_experience?: number
+        }
+        Update: {
+          available?: boolean
+          bio?: string | null
+          contact_email?: string | null
+          created_at?: string
+          display_name?: string
+          equipment?: string[]
+          hourly_rate_cents?: number | null
+          id?: string
+          insured?: boolean
+          part_107?: boolean
+          phone?: string | null
+          portfolio_url?: string | null
+          service_area_label?: string | null
+          service_lat?: number | null
+          service_lng?: number | null
+          service_radius_km?: number
+          skills?: string[]
+          updated_at?: string
+          user_id?: string
+          verticals?: Database["public"]["Enums"]["industry_vertical"][]
+          years_experience?: number
+        }
+        Relationships: []
+      }
       pilot_tracks: {
         Row: {
           accuracy: number | null
@@ -817,12 +889,31 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      find_matching_pilots: {
+        Args: { _request_id: string }
+        Returns: {
+          display_name: string
+          distance_km: number
+          hourly_rate_cents: number
+          insured: boolean
+          part_107: boolean
+          pilot_id: string
+          portfolio_url: string
+          service_area_label: string
+          verticals: Database["public"]["Enums"]["industry_vertical"][]
+          years_experience: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: boolean
+      }
+      haversine_km: {
+        Args: { lat1: number; lat2: number; lng1: number; lng2: number }
+        Returns: number
       }
       is_reserved_username: { Args: { _name: string }; Returns: boolean }
     }
