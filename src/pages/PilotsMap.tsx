@@ -190,8 +190,13 @@ export default function PilotsMap() {
 function PilotPopup({ p }: { p: PublicPilot }) {
   return (
     <div className="min-w-[200px]">
-      <p className="font-semibold text-sm">{p.display_name}</p>
-      <p className="text-xs text-muted-foreground">{p.service_area_label ?? "—"}</p>
+      <div className="flex items-center gap-2">
+        <Avatar src={p.avatar_url} name={p.display_name} size={36} />
+        <div className="min-w-0">
+          <p className="font-semibold text-sm truncate">{p.display_name}</p>
+          <p className="text-xs text-muted-foreground truncate">{p.service_area_label ?? "—"}</p>
+        </div>
+      </div>
       <div className="flex gap-1 mt-2 flex-wrap">
         {p.part_107 && <Badge variant="outline" className="text-[10px] gap-1"><ShieldCheck className="w-3 h-3" /> Part 107</Badge>}
         {p.insured && <Badge variant="outline" className="text-[10px] gap-1"><Award className="w-3 h-3" /> Insured</Badge>}
@@ -212,11 +217,14 @@ function PilotCard({ p }: { p: PublicPilot }) {
   return (
     <div className="rounded-xl border border-border bg-card p-4">
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="font-semibold text-sm text-foreground truncate">{p.display_name}</p>
-          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-            <MapPin className="w-3 h-3" /> {p.service_area_label ?? "—"} · {p.service_radius_km} km
-          </p>
+        <div className="flex items-start gap-3 min-w-0">
+          <Avatar src={p.avatar_url} name={p.display_name} size={40} />
+          <div className="min-w-0">
+            <p className="font-semibold text-sm text-foreground truncate">{p.display_name}</p>
+            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+              <MapPin className="w-3 h-3" /> {p.service_area_label ?? "—"} · {p.service_radius_km} km
+            </p>
+          </div>
         </div>
         {p.hourly_rate_cents != null && (
           <span className="text-xs font-semibold text-foreground whitespace-nowrap">${(p.hourly_rate_cents / 100).toFixed(0)}/hr</span>
@@ -231,6 +239,35 @@ function PilotCard({ p }: { p: PublicPilot }) {
         <p className="text-[11px] text-muted-foreground mt-2 line-clamp-2">
           {p.verticals.slice(0, 3).map((v) => VERTICAL_LABELS[v]).join(" · ")}
         </p>
+      )}
+    </div>
+  );
+}
+
+function Avatar({ src, name, size }: { src: string | null; name: string; size: number }) {
+  const initials = (name || "?")
+    .split(/\s+/)
+    .map((w) => w[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+  return (
+    <div
+      className="rounded-full overflow-hidden bg-primary text-primary-foreground flex items-center justify-center font-bold flex-shrink-0"
+      style={{ width: size, height: size, fontSize: size * 0.38 }}
+    >
+      {src ? (
+        <img
+          src={src}
+          alt={name}
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            (e.currentTarget as HTMLImageElement).style.display = "none";
+          }}
+        />
+      ) : (
+        <span>{initials}</span>
       )}
     </div>
   );
