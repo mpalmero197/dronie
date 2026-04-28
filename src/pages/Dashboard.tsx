@@ -649,6 +649,9 @@ export default function Dashboard() {
                 <svg className="w-4 h-4 flex-shrink-0 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
               </button>
 
+              {/* Live drone telemetry — read-only, RLS-scoped */}
+              <MyDronesPanel />
+
               {/* Advanced modules grid */}
               <div className="grid grid-cols-2 gap-2.5">
                 {[
