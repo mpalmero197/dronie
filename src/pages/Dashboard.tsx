@@ -643,6 +643,7 @@ export default function Dashboard() {
                   { to: "/rtk",        title: "RTK / GCP",     desc: "Smart alignment",        emoji: "📡", tone: "bg-accent/15 text-accent-foreground" },
                   { to: "/insights",   title: "AI Insights",   desc: "Auto metrics + PDF",     emoji: "🧠", tone: "bg-primary/10 text-primary" },
                   { to: "/compliance", title: "Compliance",    desc: "Part 107 + LAANC",       emoji: "🛡️", tone: "bg-secondary text-foreground" },
+                  { to: "/splats",     title: "Gaussian Splats", desc: "Photoreal 3D scenes",  emoji: "✨", tone: "bg-primary/10 text-primary" },
                 ].map((m) => (
                   <button
                     key={m.to}
