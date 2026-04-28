@@ -21,6 +21,21 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase, Project } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { useRef } from "react";
+import { LivePipeline } from "@/components/project/LivePipeline";
+import { PresetPicker } from "@/components/project/PresetPicker";
+import { EstimatePanel } from "@/components/project/EstimatePanel";
+import { ImageQAReport } from "@/components/project/ImageQAReport";
+import { DeliverableCard } from "@/components/project/DeliverableCard";
+import { AccuracyReport, type AccuracyData } from "@/components/project/AccuracyReport";
+import {
+   PRESETS,
+   DEFAULT_SETTINGS as PG_DEFAULT_SETTINGS,
+   estimateProcessing,
+   runImageQa,
+   type PresetId,
+   type ProcessingSettings as PgSettings,
+   type GpsPoint,
+} from "@/lib/photogrammetry";
 
 /* ────── Types ────── */
 
@@ -56,29 +71,8 @@ interface GCP {
   created_at: string;
 }
 
-interface ProcessingSettings {
-  quality: "low" | "medium" | "high" | "ultra";
-  meshType: "3d" | "2.5d" | "none";
-  dsmEnabled: boolean;
-  dtmEnabled: boolean;
-  contoursEnabled: boolean;
-  contourInterval: number;
-  outputFormat: "geotiff" | "ecw" | "jpg2000";
-  pointDensity: number[];
-  crs: string;
-}
-
-const DEFAULT_SETTINGS: ProcessingSettings = {
-  quality: "high",
-  meshType: "2.5d",
-  dsmEnabled: true,
-  dtmEnabled: true,
-  contoursEnabled: true,
-  contourInterval: 1,
-  outputFormat: "geotiff",
-  pointDensity: [75],
-  crs: "EPSG:4326",
-};
+type ProcessingSettings = PgSettings;
+const DEFAULT_SETTINGS: ProcessingSettings = PG_DEFAULT_SETTINGS;
 
 /* ────── Pipeline Steps ────── */
 
@@ -203,6 +197,10 @@ export default function ProjectDetail() {
   const [loadingGcps, setLoadingGcps] = useState(false);
   const [description, setDescription] = useState("");
   const [savingDesc, setSavingDesc] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [presetId, setPresetId] = useState<PresetId>(
+    (DEFAULT_SETTINGS.preset as PresetId) || "mapping"
+  );
 
   const fpInputRef = useRef<HTMLInputElement>(null);
   const imgInputRef = useRef<HTMLInputElement>(null);
@@ -382,8 +380,46 @@ export default function ProjectDetail() {
     toast({ title: "Description saved" });
   }
 
+  /* ── Apply preset ── */
+  function applyPreset(id: PresetId) {
+    setPresetId(id);
+    const p = PRESETS.find((x) => x.id === id);
+    if (!p) return;
+    setSettings({ ...p.settings, preset: id });
+  }
+
+  /* ── Cancel processing ── */
+  async function cancelProcessing() {
+    if (!project) return;
+    setCancelling(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+      const pid = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const res = await fetch(`https://${pid}.supabase.co/functions/v1/cancel-project`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify({ project_id: project.id }),
+      });
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}));
+        throw new Error(e.error || "Cancel failed");
+      }
+      toast({ title: "Cancellation requested", description: "The pipeline will stop at the next checkpoint." });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setCancelling(false);
+    }
+  }
+
   /* ── Submit processing ── */
   async function submitForProcessing() {
+    if (project?.status === "processing") return;
     if (!project || !user) return;
     setSubmitting(true);
     try {
@@ -519,86 +555,63 @@ export default function ProjectDetail() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left: Pipeline + Outputs */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Pipeline Steps */}
-            <div className="bg-card rounded-2xl border border-border p-5 space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="font-display font-700 text-foreground flex items-center gap-2">
-                  <Settings2 className="w-4 h-4 text-primary" />
-                  Processing Pipeline
-                </h2>
-                {isProcessing && (
-                  <span className="text-xs font-semibold text-accent flex items-center gap-1.5">
-                    <Loader2 className="w-3 h-3 animate-spin" /> {progress}%
-                  </span>
-                )}
-                {isComplete && (
-                  <span className="text-xs font-semibold text-primary flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3 h-3" /> Complete
-                  </span>
-                )}
-              </div>
+            {/* Live Pipeline */}
+            <LivePipeline
+              projectId={project.id}
+              initial={{
+                id: project.id,
+                status: project.status,
+                progress: project.progress ?? 0,
+                current_stage: (project.current_stage as string | null) ?? null,
+                stage_progress: project.stage_progress ?? null,
+                stage_started_at: project.stage_started_at ?? null,
+                eta_seconds: project.eta_seconds ?? null,
+                stage_log: (project.stage_log as any) ?? [],
+                outputs_urls: project.outputs_urls ?? null,
+              }}
+              canCancel
+              onCancel={cancelProcessing}
+              cancelling={cancelling}
+            />
 
-              {/* Overall progress bar */}
-              {(isProcessing || isComplete) && (
-                <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <div className={`h-full rounded-full transition-all duration-700 ${isComplete ? "bg-primary" : "bg-accent"}`} style={{ width: `${progress}%` }} />
-                </div>
-              )}
+            {/* Accuracy Report */}
+            {isComplete && project.accuracy_report && (
+              <AccuracyReport data={project.accuracy_report as AccuracyData} />
+            )}
 
-              <div className="space-y-2">
-                {PIPELINE_STEPS.map((step) => (
-                  <StepIndicator key={step.key} step={step} progress={progress} status={status} />
-                ))}
-              </div>
-            </div>
-
-            {/* Outputs */}
+            {/* Deliverables */}
             {isComplete && project.outputs && project.outputs.length > 0 && (
               <div className="bg-card rounded-2xl border border-border p-5 space-y-4">
                 <div className="flex items-center justify-between">
                   <h2 className="font-display font-700 text-foreground flex items-center gap-2">
                     <Package className="w-4 h-4 text-primary" />
-                    Output Files
+                    Deliverables
                   </h2>
                   <span className="text-xs text-muted-foreground">{project.outputs.length} files</span>
                 </div>
-                {(!project.outputs_urls || Object.keys(project.outputs_urls).length === 0 || project.outputs_urls.error) && (
-                  <div className="rounded-xl bg-accent/10 border border-accent/20 p-3 mb-2">
-                    <p className="text-xs text-accent font-medium">
-                      {project.outputs_urls?.error
-                        ? `⚠️ Processing error: ${project.outputs_urls.error}`
-                        : "🚧 Output files are not yet available for download."}
+                {project.outputs_urls?.error && (
+                  <div className="rounded-xl bg-destructive/10 border border-destructive/20 p-3">
+                    <p className="text-xs text-destructive font-medium">
+                      Processing error: {project.outputs_urls.error}
                     </p>
                   </div>
                 )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {project.outputs.map((name) => {
-                    const meta = OUTPUT_META[name] || { ext: "", desc: name, key: "" };
-                    const downloadUrl = project.outputs_urls?.[meta.key];
-                    const hasDownload = !!downloadUrl && !project.outputs_urls?.error;
+                    const meta = OUTPUT_META[name] || { ext: "", desc: name, key: "default" };
+                    const downloadUrl = project.outputs_urls?.[meta.key] as string | undefined;
+                    const previewUrl = meta.key === "orthomosaic" ? downloadUrl : undefined;
+                    const viewerHref = meta.key === "orthomosaic" ? `/viewer/${project.id}` : undefined;
                     return (
-                      <div key={name} className="flex items-center gap-3 bg-secondary/50 border border-border rounded-xl px-4 py-3">
-                        <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                          <FileType className="w-4 h-4 text-primary" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-foreground truncate">{name}</p>
-                          <p className="text-xs text-muted-foreground">{meta.desc}</p>
-                        </div>
-                        {hasDownload ? (
-                          <a
-                            href={downloadUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            download
-                            className="flex items-center gap-1 text-xs font-semibold text-primary hover:text-primary/80 transition-colors flex-shrink-0"
-                          >
-                            <Download className="w-3.5 h-3.5" /> Download
-                          </a>
-                        ) : (
-                          <span className="text-xs text-muted-foreground italic flex-shrink-0">—</span>
-                        )}
-                      </div>
+                      <DeliverableCard
+                        key={name}
+                        name={name}
+                        description={meta.desc}
+                        kind={meta.key as any}
+                        downloadUrl={project.outputs_urls?.error ? null : downloadUrl}
+                        previewUrl={previewUrl}
+                        viewerHref={viewerHref}
+                      />
                     );
                   })}
                 </div>
@@ -750,10 +763,38 @@ export default function ProjectDetail() {
 
           {/* Right: Settings Panel */}
           <div className="space-y-6">
+            {/* Preset Picker */}
+            <div className="bg-card rounded-2xl border border-border p-5 space-y-3">
+              <h2 className="font-display font-700 text-foreground flex items-center gap-2">
+                <Settings2 className="w-4 h-4 text-primary" />
+                Industry Preset
+              </h2>
+              <PresetPicker value={presetId} onChange={applyPreset} disabled={isProcessing} />
+            </div>
+
+            {/* Estimate */}
+            <EstimatePanel
+              estimate={estimateProcessing({
+                imageCount: project.image_count || droneImages.length,
+                areaHa: project.area_ha,
+                settings,
+              })}
+            />
+
+            {/* Image QA */}
+            {(droneImages.length > 0 || (project.gps_points && Array.isArray(project.gps_points))) && (
+              <ImageQAReport
+                qa={runImageQa({
+                  totalImages: project.image_count || droneImages.length,
+                  gpsPoints: (Array.isArray(project.gps_points) ? (project.gps_points as GpsPoint[]) : []),
+                })}
+              />
+            )}
+
             <div className="bg-card rounded-2xl border border-border p-5 space-y-5 sticky top-24">
               <h2 className="font-display font-700 text-foreground flex items-center gap-2">
                 <Sliders className="w-4 h-4 text-primary" />
-                Processing Settings
+                Advanced Settings
               </h2>
 
               {/* Quality */}

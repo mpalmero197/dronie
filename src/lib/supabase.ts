@@ -25,4 +25,14 @@ export interface Project {
   gps_points: unknown;
   created_at: string;
   updated_at: string;
+  // Live pipeline fields (added in 2026-04 migration)
+  processing_settings?: Record<string, unknown> | null;
+  current_stage?: string | null;
+  stage_progress?: number | null;
+  stage_started_at?: string | null;
+  eta_seconds?: number | null;
+  stage_log?: unknown;
+  webodm_task_id?: string | null;
+  canceled_at?: string | null;
+  accuracy_report?: Record<string, unknown> | null;
 }
