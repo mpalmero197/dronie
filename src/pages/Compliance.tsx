@@ -70,15 +70,7 @@ export default function Compliance() {
         supabase.from("jobs").select("id, mission_type, started_at, ended_at").eq("pilot_id", user.id).order("started_at", { ascending: false }).limit(50),
         supabase.from("drones").select("id, name"),
         supabase.from("drone_maintenance").select("id, drone_id, task, due_date, cycles_left, health_pct, status").order("due_date", { ascending: true }),
-        supabase.from("pilot_certifications").select("id, cert_type, issued_at, expires_at, notes").eq("user_id", user.id).order("expires_at", { ascending: true }),
-    ]);
-    // Note: select string above is unchanged — re-fetch with full columns below
-    const certsFull = await supabase
-      .from("pilot_certifications")
-      .select("id, cert_type, issued_at, expires_at, notes, recert_required, recert_confirmed_at")
-      .eq("user_id", user.id)
-      .order("expires_at", { ascending: true });
-    const _cleanup = ([
+        supabase.from("pilot_certifications").select("id, cert_type, issued_at, expires_at, notes, recert_required, recert_confirmed_at").eq("user_id", user.id).order("expires_at", { ascending: true }),
       ]);
       if (cancelled) return;
       setLogs((logsRes.data ?? []) as FlightLogRow[]);
