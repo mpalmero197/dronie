@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Loader2, Plane, MapPin, Briefcase, Shield } from "lucide-react";
+import { ArrowLeft, Loader2, Plane, MapPin, Briefcase, Shield, ShieldCheck, ShieldAlert, Clock } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,7 @@ import {
 } from "@/lib/pilots";
 import { jitterCoord } from "@/lib/jitter";
 import LiabilityNotice from "@/components/LiabilityNotice";
+import { VERIFICATION_STATUS_LABELS, type VerificationStatus } from "@/lib/verification";
 
 const VERTICAL_KEYS = Object.keys(VERTICAL_LABELS).filter((k) => k !== "other") as IndustryVertical[];
 
@@ -58,6 +59,7 @@ export default function PilotSignup() {
   const [showOnMap, setShowOnMap] = useState(true);
   const [locationPrivacy, setLocationPrivacy] = useState(true);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [verificationStatus, setVerificationStatus] = useState<VerificationStatus>("unverified");
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/auth");
@@ -90,6 +92,7 @@ export default function PilotSignup() {
           setShowOnMap(p.show_on_map);
           setLocationPrivacy(p.location_privacy);
           setAcceptedTerms(!!p.accepted_terms_at);
+          setVerificationStatus(((p as any).verification_status ?? "unverified") as VerificationStatus);
         }
       })
       .catch(() => {})
