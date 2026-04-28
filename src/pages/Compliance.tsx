@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import LiabilityNotice from "@/components/LiabilityNotice";
+import RegulationsCard from "@/components/RegulationsCard";
 
 interface FlightLogRow {
   id: string;
@@ -382,6 +383,9 @@ export default function Compliance() {
       </Dialog>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-8">
+        <div className="mb-6">
+          <RegulationsCard />
+        </div>
         <LiabilityNotice context="pilot" />
       </div>
     </div>
