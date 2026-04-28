@@ -78,7 +78,7 @@ export default function FooterSection() {
   return (
     <footer className="bg-foreground text-primary-foreground/80">
       <div className="container mx-auto px-6 py-16">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-10 mb-12">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-10 mb-12">
           {/* Brand */}
           <div className="col-span-2 md:col-span-3 lg:col-span-1 space-y-4">
             <div className="flex items-center gap-2.5">
@@ -101,12 +101,23 @@ export default function FooterSection() {
               <ul className="space-y-2.5">
                 {col.links.map((l) => (
                   <li key={l.label}>
-                    <Link
-                      to={l.href}
-                      className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors"
-                    >
-                      {l.label}
-                    </Link>
+                    {l.external ? (
+                      <a
+                        href={l.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors"
+                      >
+                        {l.label}
+                      </a>
+                    ) : (
+                      <Link
+                        to={l.href}
+                        className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors"
+                      >
+                        {l.label}
+                      </Link>
+                    )}
                   </li>
                 ))}
               </ul>
