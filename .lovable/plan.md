@@ -1,105 +1,173 @@
 ## Goal
 
-Make Dronie's photogrammetry services feel like a real production pipeline: smarter inputs (presets + QA), live per-stage progress, richer deliverables, and a more honest WebODM/NodeODM integration.
+Replace the flat tag-list of drone models in two places (pilot profile and Fleet "Add Drone") with a structured **Manufacturer → Model** picker, support **multi-select with quantities**, and let users register **per-airframe serial numbers** in Fleet Management with strong duplicate-detection fail-safes.
 
-## What we'll build
+## What changes for the user
 
-### 1. Processing settings & industry presets (ProjectDetail.tsx)
+### 1. Drone catalog (shared)
 
-- Add a **preset selector** above the existing settings panel:
-  - **Mapping (orthomosaic)** — high quality, 2.5D mesh, DSM on, point density 50%.
-  - **Inspection (towers/roofs)** — ultra quality, 3D mesh, dense cloud focus.
-  - **3D Model** — ultra, 3D mesh, no DSM/contours.
-  - **Agriculture / NDVI** — medium, 2.5D, contours off, multispectral hint.
-  - **Volumetrics** — high, DSM+DTM on, contours 0.5 m.
-  - Custom (current behavior).
-- Add **target GSD (cm/px)** and **image scale** inputs, **min features**, **matcher** (BoW vs Brute Force) — collapsible "Advanced".
-- Add **cost & time estimator** card: estimates duration and credits from `image_count`, area_ha, quality preset (pure client-side formula). Shows queue position from existing API response.
-- Persist `settings` JSON on the project row (`outputs_urls.settings` already used for error; introduce `processing_settings` jsonb column).
+A single curated catalog of manufacturers and their full model lineups (DJI, Autel, Skydio, Parrot, Yuneec, Freefly, Wingtra, senseFly, plus an "Other / Custom" escape hatch). Each model knows its category (consumer, prosumer, enterprise, survey, FPV, fixed-wing) and class hints.
 
-### 2. Pre-flight Quality Check (new `ImageQAReport` component)
+### 2. Pilot Signup → "Your fleet" section
 
-Before "Start Processing", run a client-side QA on uploaded images using already-extracted GPS points:
-- **GPS coverage**: % of images with GPS, plotted on `GpsMapPreview` heatmap.
-- **Estimated forward/side overlap** from sequential GPS distances vs altitude.
-- **Spatial extent / convex hull area** sanity check.
-- **Image count vs area** density warning (e.g., < 100 img / ha → low).
-- Surfaced as a Pass/Warn/Fail badge with actionable tips.
-- Hard-block "Start Processing" only on Fail (e.g., < 3 GPS points), warn otherwise.
-
-### 3. Live per-stage progress (process-project edge function + ProjectDetail UI)
-
-Backend changes:
-- Add new columns: `current_stage text`, `stage_progress int`, `stage_started_at timestamptz`, `eta_seconds int`, and `stage_log jsonb` (append-only array of `{stage, message, ts, level}`).
-- In `runWebODMProcessing`, map WebODM `running_progress` more granularly into named stages (alignment 0–20, dense cloud 20–45, mesh 45–60, texture 60–70, ortho 70–85, DSM/DTM 85–95, export 95–100) and push log entries from WebODM `console_output` deltas.
-- In `runSimulatedProcessing`, do the same with realistic per-stage durations + synthesized log lines.
-
-Frontend:
-- Replace the current threshold-based `StepIndicator` with a realtime view subscribed via `supabase.channel` to `projects` UPDATEs.
-- Each stage card shows its own progress bar, elapsed time, and ETA. Active stage shows the latest log lines (collapsible).
-- Add **Cancel processing** button (calls a new `cancel-project` action on the edge function which sets status `failed` with reason `canceled` and aborts WebODM task via `/api/projects/<id>/tasks/<task>/cancel/`).
-
-### 4. Richer deliverables & viewers (ProjectDetail Outputs tab)
-
-- **Thumbnails / previews** for each deliverable:
-  - Orthomosaic → preview PNG (already produced for simulated; for WebODM grab `orthophoto.png`).
-  - Point cloud → preview screenshot from `RealityCapture` snapshot or static placeholder, plus "Open in 3D Viewer" link.
-  - DSM → small color-ramp preview generated from the ASCII grid.
-  - Contours → mini SVG of the GeoJSON.
-- **Accuracy report panel**: surface RMSE, GSD, reprojection error, # tie points, # GCP residuals from WebODM `task_output.json` when available; in simulated mode, derive plausible numbers from settings & image count.
-- **Bulk download as ZIP**: client-side zip of selected deliverables using `fflate` (already in many lovable projects; add via `bun add fflate` if missing).
-- **Share link**: shareable read-only deliverables URL `/share/p/:token` (token stored in `projects.outputs_urls.share_token`); RLS-safe public read via signed URLs from the public `project-outputs` bucket.
-- Direct deep-links into Map Viewer (`/viewer/:projectId`), Reality Capture (`/reality?project=:id`), AI Insights (`/insights?project=:id`).
-
-### 5. Post-processing QA summary
-
-- New `ProcessingReport` panel on completed projects:
-  - Per-stage durations bar chart (from `stage_log`).
-  - Image registration stats (registered vs total, mean reprojection error).
-  - GCP residuals table when GCPs were provided.
-  - Generated PDF: extend `generateReportPDF` to include accuracy + per-stage timing.
-
-### 6. Workflow page polish (Workflow.tsx StageProcessing)
-
-- Show all currently-processing projects with a compact queue view, not just the latest.
-- Use the new stage data so the workflow page mirrors ProjectDetail's live stages.
-
-## Backend changes
+Replaces the current pill grid:
 
 ```text
-DB migration:
-  ALTER TABLE projects
-    ADD COLUMN processing_settings jsonb DEFAULT '{}'::jsonb,
-    ADD COLUMN current_stage text,
-    ADD COLUMN stage_progress int DEFAULT 0,
-    ADD COLUMN stage_started_at timestamptz,
-    ADD COLUMN eta_seconds int,
-    ADD COLUMN stage_log jsonb DEFAULT '[]'::jsonb,
-    ADD COLUMN webodm_task_id text,
-    ADD COLUMN canceled_at timestamptz;
-
-  ALTER PUBLICATION supabase_realtime ADD TABLE public.projects;  -- if not already
+┌── Manufacturer ▾  ─┐  ┌── Models (checkboxes) ────────────────┐
+│ DJI                │  │ ☑ Mavic 3 Pro          × 2            │
+│ Autel              │  │ ☑ Mini 4 Pro           × 1            │
+│ Skydio             │  │ ☐ Air 3S                              │
+│ ...                │  │ ☐ Matrice 350 RTK                     │
+│ Other / Custom     │  └───────────────────────────────────────┘
+└────────────────────┘
+   [+ Add custom model]      Selected: 3 drones across 2 models
 ```
 
-Edge functions:
-- `process-project`: write the new columns; better stage mapping; honor `canceled_at` to abort.
-- `cancel-project` (new): owner-only; calls WebODM cancel + updates row.
+- Click a manufacturer to expand its models (accordion-style; multiple manufacturers can be open).
+- Each model has a checkbox; once checked, a small "× N" stepper appears so a pilot can say "I own 2 Mavic 3 Pros".
+- A search box filters models across all manufacturers.
+- "Add custom model" still supported under "Other / Custom" — preserves the existing free-text flow.
+- Serial numbers are NOT collected here. Public-facing profile only states what models a pilot operates.
 
-## Files to touch
+### 3. Fleet Management → "Add Drone" / "Edit Drone" dialogs
 
-- `supabase/migrations/<new>.sql` — schema + realtime.
-- `supabase/functions/process-project/index.ts` — stage mapping, log entries, cancel check, accuracy fields, WebODM cancel.
-- `supabase/functions/cancel-project/index.ts` — new.
-- `src/pages/ProjectDetail.tsx` — presets, QA, live stages, richer outputs.
-- `src/components/project/PresetPicker.tsx` — new.
-- `src/components/project/ImageQAReport.tsx` — new.
-- `src/components/project/LivePipeline.tsx` — new (subscribes + renders stages with logs/ETA).
-- `src/components/project/DeliverableCard.tsx` — new (thumbnail + actions).
-- `src/components/project/AccuracyReport.tsx` — new.
-- `src/pages/Workflow.tsx` — use `LivePipeline`.
-- `src/pages/Share.tsx` — new shared deliverables view + route in `App.tsx`.
+New flow inside the dialog:
 
-## Notes
+```text
+Step 1  ── Manufacturer  [DJI ▾]
+Step 2  ── Model         [Mavic 3 Pro ▾]    (filtered by manufacturer)
+Step 3  ── Friendly name [Mavic-Lead ]      (auto-suggested from model)
+Step 4  ── Serial number [1ZNBJ1234567]
+            ⓘ Duplicate-detection happens here (see below)
+Step 5  ── Stream source (unchanged StreamSourcePicker)
+```
 
-- WebODM/NodeODM is already opt-in via `WEBODM_URL` + `WEBODM_TOKEN` secrets. We'll keep the simulator as a fallback so demos still work; if you want to wire a real instance now, I'll prompt you to add those secrets after the plan is approved.
-- All client-side QA & estimation are heuristic — clearly labeled as estimates so users know what's authoritative once processing finishes.
+When a user wants to add another physical drone of the same model, they
+just open the dialog again. A **"Duplicate model" banner** appears in the
+dialog the moment they pick a model that already exists in their fleet:
+
+> "You already have 2 × DJI Mavic 3 Pro. Add another one with a different
+>  serial number, or cancel."
+
+### 4. Serial-number fail-safes
+
+Triggered **as the user types** in the serial field, debounced 300 ms:
+
+| Condition | Behavior |
+|---|---|
+| Empty | Allowed (some pilots don't track S/N), shows hint "Recommended for warranty + insurance" |
+| Length < 4 or > 40 | Inline validation error |
+| Non-alphanumeric (besides `- _`) | Inline validation error |
+| Already exists on **another of your drones** (case-insensitive, trimmed) | Red banner: "Serial 1ZNBJ1234567 is already on '[Mavic-Lead]'." Submit button disabled. |
+| Differs from another only by case/whitespace | Same red banner — "looks identical to '[Mavic-Lead]'" |
+| Edit dialog matches its own current S/N | No warning |
+
+A second pass server-side: **a UNIQUE partial index** on `(assigned_pilot_id, lower(trim(serial_number)))` where `serial_number <> ''`, so even a race between two browser tabs cannot create duplicates. The client surfaces the resulting Postgres error as a friendly toast.
+
+### 5. Bonus fail-safes
+
+- **Friendly-name uniqueness within a fleet** — soft warning, not blocking, since pilots may want "Mavic-1" / "Mavic-1 (backup)".
+- **Confirm-on-delete** stays in EditDroneDialog; if the drone is currently `active` (mid-flight per telemetry), deletion is blocked with a toast: "Cannot remove a drone that is in the air. Land it first."
+
+## Out of scope
+
+- No public exposure of serial numbers — current RLS already restricts the `drones` table to `assigned_pilot_id = auth.uid()` (or admin); we keep that boundary.
+- No bulk-import of drones (CSV) — can be a follow-up.
+- No model-spec metadata (weight, sensor) on the public profile yet — catalog has the data structure ready for a later release.
+
+## Technical section
+
+### New files
+
+```text
+src/lib/drone-catalog.ts                        (NEW)
+  export type DroneManufacturer =
+    | "DJI" | "Autel" | "Skydio" | "Parrot" | "Yuneec"
+    | "Freefly" | "Wingtra" | "senseFly" | "Other";
+  export interface DroneModel {
+    id: string;        // stable slug e.g. "dji-mavic-3-pro"
+    label: string;     // display: "Mavic 3 Pro"
+    fullLabel: string; // "DJI Mavic 3 Pro" — used for free-text fallback
+    manufacturer: DroneManufacturer;
+    category: "consumer" | "prosumer" | "enterprise" | "survey" | "fpv" | "fixed-wing" | "custom";
+  }
+  export const DRONE_MODELS: DroneModel[] = [...];   // ~60 models
+  export const MANUFACTURERS: DroneManufacturer[] = [...];
+  export function findModelByLabel(label: string): DroneModel | null;
+  export function modelsByManufacturer(m: DroneManufacturer): DroneModel[];
+
+src/components/pilot/FleetCatalogPicker.tsx     (NEW)
+  Props: { value: { modelId: string; quantity: number; customLabel?: string }[];
+           onChange(next): void;
+           maxTotal?: number /* default 50 */ }
+  - Accordion of manufacturers, each expandable
+  - Search input filters models across manufacturers
+  - Per-row checkbox + quantity stepper (1–20)
+  - Renders selected count badge per manufacturer
+  - "Add custom model" inline form under "Other / Custom"
+
+src/components/fleet/SerialNumberField.tsx      (NEW)
+  Props: { value, onChange, ownDroneId?: string }
+  - Debounced query: select id, name, serial_number from drones
+    (RLS already scopes to the user's drones)
+  - Shows inline status: idle / checking / available / duplicate
+  - Exposes isValid via parent form
+```
+
+### Changes to existing files
+
+```text
+src/lib/pilots.ts
+  - Update EQUIPMENT_OPTIONS to be derived from DRONE_MODELS.fullLabel
+    (so existing pilot_profiles.equipment string[] stays compatible).
+  - Persist format unchanged: equipment is still string[] of fullLabels,
+    with quantity encoded as suffix " ×N" only when N > 1
+    (parseable, backwards compatible). Example:
+      ["DJI Mavic 3 Pro ×2", "DJI Mini 4 Pro"]
+  - Add helpers: serializeFleet(rows) / parseFleet(strings).
+  - pilotProfileSchema.equipment max stays 20; bump max element length to 80.
+
+src/pages/PilotSignup.tsx
+  - Replace the "Your fleet" pill grid + CustomDronePicker with
+    <FleetCatalogPicker value={parseFleet(equipment)} onChange={...} />
+  - On submit, equipment = serializeFleet(rows).
+
+src/components/fleet/AddDroneDialog.tsx
+  - Replace plain Model <Input> with two <Select>s: Manufacturer → Model.
+  - Auto-fill the friendly Name with model label on first selection
+    (only if Name is empty so we don't overwrite user edits).
+  - Replace plain Serial <Input> with <SerialNumberField/>.
+  - Show "duplicate model" warning banner above the form when current
+    selection matches an existing fleet entry (informational, non-blocking).
+  - Disable submit while serial validation fails.
+
+src/components/fleet/EditDroneDialog.tsx
+  - Same Manufacturer/Model selects (initial values resolved by
+    findModelByLabel(drone.model)).
+  - Pass ownDroneId={drone.id} to SerialNumberField so editing without
+    changing the S/N never trips the duplicate warning.
+  - Block delete (handled in caller) when drone.status === "active".
+
+src/integrations/supabase/types.ts
+  - Auto-regenerated by the migration; we don't hand-edit.
+```
+
+### Database migration (one migration file)
+
+```sql
+-- Trim/lowercase comparison to catch case + whitespace duplicates,
+-- but only when serial_number is non-empty.
+CREATE UNIQUE INDEX IF NOT EXISTS drones_pilot_serial_unique
+  ON public.drones (assigned_pilot_id, lower(btrim(serial_number)))
+  WHERE serial_number IS NOT NULL AND btrim(serial_number) <> '';
+```
+
+No RLS changes needed — existing policies (`Pilots view assigned drones`,
+`Admins manage all drones`) continue to scope reads/writes correctly.
+
+### Validation summary
+
+- All client inputs validated with **zod** (length, character set).
+- Serial-number lookup uses parameterized Supabase query (no string concat).
+- No serial numbers are written to console logs or analytics.
+- Server-side UNIQUE index is the final source of truth.
