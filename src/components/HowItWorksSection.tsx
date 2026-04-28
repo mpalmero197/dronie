@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Upload, Cpu, MapPin, Download } from "lucide-react";
+import { Upload, Cpu, MapPin, Download, Camera } from "lucide-react";
 
 const steps = [
   {
@@ -37,6 +37,15 @@ const steps = [
     detail: "GeoTIFF · LAS/LAZ · SHP · KMZ · DXF",
     color: "text-primary",
     accent: "bg-primary",
+  },
+  {
+    icon: Camera,
+    step: "05",
+    title: "Publish Your Portfolio",
+    desc: "Showcase finished projects, photos, and videos on your own public page at /u/your-name. Curate albums, control per-item visibility, and win the next gig.",
+    detail: "Custom URL · Albums · Per-item privacy",
+    color: "text-accent",
+    accent: "bg-accent",
   },
 ];
 
@@ -88,9 +97,9 @@ export default function HowItWorksSection() {
         {/* Timeline */}
         <div className="relative">
           {/* Connecting line (desktop) */}
-          <div className="hidden lg:block absolute top-9 left-[calc(12.5%-1px)] right-[calc(12.5%-1px)] h-0.5 bg-border" />
+          <div className="hidden lg:block absolute top-9 left-[10%] right-[10%] h-0.5 bg-border" />
 
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
             {steps.map((s, i) => {
               const Icon = s.icon;
               return (
