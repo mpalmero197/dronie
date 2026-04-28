@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, MapPin, Calendar, Briefcase, Loader2, Check, X } from "lucide-react";
+import { ArrowLeft, MapPin, Calendar, Briefcase, Loader2, Check, X, Sparkles, ShieldCheck, Plane } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,7 @@ import {
   getRequest,
   listQuotesForRequest,
 } from "@/lib/marketplace";
+import { findMatchingPilots, type MatchedPilot } from "@/lib/pilots";
 
 export default function MarketplaceDetail() {
   const { id } = useParams<{ id: string }>();
@@ -27,6 +28,7 @@ export default function MarketplaceDetail() {
   const [request, setRequest] = useState<ServiceRequest | null>(null);
   const [quotes, setQuotes] = useState<ServiceQuote[]>([]);
   const [loading, setLoading] = useState(true);
+  const [matches, setMatches] = useState<MatchedPilot[]>([]);
 
   // Quote form
   const [price, setPrice] = useState("");
@@ -44,6 +46,12 @@ export default function MarketplaceDetail() {
         setQuotes(q);
       } catch {
         setQuotes([]);
+      }
+      try {
+        const m = await findMatchingPilots(id);
+        setMatches(m);
+      } catch {
+        setMatches([]);
       }
     }
     setLoading(false);
@@ -277,6 +285,58 @@ export default function MarketplaceDetail() {
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Matched pilots — owner only */}
+        {isOwner && matches.length > 0 && (
+          <div className="bg-card rounded-2xl border border-border p-6 mt-6">
+            <div className="flex items-center gap-2 mb-1">
+              <Sparkles className="w-4 h-4 text-primary" />
+              <h2 className="font-display font-700 text-lg text-foreground">
+                Matched pilots ({matches.length})
+              </h2>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Pilots whose service area covers this job and who work in {VERTICAL_LABELS[request.vertical]}.
+            </p>
+            <div className="space-y-3">
+              {matches.map((m) => (
+                <div key={m.pilot_id} className="p-4 rounded-xl border border-border bg-background">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-display font-600 text-foreground inline-flex items-center gap-2">
+                          <Plane className="w-3.5 h-3.5 text-primary" />
+                          {m.display_name}
+                        </p>
+                        {m.part_107 && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary">
+                            <ShieldCheck className="w-3 h-3" /> Part 107
+                          </span>
+                        )}
+                        {m.insured && (
+                          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-secondary text-foreground">
+                            Insured
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {m.service_area_label ?? "—"}
+                        {m.distance_km != null && ` · ${Math.round(m.distance_km)} km away`}
+                        {m.years_experience > 0 && ` · ${m.years_experience} yr exp`}
+                        {m.hourly_rate_cents && ` · $${m.hourly_rate_cents / 100}/hr`}
+                      </p>
+                    </div>
+                    {m.portfolio_url && (
+                      <a href={m.portfolio_url} target="_blank" rel="noreferrer">
+                        <Button size="sm" variant="outline">View work</Button>
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
