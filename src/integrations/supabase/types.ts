@@ -548,6 +548,9 @@ export type Database = {
           skills: string[]
           updated_at: string
           user_id: string
+          verification_rejection_reason: string | null
+          verification_status: Database["public"]["Enums"]["pilot_verification_status"]
+          verified_at: string | null
           verticals: Database["public"]["Enums"]["industry_vertical"][]
           years_experience: number
         }
@@ -576,6 +579,9 @@ export type Database = {
           skills?: string[]
           updated_at?: string
           user_id: string
+          verification_rejection_reason?: string | null
+          verification_status?: Database["public"]["Enums"]["pilot_verification_status"]
+          verified_at?: string | null
           verticals?: Database["public"]["Enums"]["industry_vertical"][]
           years_experience?: number
         }
@@ -604,6 +610,9 @@ export type Database = {
           skills?: string[]
           updated_at?: string
           user_id?: string
+          verification_rejection_reason?: string | null
+          verification_status?: Database["public"]["Enums"]["pilot_verification_status"]
+          verified_at?: string | null
           verticals?: Database["public"]["Enums"]["industry_vertical"][]
           years_experience?: number
         }
@@ -645,6 +654,75 @@ export type Database = {
           pilot_id?: string
           recorded_at?: string
           speed?: number | null
+        }
+        Relationships: []
+      }
+      pilot_verifications: {
+        Row: {
+          admin_notes: string | null
+          country: string
+          created_at: string
+          date_of_birth: string | null
+          document_urls: string[]
+          id: string
+          id_last4: string
+          id_type: string
+          insurance_policy_number: string | null
+          insurance_provider: string | null
+          legal_first_name: string
+          legal_last_name: string
+          part_107_cert_number: string | null
+          pilot_notes: string | null
+          region: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["pilot_verification_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          country: string
+          created_at?: string
+          date_of_birth?: string | null
+          document_urls?: string[]
+          id?: string
+          id_last4: string
+          id_type: string
+          insurance_policy_number?: string | null
+          insurance_provider?: string | null
+          legal_first_name: string
+          legal_last_name: string
+          part_107_cert_number?: string | null
+          pilot_notes?: string | null
+          region?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["pilot_verification_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          country?: string
+          created_at?: string
+          date_of_birth?: string | null
+          document_urls?: string[]
+          id?: string
+          id_last4?: string
+          id_type?: string
+          insurance_policy_number?: string | null
+          insurance_provider?: string | null
+          legal_first_name?: string
+          legal_last_name?: string
+          part_107_cert_number?: string | null
+          pilot_notes?: string | null
+          region?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["pilot_verification_status"]
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -1258,6 +1336,11 @@ export type Database = {
         | "government"
         | "other"
       job_status: "active" | "completed" | "aborted"
+      pilot_verification_status:
+        | "unverified"
+        | "pending"
+        | "verified"
+        | "rejected"
       portfolio_visibility: "public" | "unlisted" | "private"
       quote_status: "pending" | "accepted" | "rejected" | "withdrawn"
       request_status:
@@ -1408,6 +1491,12 @@ export const Constants = {
         "other",
       ],
       job_status: ["active", "completed", "aborted"],
+      pilot_verification_status: [
+        "unverified",
+        "pending",
+        "verified",
+        "rejected",
+      ],
       portfolio_visibility: ["public", "unlisted", "private"],
       quote_status: ["pending", "accepted", "rejected", "withdrawn"],
       request_status: [
