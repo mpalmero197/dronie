@@ -1046,6 +1046,7 @@ export type Database = {
       get_public_pilots: {
         Args: never
         Returns: {
+          avatar_url: string
           bio: string
           display_lat: number
           display_lng: number
