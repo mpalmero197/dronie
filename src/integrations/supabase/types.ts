@@ -968,9 +968,13 @@ export type Database = {
       }
       projects: {
         Row: {
+          accuracy_report: Json | null
           area_ha: number | null
+          canceled_at: string | null
           created_at: string
+          current_stage: string | null
           description: string | null
+          eta_seconds: number | null
           gps_points: Json | null
           id: string
           image_count: number
@@ -978,15 +982,24 @@ export type Database = {
           outputs: string[] | null
           outputs_urls: Json | null
           processing_priority: number
+          processing_settings: Json
           progress: number
+          stage_log: Json
+          stage_progress: number
+          stage_started_at: string | null
           status: string
           updated_at: string
           user_id: string
+          webodm_task_id: string | null
         }
         Insert: {
+          accuracy_report?: Json | null
           area_ha?: number | null
+          canceled_at?: string | null
           created_at?: string
+          current_stage?: string | null
           description?: string | null
+          eta_seconds?: number | null
           gps_points?: Json | null
           id?: string
           image_count?: number
@@ -994,15 +1007,24 @@ export type Database = {
           outputs?: string[] | null
           outputs_urls?: Json | null
           processing_priority?: number
+          processing_settings?: Json
           progress?: number
+          stage_log?: Json
+          stage_progress?: number
+          stage_started_at?: string | null
           status?: string
           updated_at?: string
           user_id: string
+          webodm_task_id?: string | null
         }
         Update: {
+          accuracy_report?: Json | null
           area_ha?: number | null
+          canceled_at?: string | null
           created_at?: string
+          current_stage?: string | null
           description?: string | null
+          eta_seconds?: number | null
           gps_points?: Json | null
           id?: string
           image_count?: number
@@ -1010,10 +1032,15 @@ export type Database = {
           outputs?: string[] | null
           outputs_urls?: Json | null
           processing_priority?: number
+          processing_settings?: Json
           progress?: number
+          stage_log?: Json
+          stage_progress?: number
+          stage_started_at?: string | null
           status?: string
           updated_at?: string
           user_id?: string
+          webodm_task_id?: string | null
         }
         Relationships: []
       }
