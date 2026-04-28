@@ -5,6 +5,7 @@ import {
   Loader2, MapPin, Plane, Shield, ShieldAlert, ShieldCheck, Sparkles, UserCog, Wallet,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
+import PilotVerificationBanner from "@/components/PilotVerificationBanner";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -107,6 +108,30 @@ export default function PilotDashboard() {
   useEffect(() => {
     loadAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  // Live verification status — keep the header pill in sync without refresh.
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel(`pilot-dashboard-verification:${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "pilot_verifications",
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const row = (payload.new ?? payload.old) as { status?: VerificationStatus } | undefined;
+          if (row?.status) setVerificationStatus(row.status);
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   async function toggleAvailability(next: boolean) {
@@ -230,41 +255,8 @@ export default function PilotDashboard() {
           </div>
         </div>
 
-        {/* Verification CTA */}
-        {verificationStatus !== "verified" && (
-          <div
-            className={`rounded-2xl border p-4 mb-6 flex flex-wrap items-start gap-3 ${
-              verificationStatus === "rejected"
-                ? "bg-destructive/5 border-destructive/20"
-                : verificationStatus === "pending"
-                ? "bg-highlight/5 border-highlight/20"
-                : "bg-muted/40 border-border"
-            }`}
-          >
-            <Shield className="w-5 h-5 text-foreground flex-shrink-0 mt-0.5" />
-            <div className="min-w-0 flex-1">
-              <p className="font-semibold text-foreground">
-                {verificationStatus === "pending"
-                  ? "Verification under review"
-                  : verificationStatus === "rejected"
-                  ? "Verification needs your attention"
-                  : "Get verified to win more jobs"}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {verificationStatus === "pending"
-                  ? "We're reviewing your details — this usually takes 1–2 business days."
-                  : verificationStatus === "rejected"
-                  ? "Your last submission wasn't approved. Update and resubmit to earn your trust badge."
-                  : "Verified pilots earn a trust badge shown to clients on the marketplace and pilot map."}
-              </p>
-            </div>
-            <Button asChild size="sm">
-              <Link to="/pilots/verify">
-                {verificationStatus === "unverified" ? "Start verification" : "Manage verification"}
-              </Link>
-            </Button>
-          </div>
-        )}
+        {/* Verification CTA — live updates via Realtime */}
+        <PilotVerificationBanner className="mb-6" />
 
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">

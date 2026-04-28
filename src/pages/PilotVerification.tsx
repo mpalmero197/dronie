@@ -104,6 +104,33 @@ export default function PilotVerification() {
     })();
   }, [user, toast]);
 
+  // Real-time: reflect admin decisions immediately without a refresh.
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel(`pilot-verification-page:${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "pilot_verifications",
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const row = (payload.new ?? payload.old) as PilotVerification | undefined;
+          if (!row) return;
+          // Refresh the form with the latest record so locked/unlocked state and
+          // status banner stay accurate after admin action.
+          setExisting((prev) => (prev && prev.id !== row.id && prev.created_at > row.created_at ? prev : row));
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
   const locked = existing && (existing.status === "pending" || existing.status === "verified");
 
   async function handleSubmit(e: React.FormEvent) {
