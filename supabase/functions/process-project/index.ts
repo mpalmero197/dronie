@@ -10,6 +10,94 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/* ────── Stage definitions (mirror src/lib/photogrammetry.ts) ────── */
+const STAGES = [
+  { key: "alignment", from: 0, to: 20 },
+  { key: "pointcloud", from: 20, to: 45 },
+  { key: "mesh", from: 45, to: 60 },
+  { key: "texture", from: 60, to: 70 },
+  { key: "ortho", from: 70, to: 85 },
+  { key: "dem", from: 85, to: 95 },
+  { key: "export", from: 95, to: 100 },
+] as const;
+type StageKey = (typeof STAGES)[number]["key"];
+
+function stageForProgress(p: number): StageKey {
+  for (const s of STAGES) if (p < s.to) return s.key;
+  return "export";
+}
+
+/** Append a log entry to projects.stage_log (best-effort). */
+async function pushLog(
+  client: ReturnType<typeof createClient>,
+  projectId: string,
+  stage: StageKey | "system",
+  message: string,
+  level: "info" | "warn" | "error" = "info"
+) {
+  try {
+    const { data } = await client
+      .from("projects")
+      .select("stage_log")
+      .eq("id", projectId)
+      .maybeSingle();
+    const log = Array.isArray((data as any)?.stage_log) ? (data as any).stage_log : [];
+    const next = [
+      ...log.slice(-99),
+      { stage, message, ts: new Date().toISOString(), level },
+    ];
+    await client.from("projects").update({ stage_log: next }).eq("id", projectId);
+  } catch (_) {
+    // ignore
+  }
+}
+
+/** Returns true if the project has been cancelled by the user. */
+async function isCanceled(
+  client: ReturnType<typeof createClient>,
+  projectId: string
+): Promise<boolean> {
+  const { data } = await client
+    .from("projects")
+    .select("canceled_at")
+    .eq("id", projectId)
+    .maybeSingle();
+  return !!(data as any)?.canceled_at;
+}
+
+/** Update overall + per-stage progress + ETA in one call. */
+async function setProgress(
+  client: ReturnType<typeof createClient>,
+  projectId: string,
+  overall: number,
+  startedAt: number,
+  opts?: { stageStartProgress?: number; stageStartTs?: number }
+) {
+  const stage = stageForProgress(overall);
+  const def = STAGES.find((s) => s.key === stage)!;
+  const stagePct = Math.max(
+    0,
+    Math.min(100, Math.round(((overall - def.from) / Math.max(1, def.to - def.from)) * 100))
+  );
+  const elapsed = Date.now() - startedAt;
+  const eta =
+    overall > 0 && overall < 100
+      ? Math.max(5, Math.round(((elapsed / overall) * (100 - overall)) / 1000))
+      : 0;
+
+  const update: Record<string, unknown> = {
+    progress: overall,
+    current_stage: stage,
+    stage_progress: stagePct,
+    eta_seconds: eta,
+  };
+  // Update stage_started_at the first time a stage begins
+  if (opts?.stageStartTs != null) {
+    update.stage_started_at = new Date(opts.stageStartTs).toISOString();
+  }
+  await client.from("projects").update(update).eq("id", projectId);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -100,10 +188,31 @@ Deno.serve(async (req) => {
   else if (subscription_tier === "enterprise") priority = 20;
   else if (subscription_tier === "professional") priority = 10;
 
-  // Mark as queued/processing with priority
+  // Mark as processing with priority + reset live tracking fields
   await serviceClient
     .from("projects")
-    .update({ status: "processing", progress: 0, processing_priority: priority })
+    .update({
+      status: "processing",
+      progress: 0,
+      processing_priority: priority,
+      processing_settings: settings || {},
+      current_stage: "alignment",
+      stage_progress: 0,
+      stage_started_at: new Date().toISOString(),
+      stage_log: [
+        {
+          stage: "system",
+          message: "Job queued",
+          ts: new Date().toISOString(),
+          level: "info",
+        },
+      ],
+      eta_seconds: null,
+      canceled_at: null,
+      accuracy_report: null,
+      outputs_urls: {},
+      outputs: [],
+    })
     .eq("id", project_id);
 
   // Check queue position — count projects currently processing with higher priority
