@@ -239,14 +239,14 @@ export default function PricingSection() {
 
                 <Button
                   onClick={() => handleCTA(plan)}
-                  disabled={current || loadingTier === plan.tier}
+                  disabled={current || (!!plan.tier && loadingTier === plan.tier)}
                   className={`w-full font-semibold transition-all active:scale-[0.97] ${
                     plan.highlight
                       ? "bg-accent text-accent-foreground hover:bg-accent/90 shadow-md"
                       : "bg-primary text-primary-foreground hover:bg-primary/90"
                   }`}
                 >
-                  {loadingTier === plan.tier ? (
+                  {plan.tier && loadingTier === plan.tier ? (
                     <Loader2 className="w-4 h-4 animate-spin mr-2" />
                   ) : null}
                   {getButtonLabel(plan)}
