@@ -38,6 +38,7 @@ import MarketplaceInbox from "./pages/MarketplaceInbox.tsx";
 import VerticalLanding from "./pages/solutions/VerticalLanding.tsx";
 import PilotSignup from "./pages/PilotSignup.tsx";
 import PilotVerification from "./pages/PilotVerification.tsx";
+import PilotDashboard from "./pages/PilotDashboard.tsx";
 import PilotsMap from "./pages/PilotsMap.tsx";
 import Organizations from "./pages/Organizations.tsx";
 import OrgDetail from "./pages/OrgDetail.tsx";
@@ -88,6 +89,7 @@ const App = () => (
             <Route path="/solutions/:vertical" element={<VerticalLanding />} />
             <Route path="/pilots/join" element={<PilotSignup />} />
             <Route path="/pilots/verify" element={<PilotVerification />} />
+            <Route path="/pilots/dashboard" element={<PilotDashboard />} />
             <Route path="/pilots" element={<PilotsMap />} />
             <Route path="/orgs" element={<Organizations />} />
             <Route path="/orgs/accept" element={<AcceptOrgInvite />} />
