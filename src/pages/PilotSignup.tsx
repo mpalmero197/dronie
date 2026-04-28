@@ -152,7 +152,7 @@ export default function PilotSignup() {
       };
       const { error } = existing
         ? await supabase.from("pilot_profiles").update(payload).eq("user_id", user.id)
-        : await supabase.from("pilot_profiles").insert(payload);
+        : await supabase.from("pilot_profiles").insert([payload]);
       if (error) throw error;
       toast({
         title: existing ? "Profile updated" : "You're now a Dronie pilot",
