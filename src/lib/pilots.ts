@@ -62,16 +62,46 @@ export const SKILL_OPTIONS = [
 ];
 
 export const EQUIPMENT_OPTIONS = [
+  // DJI — consumer & prosumer
   "DJI Mavic 3",
   "DJI Mavic 3 Pro",
+  "DJI Mavic 3 Classic",
+  "DJI Mavic 3 Enterprise",
+  "DJI Mavic 3 Thermal",
   "DJI Mini 4 Pro",
+  "DJI Mini 3 Pro",
   "DJI Air 3",
+  "DJI Air 3S",
+  "DJI Avata 2",
+  // DJI — survey & enterprise
   "DJI Phantom 4 RTK",
+  "DJI Matrice 30",
   "DJI Matrice 30T",
+  "DJI Matrice 300 RTK",
   "DJI Matrice 350 RTK",
+  "DJI Matrice 4E",
+  "DJI Matrice 4T",
+  "DJI Inspire 3",
+  // Autel
   "Autel EVO II Pro",
-  "Skydio 2+ / X10",
+  "Autel EVO II Dual 640T",
+  "Autel EVO Lite+",
+  "Autel EVO Max 4T",
+  "Autel Dragonfish",
+  // Skydio
+  "Skydio 2+",
+  "Skydio X10",
+  "Skydio X2",
+  // Parrot
   "Parrot Anafi USA",
+  "Parrot Anafi Ai",
+  // Yuneec / Freefly / Wingtra
+  "Yuneec H520E",
+  "Freefly Astro",
+  "Freefly Alta X",
+  "Wingtra One Gen II",
+  "senseFly eBee X",
+  // Specialty
   "Custom / FPV rig",
 ];
 
