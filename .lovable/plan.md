@@ -1,94 +1,105 @@
-## Goals
+## Goal
 
-1. Show pilots on a public map with their service area, but jitter their displayed coordinates by ~5 miles for privacy (toggleable per pilot).
-2. Let businesses sign up as organizations, add pilots to their roster, and get prompted to confirm recertification when any pilot's cert expires.
-3. Add a clear liability disclaimer (responsibility for keeping certs current is on the pilot/business; Dronie + affiliates not liable for damages, losses, disputes, etc.).
+Make Dronie's photogrammetry services feel like a real production pipeline: smarter inputs (presets + QA), live per-stage progress, richer deliverables, and a more honest WebODM/NodeODM integration.
 
----
+## What we'll build
 
-## 1. Pilot map with privacy jitter
+### 1. Processing settings & industry presets (ProjectDetail.tsx)
 
-### Database
-Add to `pilot_profiles`:
-- `show_on_map boolean not null default true` — pilot opts into public map visibility.
-- `location_privacy boolean not null default true` — when true, displayed location is jittered ~5 miles (default ON).
-- `display_lat double precision`, `display_lng double precision` — pre-computed jittered coords, regenerated on save when `service_lat/lng` or `location_privacy` change. Raw `service_lat/lng` stay private.
+- Add a **preset selector** above the existing settings panel:
+  - **Mapping (orthomosaic)** — high quality, 2.5D mesh, DSM on, point density 50%.
+  - **Inspection (towers/roofs)** — ultra quality, 3D mesh, dense cloud focus.
+  - **3D Model** — ultra, 3D mesh, no DSM/contours.
+  - **Agriculture / NDVI** — medium, 2.5D, contours off, multispectral hint.
+  - **Volumetrics** — high, DSM+DTM on, contours 0.5 m.
+  - Custom (current behavior).
+- Add **target GSD (cm/px)** and **image scale** inputs, **min features**, **matcher** (BoW vs Brute Force) — collapsible "Advanced".
+- Add **cost & time estimator** card: estimates duration and credits from `image_count`, area_ha, quality preset (pure client-side formula). Shows queue position from existing API response.
+- Persist `settings` JSON on the project row (`outputs_urls.settings` already used for error; introduce `processing_settings` jsonb column).
 
-Create a public RPC `get_public_pilots()` returning only safe fields (display_name, bio, years_experience, verticals, skills, equipment, part_107, insured, portfolio_url, hourly_rate_cents, service_area_label, service_radius_km, **display_lat/lng only**). Anonymous role can call this. Tighten the existing `Authenticated can view available pilots` policy so raw `service_lat/lng` aren't exposed to other authenticated users either — switch the public discovery path to use the RPC.
+### 2. Pre-flight Quality Check (new `ImageQAReport` component)
 
-Jitter logic (in app code on save): random bearing 0–360°, random distance 6–10 km (~4–6 mi) added to lat/lng using a small haversine offset. Stored, not recomputed per request, so the marker doesn't shimmy on each load.
+Before "Start Processing", run a client-side QA on uploaded images using already-extracted GPS points:
+- **GPS coverage**: % of images with GPS, plotted on `GpsMapPreview` heatmap.
+- **Estimated forward/side overlap** from sequential GPS distances vs altitude.
+- **Spatial extent / convex hull area** sanity check.
+- **Image count vs area** density warning (e.g., < 100 img / ha → low).
+- Surfaced as a Pass/Warn/Fail badge with actionable tips.
+- Hard-block "Start Processing" only on Fail (e.g., < 3 GPS points), warn otherwise.
 
-### UI
-- New page `/pilots` (`src/pages/PilotsMap.tsx`): Leaflet map listing all pilots with `show_on_map=true`. Each marker opens a popup with name, area label, verticals, rate, "Hire" button (links to `/marketplace/new?pilot=<id>` or pilot's portfolio).
-- Add "Find pilots" link to `Navbar` Solutions/Marketplace area.
-- In `PilotSignup.tsx`: add two switches in a new "Privacy" card:
-  - "Show me on the public pilot map" (`show_on_map`)
-  - "Hide my exact location (recommended)" (`location_privacy`) — with help text: *"Your pin on the public map is shifted by roughly 5 miles in a random direction so clients can see your service area without targeting your exact location. Turn this off only if you're comfortable showing your precise base."*
+### 3. Live per-stage progress (process-project edge function + ProjectDetail UI)
 
----
+Backend changes:
+- Add new columns: `current_stage text`, `stage_progress int`, `stage_started_at timestamptz`, `eta_seconds int`, and `stage_log jsonb` (append-only array of `{stage, message, ts, level}`).
+- In `runWebODMProcessing`, map WebODM `running_progress` more granularly into named stages (alignment 0–20, dense cloud 20–45, mesh 45–60, texture 60–70, ortho 70–85, DSM/DTM 85–95, export 95–100) and push log entries from WebODM `console_output` deltas.
+- In `runSimulatedProcessing`, do the same with realistic per-stage durations + synthesized log lines.
 
-## 2. Organization (business) accounts
+Frontend:
+- Replace the current threshold-based `StepIndicator` with a realtime view subscribed via `supabase.channel` to `projects` UPDATEs.
+- Each stage card shows its own progress bar, elapsed time, and ETA. Active stage shows the latest log lines (collapsible).
+- Add **Cancel processing** button (calls a new `cancel-project` action on the edge function which sets status `failed` with reason `canceled` and aborts WebODM task via `/api/projects/<id>/tasks/<task>/cancel/`).
 
-### Database
-- New enum value: extend `app_role` with `'org_admin'` (or use existing `admin` only inside org scope — cleaner to add `org_admin`).
-- New table `organizations`: `id`, `owner_id` (auth user), `name`, `website`, `contact_email`, `phone`, `verified boolean default false`, timestamps. RLS: owner manages, public can view name/website only via a public view.
-- New table `organization_members`: `id`, `org_id`, `user_id` (the pilot's auth.users id, nullable for invited-not-yet-joined), `invited_email`, `role text` (`owner` | `manager` | `pilot`), `status` (`invited` | `active` | `removed`), timestamps. Unique `(org_id, user_id)`.
-- New table `organization_invites`: `id`, `org_id`, `email`, `token`, `expires_at`, `accepted_at`. Pilot accepts via `/orgs/accept?token=…`.
-- `pilot_certifications` already exists — add column `recert_confirmed_at timestamptz` and `recert_required boolean default false` (set true by a daily edge function or computed view when `expires_at < now()`).
-- RLS: org owners/managers can `select` their org members' `pilot_certifications` (read-only) so they can see expiry status. Pilots still own write access.
+### 4. Richer deliverables & viewers (ProjectDetail Outputs tab)
 
-### Edge function
-`check-cert-expirations` (scheduled daily via cron in `supabase/config.toml`): scans `pilot_certifications` where `expires_at < now() AND recert_confirmed_at IS NULL`, marks `recert_required=true`, and sends an in-app/email reminder to the pilot and any org managers.
+- **Thumbnails / previews** for each deliverable:
+  - Orthomosaic → preview PNG (already produced for simulated; for WebODM grab `orthophoto.png`).
+  - Point cloud → preview screenshot from `RealityCapture` snapshot or static placeholder, plus "Open in 3D Viewer" link.
+  - DSM → small color-ramp preview generated from the ASCII grid.
+  - Contours → mini SVG of the GeoJSON.
+- **Accuracy report panel**: surface RMSE, GSD, reprojection error, # tie points, # GCP residuals from WebODM `task_output.json` when available; in simulated mode, derive plausible numbers from settings & image count.
+- **Bulk download as ZIP**: client-side zip of selected deliverables using `fflate` (already in many lovable projects; add via `bun add fflate` if missing).
+- **Share link**: shareable read-only deliverables URL `/share/p/:token` (token stored in `projects.outputs_urls.share_token`); RLS-safe public read via signed URLs from the public `project-outputs` bucket.
+- Direct deep-links into Map Viewer (`/viewer/:projectId`), Reality Capture (`/reality?project=:id`), AI Insights (`/insights?project=:id`).
 
-### UI
-- `/orgs` (`src/pages/Organizations.tsx`): create org, list orgs you own/belong to.
-- `/orgs/:id` (`src/pages/OrgDetail.tsx`): org profile, member roster table with each pilot's cert status (green/amber/red badge by days until expiry). Buttons: invite member by email, remove member, view pilot profile.
-- Pilot dashboard: when any of the signed-in pilot's certs are past `expires_at` and `recert_confirmed_at` is null, show a blocking banner ("Confirm you have recertified [Cert] — issued/expires dates"). Form lets them update `issued_at` + `expires_at` + upload optional document; on submit, sets `recert_confirmed_at = now()` and clears `recert_required`. Until confirmed, the pilot is automatically toggled out of the marketplace match results (modify `find_matching_pilots` to exclude pilots with any `recert_required=true` cert).
-- Add "For businesses" CTA in `Navbar` and a section on `Index.tsx`.
-- Account-type chooser at signup (already have `account_type` enum on profiles): allow `pilot`, `client`, `both`, plus add `'organization'`.
+### 5. Post-processing QA summary
 
----
+- New `ProcessingReport` panel on completed projects:
+  - Per-stage durations bar chart (from `stage_log`).
+  - Image registration stats (registered vs total, mean reprojection error).
+  - GCP residuals table when GCPs were provided.
+  - Generated PDF: extend `generateReportPDF` to include accuracy + per-stage timing.
 
-## 3. Liability disclaimer
+### 6. Workflow page polish (Workflow.tsx StageProcessing)
 
-- Update `src/pages/TermsOfService.tsx` with new sections:
-  - **Pilot certification responsibility** — pilots/orgs are solely responsible for maintaining current certifications, insurance, registrations, and complying with FAA/local regulations.
-  - **No liability** — Dronie, its operators, employees, and affiliates accept no responsibility for damages, losses, injuries, regulatory violations, contract disputes, payment disputes, deliverable quality, or any other claims between clients and pilots/orgs. The platform is provided "as is" and acts only as an introduction/listing service.
-  - **Indemnification** — users indemnify Dronie against all third-party claims arising from their use of the platform.
-- New reusable component `src/components/LiabilityNotice.tsx` — short inline notice rendered:
-  - On `PilotSignup.tsx` (above the submit button, with checkbox "I understand I am solely responsible for my certifications and compliance").
-  - On `MarketplaceNew.tsx` (client posting a job — acknowledge platform is not responsible for pilot conduct).
-  - On `MarketplaceDetail.tsx` (when accepting a quote).
-  - In the footer as a permanent small-text link to Terms.
+- Show all currently-processing projects with a compact queue view, not just the latest.
+- Use the new stage data so the workflow page mirrors ProjectDetail's live stages.
 
----
+## Backend changes
 
-## Files
+```text
+DB migration:
+  ALTER TABLE projects
+    ADD COLUMN processing_settings jsonb DEFAULT '{}'::jsonb,
+    ADD COLUMN current_stage text,
+    ADD COLUMN stage_progress int DEFAULT 0,
+    ADD COLUMN stage_started_at timestamptz,
+    ADD COLUMN eta_seconds int,
+    ADD COLUMN stage_log jsonb DEFAULT '[]'::jsonb,
+    ADD COLUMN webodm_task_id text,
+    ADD COLUMN canceled_at timestamptz;
 
-**New**
-- `src/pages/PilotsMap.tsx`
-- `src/pages/Organizations.tsx`, `src/pages/OrgDetail.tsx`, `src/pages/AcceptOrgInvite.tsx`
-- `src/components/LiabilityNotice.tsx`
-- `src/lib/orgs.ts`, `src/lib/jitter.ts`
-- `supabase/functions/check-cert-expirations/index.ts`
-- One migration adding columns/tables/RPC/cron.
+  ALTER PUBLICATION supabase_realtime ADD TABLE public.projects;  -- if not already
+```
 
-**Edited**
-- `src/lib/pilots.ts` — schema fields, jitter on save, public RPC fetch.
-- `src/pages/PilotSignup.tsx` — privacy card + liability checkbox.
-- `src/pages/Compliance.tsx` — recert confirmation flow + banner.
-- `src/pages/Dashboard.tsx` — recert banner for pilots, "Manage organization" tile.
-- `src/pages/MarketplaceNew.tsx`, `src/pages/MarketplaceDetail.tsx` — liability notice.
-- `src/pages/TermsOfService.tsx` — disclaimer sections.
-- `src/components/Navbar.tsx` — add `/pilots` and `/orgs` links.
-- `src/App.tsx` — register new routes.
-- `supabase/config.toml` — schedule cron for cert-check function.
+Edge functions:
+- `process-project`: write the new columns; better stage mapping; honor `canceled_at` to abort.
+- `cancel-project` (new): owner-only; calls WebODM cancel + updates row.
 
----
+## Files to touch
 
-## Open assumptions (will follow unless you say otherwise)
+- `supabase/migrations/<new>.sql` — schema + realtime.
+- `supabase/functions/process-project/index.ts` — stage mapping, log entries, cancel check, accuracy fields, WebODM cancel.
+- `supabase/functions/cancel-project/index.ts` — new.
+- `src/pages/ProjectDetail.tsx` — presets, QA, live stages, richer outputs.
+- `src/components/project/PresetPicker.tsx` — new.
+- `src/components/project/ImageQAReport.tsx` — new.
+- `src/components/project/LivePipeline.tsx` — new (subscribes + renders stages with logs/ETA).
+- `src/components/project/DeliverableCard.tsx` — new (thumbnail + actions).
+- `src/components/project/AccuracyReport.tsx` — new.
+- `src/pages/Workflow.tsx` — use `LivePipeline`.
+- `src/pages/Share.tsx` — new shared deliverables view + route in `App.tsx`.
 
-- Jitter distance: random 6–10 km (~4–6 mi). Reseeded every time the pilot edits their service location, otherwise stable.
-- Org managers can **read** their pilots' certs but cannot edit them — pilot must confirm their own recerts.
-- Cert reminders: in-app banner + Resend email (already configured? if not, in-app only for v1).
-- Disclaimer is informational; the "agree" checkbox is gated only on first pilot/client/org signup, not on every action.
+## Notes
+
+- WebODM/NodeODM is already opt-in via `WEBODM_URL` + `WEBODM_TOKEN` secrets. We'll keep the simulator as a fallback so demos still work; if you want to wire a real instance now, I'll prompt you to add those secrets after the plan is approved.
+- All client-side QA & estimation are heuristic — clearly labeled as estimates so users know what's authoritative once processing finishes.
