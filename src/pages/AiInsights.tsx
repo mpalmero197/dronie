@@ -115,8 +115,8 @@ export default function AiInsights() {
           .limit(50),
       ]);
       if (cancelled) return;
-      if (r) setReport(r as AiReport);
-      if (m) setMessages(m as AiMessage[]);
+      if (r) setReport(r as unknown as AiReport);
+      if (m) setMessages(m as unknown as AiMessage[]);
       setReportLoading(false);
     })();
     return () => { cancelled = true; };
