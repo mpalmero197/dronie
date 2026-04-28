@@ -555,86 +555,63 @@ export default function ProjectDetail() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left: Pipeline + Outputs */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Pipeline Steps */}
-            <div className="bg-card rounded-2xl border border-border p-5 space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="font-display font-700 text-foreground flex items-center gap-2">
-                  <Settings2 className="w-4 h-4 text-primary" />
-                  Processing Pipeline
-                </h2>
-                {isProcessing && (
-                  <span className="text-xs font-semibold text-accent flex items-center gap-1.5">
-                    <Loader2 className="w-3 h-3 animate-spin" /> {progress}%
-                  </span>
-                )}
-                {isComplete && (
-                  <span className="text-xs font-semibold text-primary flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3 h-3" /> Complete
-                  </span>
-                )}
-              </div>
+            {/* Live Pipeline */}
+            <LivePipeline
+              projectId={project.id}
+              initial={{
+                id: project.id,
+                status: project.status,
+                progress: project.progress ?? 0,
+                current_stage: (project.current_stage as string | null) ?? null,
+                stage_progress: project.stage_progress ?? null,
+                stage_started_at: project.stage_started_at ?? null,
+                eta_seconds: project.eta_seconds ?? null,
+                stage_log: (project.stage_log as any) ?? [],
+                outputs_urls: project.outputs_urls ?? null,
+              }}
+              canCancel
+              onCancel={cancelProcessing}
+              cancelling={cancelling}
+            />
 
-              {/* Overall progress bar */}
-              {(isProcessing || isComplete) && (
-                <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <div className={`h-full rounded-full transition-all duration-700 ${isComplete ? "bg-primary" : "bg-accent"}`} style={{ width: `${progress}%` }} />
-                </div>
-              )}
+            {/* Accuracy Report */}
+            {isComplete && project.accuracy_report && (
+              <AccuracyReport data={project.accuracy_report as AccuracyData} />
+            )}
 
-              <div className="space-y-2">
-                {PIPELINE_STEPS.map((step) => (
-                  <StepIndicator key={step.key} step={step} progress={progress} status={status} />
-                ))}
-              </div>
-            </div>
-
-            {/* Outputs */}
+            {/* Deliverables */}
             {isComplete && project.outputs && project.outputs.length > 0 && (
               <div className="bg-card rounded-2xl border border-border p-5 space-y-4">
                 <div className="flex items-center justify-between">
                   <h2 className="font-display font-700 text-foreground flex items-center gap-2">
                     <Package className="w-4 h-4 text-primary" />
-                    Output Files
+                    Deliverables
                   </h2>
                   <span className="text-xs text-muted-foreground">{project.outputs.length} files</span>
                 </div>
-                {(!project.outputs_urls || Object.keys(project.outputs_urls).length === 0 || project.outputs_urls.error) && (
-                  <div className="rounded-xl bg-accent/10 border border-accent/20 p-3 mb-2">
-                    <p className="text-xs text-accent font-medium">
-                      {project.outputs_urls?.error
-                        ? `⚠️ Processing error: ${project.outputs_urls.error}`
-                        : "🚧 Output files are not yet available for download."}
+                {project.outputs_urls?.error && (
+                  <div className="rounded-xl bg-destructive/10 border border-destructive/20 p-3">
+                    <p className="text-xs text-destructive font-medium">
+                      Processing error: {project.outputs_urls.error}
                     </p>
                   </div>
                 )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {project.outputs.map((name) => {
-                    const meta = OUTPUT_META[name] || { ext: "", desc: name, key: "" };
-                    const downloadUrl = project.outputs_urls?.[meta.key];
-                    const hasDownload = !!downloadUrl && !project.outputs_urls?.error;
+                    const meta = OUTPUT_META[name] || { ext: "", desc: name, key: "default" };
+                    const downloadUrl = project.outputs_urls?.[meta.key] as string | undefined;
+                    const previewUrl = meta.key === "orthomosaic" ? downloadUrl : undefined;
+                    const viewerHref = meta.key === "orthomosaic" ? `/viewer/${project.id}` : undefined;
                     return (
-                      <div key={name} className="flex items-center gap-3 bg-secondary/50 border border-border rounded-xl px-4 py-3">
-                        <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                          <FileType className="w-4 h-4 text-primary" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-foreground truncate">{name}</p>
-                          <p className="text-xs text-muted-foreground">{meta.desc}</p>
-                        </div>
-                        {hasDownload ? (
-                          <a
-                            href={downloadUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            download
-                            className="flex items-center gap-1 text-xs font-semibold text-primary hover:text-primary/80 transition-colors flex-shrink-0"
-                          >
-                            <Download className="w-3.5 h-3.5" /> Download
-                          </a>
-                        ) : (
-                          <span className="text-xs text-muted-foreground italic flex-shrink-0">—</span>
-                        )}
-                      </div>
+                      <DeliverableCard
+                        key={name}
+                        name={name}
+                        description={meta.desc}
+                        kind={meta.key as any}
+                        downloadUrl={project.outputs_urls?.error ? null : downloadUrl}
+                        previewUrl={previewUrl}
+                        viewerHref={viewerHref}
+                      />
                     );
                   })}
                 </div>
