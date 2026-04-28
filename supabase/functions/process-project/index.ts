@@ -597,13 +597,19 @@ async function runSimulatedProcessing(
       (f) => !f.name.startsWith(".") && /\.(jpg|jpeg|tiff|tif|png|dng)$/i.test(f.name)
     );
 
-    await updateProgress(serviceClient, projectId, 10);
+    await setProgress(serviceClient, projectId, 10, startedAt);
+    await pushLog(serviceClient, projectId, "alignment", `Found ${validImages.length} images`);
 
     // Extract EXIF from images (up to 50 for speed)
     const gpsPoints: Array<{ lat: number; lng: number; alt: number | null; camera: string | null; date: string | null }> = [];
 
     const imagesToParse = validImages.slice(0, 50);
     for (let i = 0; i < imagesToParse.length; i++) {
+      if (i % 10 === 0 && (await isCanceled(serviceClient, projectId))) {
+        await pushLog(serviceClient, projectId, "system", "Cancelled during alignment", "warn");
+        await markFailed(serviceClient, projectId, "canceled");
+        return;
+      }
       try {
         const { data: fileData } = await serviceClient.storage
           .from("drone-images")
@@ -620,10 +626,12 @@ async function runSimulatedProcessing(
 
       // Update progress during alignment phase (5-20%)
       const alignProg = 10 + Math.floor((i / imagesToParse.length) * 10);
-      await updateProgress(serviceClient, projectId, alignProg);
+      await setProgress(serviceClient, projectId, alignProg, startedAt);
     }
 
-    await updateProgress(serviceClient, projectId, 20);
+    await pushLog(serviceClient, projectId, "alignment", `Aligned ${gpsPoints.length} GPS-tagged frames`);
+    stageStarts.pointcloud = Date.now();
+    await setProgress(serviceClient, projectId, 22, startedAt, { stageStartTs: stageStarts.pointcloud });
     await sleep(1000);
 
     // Calculate bounding box
@@ -646,15 +654,28 @@ async function runSimulatedProcessing(
     const areaHa = Math.max(0.1, (latDist * lngDist) / 10000);
 
     // Step 2: Dense point cloud
-    await updateProgress(serviceClient, projectId, 42);
-    await sleep(2000);
+    await pushLog(serviceClient, projectId, "pointcloud", "Building dense multi-view stereo cloud");
+    await setProgress(serviceClient, projectId, 42, startedAt);
+    await sleep(1500);
+    if (await isCanceled(serviceClient, projectId)) { await markFailed(serviceClient, projectId, "canceled"); return; }
 
     // Step 3: Mesh generation
-    await updateProgress(serviceClient, projectId, 58);
-    await sleep(2000);
+    stageStarts.mesh = Date.now();
+    await setProgress(serviceClient, projectId, 48, startedAt, { stageStartTs: stageStarts.mesh });
+    await pushLog(serviceClient, projectId, "mesh", `Generating ${settings?.meshType || "2.5d"} mesh`);
+    await sleep(1500);
+    if (await isCanceled(serviceClient, projectId)) { await markFailed(serviceClient, projectId, "canceled"); return; }
+
+    // Step 3b: Texturing
+    stageStarts.texture = Date.now();
+    await setProgress(serviceClient, projectId, 62, startedAt, { stageStartTs: stageStarts.texture });
+    await pushLog(serviceClient, projectId, "texture", "Texturing surfaces");
+    await sleep(1200);
 
     // Step 4: Orthomosaic — generate placeholder
-    await updateProgress(serviceClient, projectId, 65);
+    stageStarts.ortho = Date.now();
+    await setProgress(serviceClient, projectId, 72, startedAt, { stageStartTs: stageStarts.ortho });
+    await pushLog(serviceClient, projectId, "ortho", "Compositing orthomosaic");
 
     // We generate a small PNG as orthomosaic placeholder
     // (A real one would be a massive GeoTIFF)
@@ -665,10 +686,14 @@ async function runSimulatedProcessing(
       upsert: true,
     });
 
-    await updateProgress(serviceClient, projectId, 74);
+    await setProgress(serviceClient, projectId, 82, startedAt);
     await sleep(1000);
+    if (await isCanceled(serviceClient, projectId)) { await markFailed(serviceClient, projectId, "canceled"); return; }
 
     // Step 5: DSM/DTM
+    stageStarts.dem = Date.now();
+    await setProgress(serviceClient, projectId, 88, startedAt, { stageStartTs: stageStarts.dem });
+    await pushLog(serviceClient, projectId, "dem", "Computing DSM & DTM rasters");
     const dsmContent = generateSampleDSM(bbox);
     const dsmPath = `${userId}/${projectId}/dsm.asc`;
     await serviceClient.storage.from("project-outputs").upload(dsmPath, new TextEncoder().encode(dsmContent), {
@@ -682,7 +707,7 @@ async function runSimulatedProcessing(
       upsert: true,
     });
 
-    await updateProgress(serviceClient, projectId, 88);
+    await setProgress(serviceClient, projectId, 92, startedAt);
     await sleep(1500);
 
     // Step 6: Contour extraction
@@ -694,7 +719,9 @@ async function runSimulatedProcessing(
       upsert: true,
     });
 
-    await updateProgress(serviceClient, projectId, 95);
+    stageStarts.export = Date.now();
+    await setProgress(serviceClient, projectId, 96, startedAt, { stageStartTs: stageStarts.export });
+    await pushLog(serviceClient, projectId, "export", "Packaging deliverables");
     await sleep(1000);
 
     // Step 7: Final export — generate report PDF
@@ -717,19 +744,36 @@ async function runSimulatedProcessing(
       report: `${baseUrl}/${reportPath}`,
     };
 
+    // Synthesize a plausible accuracy report for the simulator
+    const targetGsd = (settings?.targetGsdCm as number | undefined) ?? 3;
+    const accuracyReport = {
+      gsd_cm: parseFloat((targetGsd + (Math.random() - 0.5) * 0.6).toFixed(2)),
+      rmse_m: parseFloat((0.025 + Math.random() * 0.04).toFixed(3)),
+      reprojection_error_px: parseFloat((0.4 + Math.random() * 0.4).toFixed(2)),
+      registered_images: validImages.length,
+      total_images: validImages.length,
+      tie_points: 12000 + Math.floor(Math.random() * 80000),
+    };
+
+    await pushLog(serviceClient, projectId, "export", "Pipeline complete");
     await serviceClient
       .from("projects")
       .update({
         status: "complete",
         progress: 100,
+        current_stage: "export",
+        stage_progress: 100,
+        eta_seconds: 0,
         area_ha: parseFloat(areaHa.toFixed(1)),
         outputs: ["Orthomosaic", "DSM", "DTM", "Contours GeoJSON", "Flight Report PDF"],
         outputs_urls: outputsUrls,
         gps_points: gpsPoints.length > 0 ? gpsPoints : null,
+        accuracy_report: accuracyReport,
       })
       .eq("id", projectId);
   } catch (err: any) {
     console.error("Simulated processing failed:", err);
+    await pushLog(serviceClient, projectId, "system", err.message || "Processing failed", "error");
     await markFailed(serviceClient, projectId, err.message || "Processing failed");
   }
 }
