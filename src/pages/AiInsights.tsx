@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
-  ArrowLeft, FileText, Loader2, Layers, Eye, Sparkles, FolderOpen,
+  ArrowLeft, FileText, Loader2, Sparkles, FolderOpen, Eye, RefreshCw,
+  AlertTriangle, CheckCircle2, Lightbulb, Send, MessageSquare, Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -16,6 +18,7 @@ import jsPDF from "jspdf";
 interface ProjectRow {
   id: string;
   name: string;
+  description: string | null;
   status: string;
   area_ha: number | null;
   image_count: number;
@@ -24,6 +27,30 @@ interface ProjectRow {
   created_at: string;
 }
 
+interface AiReport {
+  id: string;
+  project_id: string;
+  model: string;
+  summary: string;
+  features: { title: string; detail: string }[];
+  risks: { title: string; detail: string; severity?: "low" | "medium" | "high" }[];
+  recommendations: { title: string; detail: string }[];
+  created_at: string;
+}
+
+interface AiMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  created_at: string;
+}
+
+const MODEL_OPTIONS = [
+  { value: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash · fast" },
+  { value: "google/gemini-2.5-pro", label: "Gemini 2.5 Pro · deep reasoning" },
+  { value: "openai/gpt-5-mini", label: "GPT-5 Mini · balanced" },
+];
+
 export default function AiInsights() {
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
@@ -31,16 +58,26 @@ export default function AiInsights() {
 
   const [projects, setProjects] = useState<ProjectRow[]>([]);
   const [projectId, setProjectId] = useState<string>("");
+  const [model, setModel] = useState<string>(MODEL_OPTIONS[0].value);
   const [loading, setLoading] = useState(true);
+
+  const [report, setReport] = useState<AiReport | null>(null);
+  const [reportLoading, setReportLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
 
+  const [messages, setMessages] = useState<AiMessage[]>([]);
+  const [question, setQuestion] = useState("");
+  const [asking, setAsking] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // Load completed projects
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
-    async function load() {
+    (async () => {
       const { data } = await supabase
         .from("projects")
-        .select("id, name, status, area_ha, image_count, outputs, outputs_urls, created_at")
+        .select("id, name, description, status, area_ha, image_count, outputs, outputs_urls, created_at")
         .eq("user_id", user.id)
         .eq("status", "complete")
         .order("created_at", { ascending: false })
@@ -50,73 +87,185 @@ export default function AiInsights() {
       setProjects(rows);
       if (rows[0]) setProjectId(rows[0].id);
       setLoading(false);
-    }
-    load();
+    })();
     return () => { cancelled = true; };
   }, [user]);
 
-  const project = useMemo(() => projects.find((p) => p.id === projectId) ?? null, [projects, projectId]);
+  // Load latest report + chat history when project changes
+  useEffect(() => {
+    if (!projectId || !user) return;
+    let cancelled = false;
+    setReportLoading(true);
+    setReport(null);
+    setMessages([]);
+    (async () => {
+      const [{ data: r }, { data: m }] = await Promise.all([
+        supabase
+          .from("project_ai_reports")
+          .select("*")
+          .eq("project_id", projectId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        supabase
+          .from("project_ai_messages")
+          .select("id, role, content, created_at")
+          .eq("project_id", projectId)
+          .order("created_at", { ascending: true })
+          .limit(50),
+      ]);
+      if (cancelled) return;
+      if (r) setReport(r as unknown as AiReport);
+      if (m) setMessages(m as unknown as AiMessage[]);
+      setReportLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [projectId, user]);
 
-  const metrics = useMemo(() => {
-    if (!project) return [] as { label: string; value: string; unit?: string }[];
-    const m: { label: string; value: string; unit?: string }[] = [
-      { label: "Image count", value: project.image_count.toLocaleString(), unit: "imgs" },
-    ];
-    if (project.area_ha != null) m.push({ label: "Surveyed area", value: Number(project.area_ha).toFixed(2), unit: "ha" });
-    if (project.outputs?.length) m.push({ label: "Output deliverables", value: String(project.outputs.length), unit: "files" });
-    return m;
-  }, [project]);
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages.length]);
 
-  async function generateReport() {
+  const project = useMemo(
+    () => projects.find((p) => p.id === projectId) ?? null,
+    [projects, projectId],
+  );
+
+  async function generate() {
     if (!project) return;
     setGenerating(true);
     try {
-      const doc = new jsPDF({ unit: "mm", format: "a4" });
-      const pad = 18;
-      let y = pad;
-      doc.setFillColor(36, 90, 60);
-      doc.rect(0, 0, 210, 22, "F");
-      doc.setTextColor(255, 255, 255);
-      doc.setFont("helvetica", "bold").setFontSize(16);
-      doc.text("Dronie · Site Insights Report", pad, 14);
-      doc.setFont("helvetica", "normal").setFontSize(9);
-      doc.text(new Date().toLocaleString(), 210 - pad, 14, { align: "right" });
-      y = 32;
-      doc.setTextColor(20, 20, 20);
-      doc.setFont("helvetica", "bold").setFontSize(12);
-      doc.text(project.name, pad, y); y += 6;
-      doc.setFont("helvetica", "normal").setFontSize(10);
-      doc.text(`Project ID: ${project.id}`, pad, y); y += 5;
-      doc.text(`Captured: ${new Date(project.created_at).toLocaleDateString()}`, pad, y); y += 10;
-
-      doc.setFont("helvetica", "bold").setFontSize(12);
-      doc.text("Key metrics", pad, y); y += 4;
-      doc.setDrawColor(220);
-      doc.line(pad, y, 210 - pad, y); y += 6;
-      doc.setFontSize(10);
-      metrics.forEach((m) => {
-        doc.setFont("helvetica", "bold");
-        doc.text(`${m.value}${m.unit ? " " + m.unit : ""}`, pad, y);
-        doc.setFont("helvetica", "normal");
-        doc.text(m.label, pad + 60, y);
-        y += 7;
+      const { data, error } = await supabase.functions.invoke("ai-site-insights", {
+        body: { mode: "analyze", project_id: project.id, model },
       });
-      y += 6;
-
-      if (project.outputs?.length) {
-        doc.setFont("helvetica", "bold").setFontSize(12);
-        doc.text("Generated deliverables", pad, y); y += 6;
-        doc.setFont("helvetica", "normal").setFontSize(10);
-        project.outputs.forEach((o) => {
-          doc.text(`• ${o}`, pad, y); y += 5;
-        });
-      }
-
-      doc.save(`dronie-${project.name.replace(/\s+/g, "-").toLowerCase()}-report-${Date.now()}.pdf`);
-      toast({ title: "Report generated", description: "PDF downloaded to your device." });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      setReport((data as any).report as AiReport);
+      toast({ title: "Analysis ready", description: "Generated by " + model });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Failed to generate report";
+      toast({ title: "Could not generate analysis", description: msg, variant: "destructive" });
     } finally {
       setGenerating(false);
     }
+  }
+
+  async function ask() {
+    const q = question.trim();
+    if (!q || !project || asking) return;
+    setAsking(true);
+    const optimistic: AiMessage = {
+      id: `tmp-${Date.now()}`,
+      role: "user",
+      content: q,
+      created_at: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, optimistic]);
+    setQuestion("");
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-site-insights", {
+        body: { mode: "chat", project_id: project.id, model, question: q },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      const answer: AiMessage = {
+        id: `a-${Date.now()}`,
+        role: "assistant",
+        content: (data as any).answer ?? "(no answer)",
+        created_at: new Date().toISOString(),
+      };
+      setMessages((prev) => [...prev, answer]);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Failed";
+      toast({ title: "Chat failed", description: msg, variant: "destructive" });
+      setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
+      setQuestion(q);
+    } finally {
+      setAsking(false);
+    }
+  }
+
+  async function clearChat() {
+    if (!project) return;
+    const { error } = await supabase
+      .from("project_ai_messages")
+      .delete()
+      .eq("project_id", project.id);
+    if (error) {
+      toast({ title: "Could not clear chat", description: error.message, variant: "destructive" });
+      return;
+    }
+    setMessages([]);
+  }
+
+  function exportPdf() {
+    if (!project || !report) return;
+    const doc = new jsPDF({ unit: "mm", format: "a4" });
+    const pad = 18;
+    const W = 210;
+    let y = pad;
+
+    doc.setFillColor(36, 90, 60);
+    doc.rect(0, 0, W, 22, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold").setFontSize(16);
+    doc.text("Dronie · AI Site Analysis", pad, 14);
+    doc.setFont("helvetica", "normal").setFontSize(9);
+    doc.text(new Date().toLocaleString(), W - pad, 14, { align: "right" });
+    y = 30;
+
+    doc.setTextColor(20, 20, 20);
+    doc.setFont("helvetica", "bold").setFontSize(13);
+    doc.text(project.name, pad, y); y += 6;
+    doc.setFont("helvetica", "normal").setFontSize(9);
+    doc.setTextColor(110);
+    doc.text(`Captured ${new Date(project.created_at).toLocaleDateString()}  ·  ${project.image_count} images${project.area_ha ? `  ·  ${Number(project.area_ha).toFixed(2)} ha` : ""}  ·  Model: ${report.model}`, pad, y);
+    y += 8;
+    doc.setTextColor(20);
+
+    const writeSection = (title: string, body: () => void) => {
+      if (y > 260) { doc.addPage(); y = pad; }
+      doc.setFont("helvetica", "bold").setFontSize(11);
+      doc.text(title, pad, y); y += 2;
+      doc.setDrawColor(220);
+      doc.line(pad, y, W - pad, y); y += 5;
+      doc.setFont("helvetica", "normal").setFontSize(10);
+      body();
+      y += 4;
+    };
+
+    writeSection("Executive summary", () => {
+      const lines = doc.splitTextToSize(report.summary, W - 2 * pad);
+      lines.forEach((l: string) => {
+        if (y > 280) { doc.addPage(); y = pad; }
+        doc.text(l, pad, y); y += 5;
+      });
+    });
+
+    const writeList = (title: string, items: { title: string; detail: string; severity?: string }[]) => {
+      if (!items.length) return;
+      writeSection(title, () => {
+        items.forEach((it) => {
+          if (y > 270) { doc.addPage(); y = pad; }
+          doc.setFont("helvetica", "bold");
+          doc.text(`• ${it.title}${it.severity ? `  [${it.severity.toUpperCase()}]` : ""}`, pad, y); y += 5;
+          doc.setFont("helvetica", "normal");
+          const dl = doc.splitTextToSize(it.detail, W - 2 * pad - 4);
+          dl.forEach((l: string) => {
+            if (y > 280) { doc.addPage(); y = pad; }
+            doc.text(l, pad + 4, y); y += 5;
+          });
+          y += 1;
+        });
+      });
+    };
+
+    writeList("Observed features", report.features);
+    writeList("Risks & anomalies", report.risks);
+    writeList("Recommended next actions", report.recommendations);
+
+    doc.save(`dronie-${project.name.replace(/\s+/g, "-").toLowerCase()}-ai-report-${Date.now()}.pdf`);
+    toast({ title: "Report exported", description: "PDF downloaded." });
   }
 
   if (authLoading) return <Center><Loader2 className="w-5 h-5 animate-spin mr-2" /> Loading…</Center>;
@@ -131,13 +280,17 @@ export default function AiInsights() {
               <ArrowLeft className="w-5 h-5" />
             </Link>
             <div className="min-w-0">
-              <h1 className="text-base sm:text-lg font-display font-700 truncate">AI Insights · Site Analysis</h1>
-              <p className="text-xs text-muted-foreground truncate">Per-project metrics · downloadable PDF reports</p>
+              <h1 className="text-base sm:text-lg font-display font-700 truncate">AI Site Analysis</h1>
+              <p className="text-xs text-muted-foreground truncate hidden sm:block">
+                Multimodal AI analysis of your survey deliverables
+              </p>
             </div>
           </div>
-          <Button size="sm" onClick={generateReport} disabled={generating || !project} className="gap-1.5">
-            <FileText className="w-4 h-4" /> {generating ? "Generating…" : "Export PDF"}
-          </Button>
+          {report && (
+            <Button size="sm" variant="outline" onClick={exportPdf} className="gap-1.5 shrink-0">
+              <FileText className="w-4 h-4" /> <span className="hidden sm:inline">Export</span> PDF
+            </Button>
+          )}
         </div>
       </header>
 
@@ -147,78 +300,204 @@ export default function AiInsights() {
         ) : projects.length === 0 ? (
           <EmptyState
             title="No completed projects yet"
-            description="Insights become available once a project finishes processing. Upload imagery from the Dashboard to get started."
+            description="AI insights become available once a project finishes processing. Upload imagery from the Dashboard to get started."
             cta={<Link to="/dashboard"><Button size="sm" className="gap-2"><FolderOpen className="w-4 h-4" /> Open Dashboard</Button></Link>}
           />
         ) : (
           <div className="space-y-5">
+            {/* Controls */}
             <div className="rounded-2xl border border-border bg-card p-4 flex flex-wrap items-center gap-3">
-              <Sparkles className="w-4 h-4 text-primary" />
-              <span className="text-sm font-semibold">Project</span>
+              <Sparkles className="w-4 h-4 text-primary shrink-0" />
+              <span className="text-sm font-semibold shrink-0">Project</span>
               <Select value={projectId} onValueChange={setProjectId}>
-                <SelectTrigger className="w-full sm:w-80"><SelectValue placeholder="Select project" /></SelectTrigger>
+                <SelectTrigger className="w-full sm:w-72">
+                  <SelectValue placeholder="Select project" />
+                </SelectTrigger>
                 <SelectContent>
                   {projects.map((p) => (
                     <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {project && (
-                <Link to={`/viewer/${project.id}`} className="ml-auto">
-                  <Button size="sm" variant="outline" className="gap-1.5"><Eye className="w-4 h-4" /> Open in viewer</Button>
-                </Link>
-              )}
+
+              <Select value={model} onValueChange={setModel}>
+                <SelectTrigger className="w-full sm:w-60">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {MODEL_OPTIONS.map((m) => (
+                    <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <div className="flex items-center gap-2 sm:ml-auto">
+                {project && (
+                  <Link to={`/viewer/${project.id}`}>
+                    <Button size="sm" variant="ghost" className="gap-1.5">
+                      <Eye className="w-4 h-4" /> Viewer
+                    </Button>
+                  </Link>
+                )}
+                <Button size="sm" onClick={generate} disabled={generating || !project} className="gap-1.5">
+                  {generating
+                    ? <><Loader2 className="w-4 h-4 animate-spin" /> Analyzing…</>
+                    : report
+                      ? <><RefreshCw className="w-4 h-4" /> Regenerate</>
+                      : <><Sparkles className="w-4 h-4" /> Analyze with AI</>}
+                </Button>
+              </div>
             </div>
 
-            {project && (
+            {/* Report */}
+            {reportLoading ? (
+              <Center><Loader2 className="w-5 h-5 animate-spin mr-2" /> Loading analysis…</Center>
+            ) : !report ? (
+              <div className="rounded-2xl border border-dashed border-border bg-card/50 px-6 py-16 text-center">
+                <Sparkles className="w-6 h-6 text-primary mx-auto mb-3" />
+                <h2 className="font-display font-700 text-lg">No analysis yet</h2>
+                <p className="text-sm text-muted-foreground mt-1.5 max-w-md mx-auto">
+                  Click <span className="font-semibold">Analyze with AI</span> to generate a structured site report
+                  including observed features, risks, and recommended next actions.
+                </p>
+              </div>
+            ) : (
               <>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {metrics.map((m) => (
-                    <div key={m.label} className="rounded-xl border border-border bg-card p-3">
-                      <p className="text-[11px] text-muted-foreground">{m.label}</p>
-                      <p className="font-display font-700 text-xl mt-1">
-                        {m.value}
-                        {m.unit && <span className="text-xs text-muted-foreground ml-1 font-sans font-normal">{m.unit}</span>}
-                      </p>
+                <div className="rounded-2xl border border-border bg-card p-5">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                      <Sparkles className="w-4 h-4 text-primary" />
                     </div>
-                  ))}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h2 className="font-display font-700 text-lg">Executive summary</h2>
+                        <Badge variant="outline" className="text-[10px]">{report.model}</Badge>
+                        <span className="text-[11px] text-muted-foreground">
+                          {new Date(report.created_at).toLocaleString()}
+                        </span>
+                      </div>
+                      <p className="text-sm text-foreground/90 mt-2 leading-relaxed">{report.summary}</p>
+                    </div>
+                  </div>
                 </div>
 
+                <div className="grid gap-4 lg:grid-cols-3">
+                  <Section title="Observed features" icon={CheckCircle2} iconClass="text-primary"
+                    items={report.features.map((f) => ({ title: f.title, detail: f.detail }))}
+                    empty="No notable features identified." />
+                  <Section title="Risks & anomalies" icon={AlertTriangle} iconClass="text-amber-500"
+                    items={report.risks.map((r) => ({ title: r.title, detail: r.detail, badge: r.severity }))}
+                    empty="No significant risks detected." />
+                  <Section title="Next actions" icon={Lightbulb} iconClass="text-sky-500"
+                    items={report.recommendations.map((r) => ({ title: r.title, detail: r.detail }))}
+                    empty="No recommendations." />
+                </div>
+
+                {/* Q&A */}
                 <div className="rounded-2xl border border-border bg-card overflow-hidden">
                   <div className="px-4 py-3 border-b border-border flex items-center gap-2">
-                    <Layers className="w-4 h-4 text-primary" />
-                    <h2 className="font-semibold text-sm">Deliverables</h2>
-                    <Badge variant="outline" className="text-[10px] ml-auto">{project.outputs?.length ?? 0}</Badge>
+                    <MessageSquare className="w-4 h-4 text-primary" />
+                    <h2 className="font-semibold text-sm">Ask follow-up questions</h2>
+                    {messages.length > 0 && (
+                      <Button size="sm" variant="ghost" onClick={clearChat} className="ml-auto h-7 px-2 text-xs gap-1">
+                        <Trash2 className="w-3 h-3" /> Clear
+                      </Button>
+                    )}
                   </div>
-                  {!project.outputs?.length ? (
-                    <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-                      Processing did not record any output files for this project yet.
-                    </div>
-                  ) : (
-                    <ul className="divide-y divide-border">
-                      {project.outputs.map((name) => {
-                        const url = project.outputs_urls?.[name];
-                        return (
-                          <li key={name} className="px-4 py-3 flex items-center justify-between gap-3">
-                            <span className="text-sm font-mono truncate">{name}</span>
-                            {url ? (
-                              <a href={url} target="_blank" rel="noreferrer" className="text-xs text-primary underline">
-                                Download
-                              </a>
-                            ) : (
-                              <span className="text-[11px] text-muted-foreground">No URL</span>
-                            )}
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  )}
+
+                  <div className="px-4 py-4 space-y-3 max-h-[420px] overflow-y-auto">
+                    {messages.length === 0 ? (
+                      <p className="text-xs text-muted-foreground text-center py-4">
+                        Ask anything about this site — vegetation health, suspected damage, suggested re-flights, etc.
+                      </p>
+                    ) : (
+                      messages.map((m) => (
+                        <div key={m.id} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                          <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap ${
+                            m.role === "user"
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-secondary text-foreground"
+                          }`}>
+                            {m.content}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                    <div ref={chatEndRef} />
+                  </div>
+
+                  <div className="border-t border-border p-3 flex gap-2">
+                    <Textarea
+                      value={question}
+                      onChange={(e) => setQuestion(e.target.value)}
+                      onKeyDown={(e) => {
+                        if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                          e.preventDefault();
+                          ask();
+                        }
+                      }}
+                      placeholder="Ask a follow-up about this project… (Cmd/Ctrl+Enter to send)"
+                      rows={2}
+                      className="resize-none text-sm"
+                      disabled={asking}
+                    />
+                    <Button onClick={ask} disabled={asking || !question.trim()} className="gap-1.5 shrink-0">
+                      {asking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                      <span className="hidden sm:inline">Send</span>
+                    </Button>
+                  </div>
                 </div>
               </>
             )}
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function Section({
+  title, icon: Icon, iconClass, items, empty,
+}: {
+  title: string;
+  icon: React.ComponentType<{ className?: string }>;
+  iconClass: string;
+  items: { title: string; detail: string; badge?: string }[];
+  empty: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-border bg-card overflow-hidden flex flex-col">
+      <div className="px-4 py-3 border-b border-border flex items-center gap-2">
+        <Icon className={`w-4 h-4 ${iconClass}`} />
+        <h3 className="font-semibold text-sm">{title}</h3>
+        <Badge variant="outline" className="text-[10px] ml-auto">{items.length}</Badge>
+      </div>
+      {items.length === 0 ? (
+        <div className="px-4 py-6 text-center text-xs text-muted-foreground">{empty}</div>
+      ) : (
+        <ul className="divide-y divide-border">
+          {items.map((it, i) => (
+            <li key={i} className="px-4 py-3">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-semibold truncate">{it.title}</p>
+                {it.badge && (
+                  <Badge
+                    variant="outline"
+                    className={`text-[10px] uppercase ${
+                      it.badge === "high" ? "border-destructive text-destructive" :
+                      it.badge === "medium" ? "border-amber-500 text-amber-600" :
+                      "border-border text-muted-foreground"
+                    }`}
+                  >
+                    {it.badge}
+                  </Badge>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{it.detail}</p>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
