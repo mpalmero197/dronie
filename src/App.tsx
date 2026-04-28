@@ -36,6 +36,7 @@ import MarketplaceNew from "./pages/MarketplaceNew.tsx";
 import MarketplaceDetail from "./pages/MarketplaceDetail.tsx";
 import MarketplaceInbox from "./pages/MarketplaceInbox.tsx";
 import VerticalLanding from "./pages/solutions/VerticalLanding.tsx";
+import PilotSignup from "./pages/PilotSignup.tsx";
 
 const queryClient = new QueryClient();
 
@@ -80,6 +81,7 @@ const App = () => (
             <Route path="/marketplace/inbox" element={<MarketplaceInbox />} />
             <Route path="/marketplace/:id" element={<MarketplaceDetail />} />
             <Route path="/solutions/:vertical" element={<VerticalLanding />} />
+            <Route path="/pilots/join" element={<PilotSignup />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

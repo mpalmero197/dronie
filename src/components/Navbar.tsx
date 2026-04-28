@@ -86,6 +86,9 @@ export default function Navbar() {
           <Link to="/marketplace" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
             Marketplace
           </Link>
+          <Link to="/pilots/join" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+            For Pilots
+          </Link>
         </nav>
 
         {/* CTA */}
@@ -156,6 +159,9 @@ export default function Navbar() {
         )}
           <Link to="/marketplace" onClick={() => setOpen(false)} className="block py-2 text-sm font-medium text-muted-foreground hover:text-foreground">
             <span className="inline-flex items-center gap-2"><Briefcase className="w-4 h-4" />Marketplace</span>
+          </Link>
+          <Link to="/pilots/join" onClick={() => setOpen(false)} className="block py-2 text-sm font-medium text-muted-foreground hover:text-foreground">
+            For Pilots
           </Link>
           <div className="pt-2 border-t border-border">
             <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1">Solutions</p>
