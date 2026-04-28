@@ -37,6 +37,8 @@ interface CertRow {
   issued_at: string;
   expires_at: string;
   notes: string | null;
+  recert_required?: boolean;
+  recert_confirmed_at?: string | null;
 }
 interface JobRow { id: string; mission_type: string; started_at: string; ended_at: string | null; }
 interface DroneRow { id: string; name: string; }
@@ -69,6 +71,14 @@ export default function Compliance() {
         supabase.from("drones").select("id, name"),
         supabase.from("drone_maintenance").select("id, drone_id, task, due_date, cycles_left, health_pct, status").order("due_date", { ascending: true }),
         supabase.from("pilot_certifications").select("id, cert_type, issued_at, expires_at, notes").eq("user_id", user.id).order("expires_at", { ascending: true }),
+    ]);
+    // Note: select string above is unchanged — re-fetch with full columns below
+    const certsFull = await supabase
+      .from("pilot_certifications")
+      .select("id, cert_type, issued_at, expires_at, notes, recert_required, recert_confirmed_at")
+      .eq("user_id", user.id)
+      .order("expires_at", { ascending: true });
+    const _cleanup = ([
       ]);
       if (cancelled) return;
       setLogs((logsRes.data ?? []) as FlightLogRow[]);
