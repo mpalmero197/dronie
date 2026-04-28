@@ -43,9 +43,24 @@ const cols: { title: string; links: FooterLink[] }[] = [
       { label: "Sample Gallery", href: "/gallery" },
       { label: "Mission Planner", href: "/plan" },
       { label: "Saved Missions", href: "/missions" },
-      { label: "Reality Capture", href: "/reality" },
-      { label: "Gaussian Splats", href: "/splats" },
       { label: "Install Apps", href: "/install" },
+      { label: "📖 Field Guide on Amazon", href: "https://amzn.to/4cCG9m6", external: true },
+    ],
+  },
+  {
+    title: "Rules & Regulations",
+    links: [
+      { label: "FAA Part 107 (USA)", href: "https://www.faa.gov/uas/commercial_operators", external: true },
+      { label: "FAA DroneZone", href: "https://faadronezone-access.faa.gov/", external: true },
+      { label: "Remote ID (Part 89)", href: "https://www.faa.gov/uas/getting_started/remote_id", external: true },
+      { label: "LAANC Authorization", href: "https://www.faa.gov/uas/getting_started/laanc", external: true },
+      { label: "B4UFLY (FAA App)", href: "https://www.faa.gov/uas/getting_started/b4ufly", external: true },
+      { label: "EASA Drones (EU)", href: "https://www.easa.europa.eu/en/domains/civil-drones", external: true },
+      { label: "UK CAA Drone Code", href: "https://register-drones.caa.co.uk/drone-code", external: true },
+      { label: "Transport Canada RPAS", href: "https://tc.canada.ca/en/aviation/drone-safety", external: true },
+      { label: "CASA (Australia)", href: "https://www.casa.gov.au/drones", external: true },
+      { label: "TFR Lookup", href: "https://tfr.faa.gov/tfr2/list.html", external: true },
+      { label: "Aviation Weather", href: "https://www.aviationweather.gov/", external: true },
     ],
   },
   {
@@ -63,7 +78,7 @@ export default function FooterSection() {
   return (
     <footer className="bg-foreground text-primary-foreground/80">
       <div className="container mx-auto px-6 py-16">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-10 mb-12">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-10 mb-12">
           {/* Brand */}
           <div className="col-span-2 md:col-span-3 lg:col-span-1 space-y-4">
             <div className="flex items-center gap-2.5">
@@ -86,12 +101,23 @@ export default function FooterSection() {
               <ul className="space-y-2.5">
                 {col.links.map((l) => (
                   <li key={l.label}>
-                    <Link
-                      to={l.href}
-                      className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors"
-                    >
-                      {l.label}
-                    </Link>
+                    {l.external ? (
+                      <a
+                        href={l.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors"
+                      >
+                        {l.label}
+                      </a>
+                    ) : (
+                      <Link
+                        to={l.href}
+                        className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors"
+                      >
+                        {l.label}
+                      </Link>
+                    )}
                   </li>
                 ))}
               </ul>
