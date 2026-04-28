@@ -136,9 +136,9 @@ function VerificationCard({
       )}
 
       {/* FAA Airmen Registry lookup — verify Remote Pilot (Part 107) certificate */}
-      <div className="rounded-lg border border-sky/30 bg-sky/5 p-3 space-y-2">
+      <div className="rounded-lg border border-accent/30 bg-accent/5 p-3 space-y-2">
         <div className="flex items-start gap-2">
-          <Plane className="w-4 h-4 text-sky mt-0.5 flex-shrink-0" />
+          <Plane className="w-4 h-4 text-accent mt-0.5 flex-shrink-0" />
           <div className="min-w-0 flex-1 text-sm">
             <p className="font-semibold text-foreground">Verify with FAA Airmen Registry</p>
             <p className="text-xs text-muted-foreground">
