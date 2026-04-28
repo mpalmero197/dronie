@@ -806,6 +806,88 @@ export type Database = {
         }
         Relationships: []
       }
+      project_ai_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          project_id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          project_id: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          project_id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_ai_messages_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_ai_reports: {
+        Row: {
+          created_at: string
+          features: Json
+          id: string
+          model: string
+          project_id: string
+          raw: Json | null
+          recommendations: Json
+          risks: Json
+          summary: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          features?: Json
+          id?: string
+          model?: string
+          project_id: string
+          raw?: Json | null
+          recommendations?: Json
+          risks?: Json
+          summary: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          features?: Json
+          id?: string
+          model?: string
+          project_id?: string
+          raw?: Json | null
+          recommendations?: Json
+          risks?: Json
+          summary?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_ai_reports_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           area_ha: number | null
