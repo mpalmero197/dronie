@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Loader2, Plane, MapPin, Briefcase, Shield, ShieldCheck, ShieldAlert, Clock } from "lucide-react";
+import { ArrowLeft, Loader2, Plane, MapPin, Briefcase } from "lucide-react";
 import Navbar from "@/components/Navbar";
+import PilotVerificationBanner from "@/components/PilotVerificationBanner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,7 +22,6 @@ import {
 } from "@/lib/pilots";
 import { jitterCoord } from "@/lib/jitter";
 import LiabilityNotice from "@/components/LiabilityNotice";
-import { VERIFICATION_STATUS_LABELS, type VerificationStatus } from "@/lib/verification";
 
 const VERTICAL_KEYS = Object.keys(VERTICAL_LABELS).filter((k) => k !== "other") as IndustryVertical[];
 
@@ -59,7 +59,6 @@ export default function PilotSignup() {
   const [showOnMap, setShowOnMap] = useState(true);
   const [locationPrivacy, setLocationPrivacy] = useState(true);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
-  const [verificationStatus, setVerificationStatus] = useState<VerificationStatus>("unverified");
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/auth");
@@ -92,7 +91,6 @@ export default function PilotSignup() {
           setShowOnMap(p.show_on_map);
           setLocationPrivacy(p.location_privacy);
           setAcceptedTerms(!!p.accepted_terms_at);
-          setVerificationStatus(((p as any).verification_status ?? "unverified") as VerificationStatus);
         }
       })
       .catch(() => {})
@@ -233,48 +231,7 @@ export default function PilotSignup() {
           </div>
         </div>
 
-        {existing && (
-          <div
-            className={`rounded-2xl border p-4 mb-6 flex flex-wrap items-start gap-3 ${
-              verificationStatus === "verified"
-                ? "bg-primary/5 border-primary/20"
-                : verificationStatus === "rejected"
-                ? "bg-destructive/5 border-destructive/20"
-                : verificationStatus === "pending"
-                ? "bg-highlight/5 border-highlight/20"
-                : "bg-muted/40 border-border"
-            }`}
-          >
-            {verificationStatus === "verified" ? (
-              <ShieldCheck className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-            ) : verificationStatus === "rejected" ? (
-              <ShieldAlert className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
-            ) : verificationStatus === "pending" ? (
-              <Clock className="w-5 h-5 text-highlight flex-shrink-0 mt-0.5" />
-            ) : (
-              <Shield className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
-            )}
-            <div className="min-w-0 flex-1">
-              <p className="font-semibold text-foreground">
-                Identity verification: {VERIFICATION_STATUS_LABELS[verificationStatus]}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {verificationStatus === "verified"
-                  ? "Your verified badge is shown to clients on the marketplace."
-                  : verificationStatus === "pending"
-                  ? "An admin is reviewing your submission. You'll be notified once approved."
-                  : verificationStatus === "rejected"
-                  ? "Your last submission wasn't approved. Update and resubmit to earn your badge."
-                  : "Get a verified badge so clients can trust your profile faster."}
-              </p>
-            </div>
-            <Button asChild size="sm" variant={verificationStatus === "verified" ? "outline" : "default"}>
-              <Link to="/pilots/verify">
-                {verificationStatus === "unverified" ? "Start verification" : "Manage verification"}
-              </Link>
-            </Button>
-          </div>
-        )}
+        {existing && <PilotVerificationBanner className="mb-6" />}
 
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* About */}
