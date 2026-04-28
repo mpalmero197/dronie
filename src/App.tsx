@@ -31,6 +31,11 @@ import Compliance from "./pages/Compliance.tsx";
 import GaussianSplats from "./pages/GaussianSplats.tsx";
 import PortfolioStudio from "./pages/PortfolioStudio.tsx";
 import PublicPortfolio from "./pages/PublicPortfolio.tsx";
+import Marketplace from "./pages/Marketplace.tsx";
+import MarketplaceNew from "./pages/MarketplaceNew.tsx";
+import MarketplaceDetail from "./pages/MarketplaceDetail.tsx";
+import MarketplaceInbox from "./pages/MarketplaceInbox.tsx";
+import VerticalLanding from "./pages/solutions/VerticalLanding.tsx";
 
 const queryClient = new QueryClient();
 
@@ -70,6 +75,11 @@ const App = () => (
             <Route path="/u/:username/photos" element={<PublicPortfolio mode="photos" />} />
             <Route path="/u/:username/videos" element={<PublicPortfolio mode="videos" />} />
             <Route path="/u/:username/album/:slug" element={<PublicPortfolio mode="album" />} />
+            <Route path="/marketplace" element={<Marketplace />} />
+            <Route path="/marketplace/new" element={<MarketplaceNew />} />
+            <Route path="/marketplace/inbox" element={<MarketplaceInbox />} />
+            <Route path="/marketplace/:id" element={<MarketplaceDetail />} />
+            <Route path="/solutions/:vertical" element={<VerticalLanding />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
