@@ -27,16 +27,33 @@ interface PublicPilot {
   part_107: boolean;
   insured: boolean;
   portfolio_url: string | null;
+  avatar_url: string | null;
 }
 
-const pilotIcon = L.divIcon({
-  html: `<div style="background:hsl(var(--primary));width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,.3);">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg>
-  </div>`,
-  className: "",
-  iconSize: [28, 28],
-  iconAnchor: [14, 14],
-});
+function escapeHtml(s: string) {
+  return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+}
+
+function makePilotIcon(p: PublicPilot) {
+  const size = 44;
+  const initials = (p.display_name || "?")
+    .split(/\s+/)
+    .map((w) => w[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+  const inner = p.avatar_url
+    ? `<img src="${escapeHtml(p.avatar_url)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.style.display='none';this.parentElement.querySelector('.fallback').style.display='flex';" />
+       <div class="fallback" style="display:none;width:100%;height:100%;align-items:center;justify-content:center;background:hsl(var(--primary));color:#fff;font-weight:700;font-size:13px;">${escapeHtml(initials)}</div>`
+    : `<div style="display:flex;width:100%;height:100%;align-items:center;justify-content:center;background:hsl(var(--primary));color:#fff;font-weight:700;font-size:13px;">${escapeHtml(initials)}</div>`;
+  return L.divIcon({
+    html: `<div style="width:${size}px;height:${size}px;border-radius:50%;overflow:hidden;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,.3);background:#fff;">${inner}</div>`,
+    className: "",
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+  });
+}
 
 export default function PilotsMap() {
   const [pilots, setPilots] = useState<PublicPilot[]>([]);
@@ -143,7 +160,7 @@ export default function PilotsMap() {
                       radius={p.service_radius_km * 1000}
                       pathOptions={{ color: "hsl(var(--primary))", fillOpacity: 0.05, weight: 1 }}
                     />
-                    <Marker position={[p.display_lat, p.display_lng]} icon={pilotIcon}>
+                    <Marker position={[p.display_lat, p.display_lng]} icon={makePilotIcon(p)}>
                       <Popup>
                         <PilotPopup p={p} />
                       </Popup>
