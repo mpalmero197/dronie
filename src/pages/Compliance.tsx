@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import LiabilityNotice from "@/components/LiabilityNotice";
 
 interface FlightLogRow {
   id: string;
@@ -58,6 +59,9 @@ export default function Compliance() {
   // New cert dialog
   const [certOpen, setCertOpen] = useState(false);
   const [certDraft, setCertDraft] = useState({ cert_type: "Part 107", issued_at: "", expires_at: "", notes: "" });
+  const [recertOpen, setRecertOpen] = useState(false);
+  const [recertingCert, setRecertingCert] = useState<CertRow | null>(null);
+  const [recertDraft, setRecertDraft] = useState({ issued_at: "", expires_at: "" });
 
   useEffect(() => {
     if (!user) return;
@@ -131,6 +135,37 @@ export default function Compliance() {
     setCertDraft({ cert_type: "Part 107", issued_at: "", expires_at: "", notes: "" });
     // refresh
     const { data } = await supabase.from("pilot_certifications").select("id, cert_type, issued_at, expires_at, notes").eq("user_id", user.id).order("expires_at", { ascending: true });
+    setCerts((data ?? []) as CertRow[]);
+  }
+
+  function openRecert(c: CertRow) {
+    setRecertingCert(c);
+    setRecertDraft({ issued_at: "", expires_at: "" });
+    setRecertOpen(true);
+  }
+
+  async function confirmRecert() {
+    if (!user || !recertingCert) return;
+    if (!recertDraft.issued_at || !recertDraft.expires_at) {
+      toast({ title: "Both dates required", variant: "destructive" });
+      return;
+    }
+    const { error } = await supabase
+      .from("pilot_certifications")
+      .update({
+        issued_at: recertDraft.issued_at,
+        expires_at: recertDraft.expires_at,
+        recert_confirmed_at: new Date().toISOString(),
+        recert_required: false,
+      })
+      .eq("id", recertingCert.id);
+    if (error) {
+      toast({ title: "Could not save", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Recertification confirmed" });
+    setRecertOpen(false);
+    const { data } = await supabase.from("pilot_certifications").select("id, cert_type, issued_at, expires_at, notes, recert_required, recert_confirmed_at").eq("user_id", user.id).order("expires_at", { ascending: true });
     setCerts((data ?? []) as CertRow[]);
   }
 
