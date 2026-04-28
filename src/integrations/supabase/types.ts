@@ -437,27 +437,158 @@ export type Database = {
         }
         Relationships: []
       }
+      portfolio_albums: {
+        Row: {
+          cover_url: string | null
+          created_at: string
+          description: string | null
+          id: string
+          slug: string
+          sort_order: number
+          title: string
+          updated_at: string
+          user_id: string
+          visibility: Database["public"]["Enums"]["portfolio_visibility"]
+        }
+        Insert: {
+          cover_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          slug: string
+          sort_order?: number
+          title: string
+          updated_at?: string
+          user_id: string
+          visibility?: Database["public"]["Enums"]["portfolio_visibility"]
+        }
+        Update: {
+          cover_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          slug?: string
+          sort_order?: number
+          title?: string
+          updated_at?: string
+          user_id?: string
+          visibility?: Database["public"]["Enums"]["portfolio_visibility"]
+        }
+        Relationships: []
+      }
+      portfolio_items: {
+        Row: {
+          album_id: string | null
+          caption: string | null
+          captured_at: string | null
+          created_at: string
+          duration_s: number | null
+          height: number | null
+          id: string
+          kind: string
+          media_url: string | null
+          project_id: string | null
+          sort_order: number
+          storage_path: string | null
+          thumb_url: string | null
+          title: string | null
+          updated_at: string
+          user_id: string
+          visibility: Database["public"]["Enums"]["portfolio_visibility"]
+          width: number | null
+        }
+        Insert: {
+          album_id?: string | null
+          caption?: string | null
+          captured_at?: string | null
+          created_at?: string
+          duration_s?: number | null
+          height?: number | null
+          id?: string
+          kind: string
+          media_url?: string | null
+          project_id?: string | null
+          sort_order?: number
+          storage_path?: string | null
+          thumb_url?: string | null
+          title?: string | null
+          updated_at?: string
+          user_id: string
+          visibility?: Database["public"]["Enums"]["portfolio_visibility"]
+          width?: number | null
+        }
+        Update: {
+          album_id?: string | null
+          caption?: string | null
+          captured_at?: string | null
+          created_at?: string
+          duration_s?: number | null
+          height?: number | null
+          id?: string
+          kind?: string
+          media_url?: string | null
+          project_id?: string | null
+          sort_order?: number
+          storage_path?: string | null
+          thumb_url?: string | null
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+          visibility?: Database["public"]["Enums"]["portfolio_visibility"]
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_items_album_id_fkey"
+            columns: ["album_id"]
+            isOneToOne: false
+            referencedRelation: "portfolio_albums"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
+          bio: string | null
           created_at: string
           full_name: string | null
+          headline: string | null
           id: string
+          instagram: string | null
+          location: string | null
+          portfolio_published: boolean
           updated_at: string
+          username: string | null
+          website: string | null
         }
         Insert: {
           avatar_url?: string | null
+          bio?: string | null
           created_at?: string
           full_name?: string | null
+          headline?: string | null
           id: string
+          instagram?: string | null
+          location?: string | null
+          portfolio_published?: boolean
           updated_at?: string
+          username?: string | null
+          website?: string | null
         }
         Update: {
           avatar_url?: string | null
+          bio?: string | null
           created_at?: string
           full_name?: string | null
+          headline?: string | null
           id?: string
+          instagram?: string | null
+          location?: string | null
+          portfolio_published?: boolean
           updated_at?: string
+          username?: string | null
+          website?: string | null
         }
         Relationships: []
       }
@@ -589,11 +720,13 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_reserved_username: { Args: { _name: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "pilot" | "viewer"
       drone_status: "idle" | "active" | "maintenance" | "offline"
       job_status: "active" | "completed" | "aborted"
+      portfolio_visibility: "public" | "unlisted" | "private"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -724,6 +857,7 @@ export const Constants = {
       app_role: ["admin", "pilot", "viewer"],
       drone_status: ["idle", "active", "maintenance", "offline"],
       job_status: ["active", "completed", "aborted"],
+      portfolio_visibility: ["public", "unlisted", "private"],
     },
   },
 } as const
