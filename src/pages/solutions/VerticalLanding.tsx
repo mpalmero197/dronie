@@ -4,6 +4,7 @@ import Navbar from "@/components/Navbar";
 import FooterSection from "@/components/FooterSection";
 import { Button } from "@/components/ui/button";
 import { VERTICALS, VERTICAL_LIST } from "./verticals.config";
+import VerticalPilotsSection from "@/components/solutions/VerticalPilotsSection";
 
 export default function VerticalLanding() {
   const { vertical } = useParams<{ vertical: string }>();
@@ -90,6 +91,9 @@ export default function VerticalLanding() {
           </div>
         </div>
       </section>
+
+      {/* Pilots in this vertical */}
+      <VerticalPilotsSection vertical={config.slug} verticalName={config.name} />
 
       {/* CTA */}
       <section className="py-20 bg-background">
