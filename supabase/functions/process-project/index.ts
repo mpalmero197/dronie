@@ -582,8 +582,12 @@ async function runSimulatedProcessing(
   settings: any
 ) {
   try {
+    const startedAt = Date.now();
+    const stageStarts: Record<string, number> = { alignment: Date.now() };
+    await pushLog(serviceClient, projectId, "alignment", "Starting image alignment");
     // Step 1: Image alignment — list and parse images
-    await updateProgress(serviceClient, projectId, 5);
+    await setProgress(serviceClient, projectId, 5, startedAt, { stageStartTs: stageStarts.alignment });
+    if (await isCanceled(serviceClient, projectId)) { await markFailed(serviceClient, projectId, "canceled"); return; }
 
     const { data: imageFiles } = await serviceClient.storage
       .from("drone-images")
