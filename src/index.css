@@ -96,6 +96,16 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+  }
+
+  html {
+    overflow-x: hidden;
+  }
+
+  /* Prevent long words/URLs from forcing horizontal scroll on mobile */
+  p, span, a, h1, h2, h3, h4, h5, h6 {
+    overflow-wrap: anywhere;
   }
 
   h1, h2, h3, h4, h5, h6 {
