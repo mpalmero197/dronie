@@ -365,6 +365,25 @@ export default function Compliance() {
           </section>
         </div>
       )}
+
+      <Dialog open={recertOpen} onOpenChange={setRecertOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Confirm recertification — {recertingCert?.cert_type}</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Enter the new issued and expiration dates from your renewed certificate. This is a self-attestation; you remain solely
+            responsible for keeping documentation up to date.
+          </p>
+          <div className="grid grid-cols-2 gap-3 mt-3">
+            <div><Label>New issued</Label><Input type="date" value={recertDraft.issued_at} onChange={(e) => setRecertDraft({ ...recertDraft, issued_at: e.target.value })} /></div>
+            <div><Label>New expires</Label><Input type="date" value={recertDraft.expires_at} onChange={(e) => setRecertDraft({ ...recertDraft, expires_at: e.target.value })} /></div>
+          </div>
+          <DialogFooter><Button onClick={confirmRecert}>Confirm</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-8">
+        <LiabilityNotice context="pilot" />
+      </div>
     </div>
   );
 }
