@@ -21,6 +21,21 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase, Project } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { useRef } from "react";
+import { LivePipeline } from "@/components/project/LivePipeline";
+import { PresetPicker } from "@/components/project/PresetPicker";
+import { EstimatePanel } from "@/components/project/EstimatePanel";
+import { ImageQAReport } from "@/components/project/ImageQAReport";
+import { DeliverableCard } from "@/components/project/DeliverableCard";
+import { AccuracyReport, type AccuracyData } from "@/components/project/AccuracyReport";
+import {
+   PRESETS,
+   DEFAULT_SETTINGS as PG_DEFAULT_SETTINGS,
+   estimateProcessing,
+   runImageQa,
+   type PresetId,
+   type ProcessingSettings as PgSettings,
+   type GpsPoint,
+} from "@/lib/photogrammetry";
 
 /* ────── Types ────── */
 
