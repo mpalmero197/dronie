@@ -549,6 +549,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          account_type: Database["public"]["Enums"]["account_type"]
           avatar_url: string | null
           bio: string | null
           created_at: string
@@ -563,6 +564,7 @@ export type Database = {
           website: string | null
         }
         Insert: {
+          account_type?: Database["public"]["Enums"]["account_type"]
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
@@ -577,6 +579,7 @@ export type Database = {
           website?: string | null
         }
         Update: {
+          account_type?: Database["public"]["Enums"]["account_type"]
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
@@ -687,6 +690,107 @@ export type Database = {
           },
         ]
       }
+      service_quotes: {
+        Row: {
+          created_at: string
+          eta_days: number | null
+          id: string
+          message: string | null
+          pilot_id: string
+          price_cents: number
+          request_id: string
+          status: Database["public"]["Enums"]["quote_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          eta_days?: number | null
+          id?: string
+          message?: string | null
+          pilot_id: string
+          price_cents: number
+          request_id: string
+          status?: Database["public"]["Enums"]["quote_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          eta_days?: number | null
+          id?: string
+          message?: string | null
+          pilot_id?: string
+          price_cents?: number
+          request_id?: string
+          status?: Database["public"]["Enums"]["quote_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_quotes_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "service_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_requests: {
+        Row: {
+          assigned_pilot_id: string | null
+          budget_cents: number | null
+          client_id: string
+          created_at: string
+          deadline: string | null
+          deliverables: string[]
+          description: string | null
+          id: string
+          latitude: number | null
+          location_label: string | null
+          longitude: number | null
+          project_id: string | null
+          status: Database["public"]["Enums"]["request_status"]
+          title: string
+          updated_at: string
+          vertical: Database["public"]["Enums"]["industry_vertical"]
+        }
+        Insert: {
+          assigned_pilot_id?: string | null
+          budget_cents?: number | null
+          client_id: string
+          created_at?: string
+          deadline?: string | null
+          deliverables?: string[]
+          description?: string | null
+          id?: string
+          latitude?: number | null
+          location_label?: string | null
+          longitude?: number | null
+          project_id?: string | null
+          status?: Database["public"]["Enums"]["request_status"]
+          title: string
+          updated_at?: string
+          vertical?: Database["public"]["Enums"]["industry_vertical"]
+        }
+        Update: {
+          assigned_pilot_id?: string | null
+          budget_cents?: number | null
+          client_id?: string
+          created_at?: string
+          deadline?: string | null
+          deliverables?: string[]
+          description?: string | null
+          id?: string
+          latitude?: number | null
+          location_label?: string | null
+          longitude?: number | null
+          project_id?: string | null
+          status?: Database["public"]["Enums"]["request_status"]
+          title?: string
+          updated_at?: string
+          vertical?: Database["public"]["Enums"]["industry_vertical"]
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -723,10 +827,28 @@ export type Database = {
       is_reserved_username: { Args: { _name: string }; Returns: boolean }
     }
     Enums: {
+      account_type: "pilot" | "client" | "both"
       app_role: "admin" | "pilot" | "viewer"
       drone_status: "idle" | "active" | "maintenance" | "offline"
+      industry_vertical:
+        | "construction"
+        | "real_estate"
+        | "agriculture"
+        | "energy"
+        | "mining"
+        | "insurance"
+        | "government"
+        | "other"
       job_status: "active" | "completed" | "aborted"
       portfolio_visibility: "public" | "unlisted" | "private"
+      quote_status: "pending" | "accepted" | "rejected" | "withdrawn"
+      request_status:
+        | "open"
+        | "quoted"
+        | "assigned"
+        | "in_progress"
+        | "delivered"
+        | "closed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -854,10 +976,30 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      account_type: ["pilot", "client", "both"],
       app_role: ["admin", "pilot", "viewer"],
       drone_status: ["idle", "active", "maintenance", "offline"],
+      industry_vertical: [
+        "construction",
+        "real_estate",
+        "agriculture",
+        "energy",
+        "mining",
+        "insurance",
+        "government",
+        "other",
+      ],
       job_status: ["active", "completed", "aborted"],
       portfolio_visibility: ["public", "unlisted", "private"],
+      quote_status: ["pending", "accepted", "rejected", "withdrawn"],
+      request_status: [
+        "open",
+        "quoted",
+        "assigned",
+        "in_progress",
+        "delivered",
+        "closed",
+      ],
     },
   },
 } as const
