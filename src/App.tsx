@@ -43,6 +43,7 @@ import PilotsMap from "./pages/PilotsMap.tsx";
 import Organizations from "./pages/Organizations.tsx";
 import OrgDetail from "./pages/OrgDetail.tsx";
 import AcceptOrgInvite from "./pages/AcceptOrgInvite.tsx";
+import ScrollToTop from "./components/ScrollToTop.tsx";
 
 const queryClient = new QueryClient();
 
@@ -53,6 +54,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <ScrollToTop />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<AuthPage />} />
