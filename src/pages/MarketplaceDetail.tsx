@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, MapPin, Calendar, Briefcase, Loader2, Check, X, Sparkles, ShieldCheck, Plane } from "lucide-react";
+import { ArrowLeft, MapPin, Calendar, Briefcase, Loader2, Check, X, Sparkles, ShieldCheck, Plane, MessageSquare } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,13 @@ import {
   listQuotesForRequest,
 } from "@/lib/marketplace";
 import { findMatchingPilots, type MatchedPilot } from "@/lib/pilots";
+import Conversation from "@/components/marketplace/Conversation";
+
+interface PilotMini {
+  user_id: string;
+  display_name: string;
+  avatar_url: string | null;
+}
 
 export default function MarketplaceDetail() {
   const { id } = useParams<{ id: string }>();
@@ -29,6 +36,10 @@ export default function MarketplaceDetail() {
   const [quotes, setQuotes] = useState<ServiceQuote[]>([]);
   const [loading, setLoading] = useState(true);
   const [matches, setMatches] = useState<MatchedPilot[]>([]);
+  const [pilotInfo, setPilotInfo] = useState<Record<string, PilotMini>>({});
+  const [openThreadPilotId, setOpenThreadPilotId] = useState<string | null>(null);
+  const [clientName, setClientName] = useState<string>("Client");
+  const [clientAvatar, setClientAvatar] = useState<string | null>(null);
 
   // Quote form
   const [price, setPrice] = useState("");
@@ -44,6 +55,29 @@ export default function MarketplaceDetail() {
       try {
         const q = await listQuotesForRequest(id);
         setQuotes(q);
+        const pilotIds = Array.from(new Set(q.map((x) => x.pilot_id)));
+        if (pilotIds.length > 0) {
+          const { data: pp } = await supabase
+            .from("pilot_profiles")
+            .select("user_id, display_name")
+            .in("user_id", pilotIds);
+          const { data: profs } = await supabase
+            .from("profiles")
+            .select("id, full_name, avatar_url")
+            .in("id", pilotIds);
+          const profMap = new Map((profs ?? []).map((p: any) => [p.id, p]));
+          const map: Record<string, PilotMini> = {};
+          for (const pid of pilotIds) {
+            const pf = (pp ?? []).find((x: any) => x.user_id === pid);
+            const pr: any = profMap.get(pid);
+            map[pid] = {
+              user_id: pid,
+              display_name: pf?.display_name ?? pr?.full_name ?? "Pilot",
+              avatar_url: pr?.avatar_url ?? null,
+            };
+          }
+          setPilotInfo(map);
+        }
       } catch {
         setQuotes([]);
       }
@@ -52,6 +86,18 @@ export default function MarketplaceDetail() {
         setMatches(m);
       } catch {
         setMatches([]);
+      }
+      // Load client info (for pilots viewing the request)
+      try {
+        const { data: c } = await supabase
+          .from("profiles")
+          .select("full_name, avatar_url")
+          .eq("id", r.client_id)
+          .maybeSingle();
+        setClientName(c?.full_name ?? "Client");
+        setClientAvatar(c?.avatar_url ?? null);
+      } catch {
+        // ignore
       }
     }
     setLoading(false);
@@ -87,6 +133,7 @@ export default function MarketplaceDetail() {
 
   const isOwner = user?.id === request.client_id;
   const myQuote = quotes.find((q) => q.pilot_id === user?.id);
+  const canPilotMessage = !!user && !isOwner && (!!myQuote || request.assigned_pilot_id === user.id);
 
   async function submitQuote(e: React.FormEvent) {
     e.preventDefault();
@@ -260,6 +307,9 @@ export default function MarketplaceDetail() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1">
                         <p className="font-display font-600 text-foreground">
+                          {isOwner && pilotInfo[q.pilot_id] ? (
+                            <span className="mr-2">{pilotInfo[q.pilot_id].display_name} · </span>
+                          ) : null}
                           ${(q.price_cents / 100).toLocaleString()}
                           {q.eta_days && <span className="text-sm text-muted-foreground font-normal"> · {q.eta_days} days</span>}
                         </p>
@@ -279,12 +329,63 @@ export default function MarketplaceDetail() {
                         <Button size="sm" variant="outline" onClick={() => rejectQuote(q)} className="gap-1.5">
                           <X className="w-3.5 h-3.5" /> Decline
                         </Button>
+                        {isOwner && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setOpenThreadPilotId(openThreadPilotId === q.pilot_id ? null : q.pilot_id)}
+                            className="gap-1.5"
+                          >
+                            <MessageSquare className="w-3.5 h-3.5" />
+                            {openThreadPilotId === q.pilot_id ? "Close chat" : "Message"}
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                    {isOwner && (q.status !== "pending" || request.status !== "open") && (
+                      <div className="mt-3">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setOpenThreadPilotId(openThreadPilotId === q.pilot_id ? null : q.pilot_id)}
+                          className="gap-1.5"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                          {openThreadPilotId === q.pilot_id ? "Close chat" : "Message pilot"}
+                        </Button>
+                      </div>
+                    )}
+                    {isOwner && openThreadPilotId === q.pilot_id && user && (
+                      <div className="mt-4">
+                        <Conversation
+                          requestId={request.id}
+                          pilotId={q.pilot_id}
+                          currentUserId={user.id}
+                          counterpartyName={pilotInfo[q.pilot_id]?.display_name ?? "Pilot"}
+                          counterpartyAvatar={pilotInfo[q.pilot_id]?.avatar_url ?? null}
+                        />
                       </div>
                     )}
                   </div>
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Pilot-side conversation with client */}
+        {canPilotMessage && user && (
+          <div className="mt-6">
+            <h2 className="font-display font-700 text-lg text-foreground mb-3 flex items-center gap-2">
+              <MessageSquare className="w-4 h-4 text-primary" /> Message client
+            </h2>
+            <Conversation
+              requestId={request.id}
+              pilotId={user.id}
+              currentUserId={user.id}
+              counterpartyName={clientName}
+              counterpartyAvatar={clientAvatar}
+            />
           </div>
         )}
 

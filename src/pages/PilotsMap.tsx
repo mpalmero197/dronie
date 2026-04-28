@@ -27,16 +27,33 @@ interface PublicPilot {
   part_107: boolean;
   insured: boolean;
   portfolio_url: string | null;
+  avatar_url: string | null;
 }
 
-const pilotIcon = L.divIcon({
-  html: `<div style="background:hsl(var(--primary));width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,.3);">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg>
-  </div>`,
-  className: "",
-  iconSize: [28, 28],
-  iconAnchor: [14, 14],
-});
+function escapeHtml(s: string) {
+  return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+}
+
+function makePilotIcon(p: PublicPilot) {
+  const size = 44;
+  const initials = (p.display_name || "?")
+    .split(/\s+/)
+    .map((w) => w[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+  const inner = p.avatar_url
+    ? `<img src="${escapeHtml(p.avatar_url)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.style.display='none';this.parentElement.querySelector('.fallback').style.display='flex';" />
+       <div class="fallback" style="display:none;width:100%;height:100%;align-items:center;justify-content:center;background:hsl(var(--primary));color:#fff;font-weight:700;font-size:13px;">${escapeHtml(initials)}</div>`
+    : `<div style="display:flex;width:100%;height:100%;align-items:center;justify-content:center;background:hsl(var(--primary));color:#fff;font-weight:700;font-size:13px;">${escapeHtml(initials)}</div>`;
+  return L.divIcon({
+    html: `<div style="width:${size}px;height:${size}px;border-radius:50%;overflow:hidden;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,.3);background:#fff;">${inner}</div>`,
+    className: "",
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+  });
+}
 
 export default function PilotsMap() {
   const [pilots, setPilots] = useState<PublicPilot[]>([]);
@@ -143,7 +160,7 @@ export default function PilotsMap() {
                       radius={p.service_radius_km * 1000}
                       pathOptions={{ color: "hsl(var(--primary))", fillOpacity: 0.05, weight: 1 }}
                     />
-                    <Marker position={[p.display_lat, p.display_lng]} icon={pilotIcon}>
+                    <Marker position={[p.display_lat, p.display_lng]} icon={makePilotIcon(p)}>
                       <Popup>
                         <PilotPopup p={p} />
                       </Popup>
@@ -173,8 +190,13 @@ export default function PilotsMap() {
 function PilotPopup({ p }: { p: PublicPilot }) {
   return (
     <div className="min-w-[200px]">
-      <p className="font-semibold text-sm">{p.display_name}</p>
-      <p className="text-xs text-muted-foreground">{p.service_area_label ?? "—"}</p>
+      <div className="flex items-center gap-2">
+        <Avatar src={p.avatar_url} name={p.display_name} size={36} />
+        <div className="min-w-0">
+          <p className="font-semibold text-sm truncate">{p.display_name}</p>
+          <p className="text-xs text-muted-foreground truncate">{p.service_area_label ?? "—"}</p>
+        </div>
+      </div>
       <div className="flex gap-1 mt-2 flex-wrap">
         {p.part_107 && <Badge variant="outline" className="text-[10px] gap-1"><ShieldCheck className="w-3 h-3" /> Part 107</Badge>}
         {p.insured && <Badge variant="outline" className="text-[10px] gap-1"><Award className="w-3 h-3" /> Insured</Badge>}
@@ -195,11 +217,14 @@ function PilotCard({ p }: { p: PublicPilot }) {
   return (
     <div className="rounded-xl border border-border bg-card p-4">
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="font-semibold text-sm text-foreground truncate">{p.display_name}</p>
-          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-            <MapPin className="w-3 h-3" /> {p.service_area_label ?? "—"} · {p.service_radius_km} km
-          </p>
+        <div className="flex items-start gap-3 min-w-0">
+          <Avatar src={p.avatar_url} name={p.display_name} size={40} />
+          <div className="min-w-0">
+            <p className="font-semibold text-sm text-foreground truncate">{p.display_name}</p>
+            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+              <MapPin className="w-3 h-3" /> {p.service_area_label ?? "—"} · {p.service_radius_km} km
+            </p>
+          </div>
         </div>
         {p.hourly_rate_cents != null && (
           <span className="text-xs font-semibold text-foreground whitespace-nowrap">${(p.hourly_rate_cents / 100).toFixed(0)}/hr</span>
@@ -214,6 +239,35 @@ function PilotCard({ p }: { p: PublicPilot }) {
         <p className="text-[11px] text-muted-foreground mt-2 line-clamp-2">
           {p.verticals.slice(0, 3).map((v) => VERTICAL_LABELS[v]).join(" · ")}
         </p>
+      )}
+    </div>
+  );
+}
+
+function Avatar({ src, name, size }: { src: string | null; name: string; size: number }) {
+  const initials = (name || "?")
+    .split(/\s+/)
+    .map((w) => w[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+  return (
+    <div
+      className="rounded-full overflow-hidden bg-primary text-primary-foreground flex items-center justify-center font-bold flex-shrink-0"
+      style={{ width: size, height: size, fontSize: size * 0.38 }}
+    >
+      {src ? (
+        <img
+          src={src}
+          alt={name}
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            (e.currentTarget as HTMLImageElement).style.display = "none";
+          }}
+        />
+      ) : (
+        <span>{initials}</span>
       )}
     </div>
   );
