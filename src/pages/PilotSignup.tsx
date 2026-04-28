@@ -22,6 +22,7 @@ import {
 } from "@/lib/pilots";
 import { jitterCoord } from "@/lib/jitter";
 import LiabilityNotice from "@/components/LiabilityNotice";
+import FleetCatalogPicker from "@/components/pilot/FleetCatalogPicker";
 
 const VERTICAL_KEYS = Object.keys(VERTICAL_LABELS).filter((k) => k !== "other") as IndustryVertical[];
 
