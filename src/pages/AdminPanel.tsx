@@ -11,6 +11,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import VerificationReviews from "@/components/admin/VerificationReviews";
 
 interface AdminUser {
   id: string;
@@ -288,6 +289,8 @@ export default function AdminPanel() {
             )}
           </div>
         )}
+
+        <VerificationReviews />
       </main>
     </div>
   );
