@@ -571,6 +571,7 @@ export default function Dashboard() {
         </header>
 
         <div className="flex-1 p-4 sm:p-6 space-y-6 min-w-0">
+          <PilotVerificationBanner hideWhenUnverified />
           {sidebarView === "analytics" && <AnalyticsPanel projects={projects} />}
           {sidebarView === "storage" && <StoragePanel projects={projects} tierLimits={tierLimits} />}
 
