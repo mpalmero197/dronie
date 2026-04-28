@@ -377,6 +377,41 @@ export default function PilotSignup() {
             </label>
           </section>
 
+          {/* Privacy */}
+          <section className="bg-card rounded-2xl border border-border p-6 space-y-4">
+            <div className="flex items-center gap-2">
+              <Shield className="w-4 h-4 text-primary" />
+              <h2 className="font-display font-700 text-foreground">Privacy</h2>
+            </div>
+            <label className="flex items-center justify-between gap-3 py-2">
+              <div>
+                <p className="text-sm font-semibold text-foreground">Show me on the public pilot map</p>
+                <p className="text-xs text-muted-foreground">Clients can browse pilots in their area at /pilots</p>
+              </div>
+              <Switch checked={showOnMap} onCheckedChange={setShowOnMap} />
+            </label>
+            <label className="flex items-center justify-between gap-3 py-2 border-t border-border">
+              <div>
+                <p className="text-sm font-semibold text-foreground">Hide my exact location (recommended)</p>
+                <p className="text-xs text-muted-foreground">
+                  Your pin on the public map is shifted by roughly 5 miles in a random direction so clients can see your service
+                  area without targeting your exact base. Turn this off only if you're comfortable showing your precise location.
+                </p>
+              </div>
+              <Switch checked={locationPrivacy} onCheckedChange={setLocationPrivacy} />
+            </label>
+          </section>
+
+          {/* Liability acknowledgement */}
+          <LiabilityNotice context="pilot" />
+          <label className="flex items-start gap-3 p-4 rounded-xl border border-border bg-card cursor-pointer">
+            <Checkbox checked={acceptedTerms} onCheckedChange={(v) => setAcceptedTerms(v === true)} className="mt-0.5" />
+            <span className="text-sm text-foreground">
+              I confirm I am solely responsible for keeping my certifications, insurance, and regulatory compliance current, and I
+              accept the <Link to="/terms" className="text-primary underline">Dronie Terms of Service</Link>.
+            </span>
+          </label>
+
           <Button type="submit" disabled={submitting} size="lg" className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-semibold">
             {submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
             {existing ? "Save profile" : "Join the pilot network"}
