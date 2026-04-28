@@ -165,7 +165,7 @@ export default function PilotVerification() {
           .eq("id", existing.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("pilot_verifications").insert(payload);
+        const { error } = await supabase.from("pilot_verifications").insert([payload]);
         if (error) throw error;
       }
       toast({
