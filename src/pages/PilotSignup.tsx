@@ -151,8 +151,8 @@ export default function PilotSignup() {
         verticals: parsed.data.verticals as IndustryVertical[],
       };
       const { error } = existing
-        ? await supabase.from("pilot_profiles").update(payload).eq("user_id", user.id)
-        : await supabase.from("pilot_profiles").insert([payload]);
+        ? await supabase.from("pilot_profiles").update(payload as any).eq("user_id", user.id)
+        : await supabase.from("pilot_profiles").insert(payload as any);
       if (error) throw error;
       toast({
         title: existing ? "Profile updated" : "You're now a Dronie pilot",
