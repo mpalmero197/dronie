@@ -10,6 +10,7 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import ProjectDetailDialog from "@/components/ProjectDetailDialog";
 import PilotVerificationBanner from "@/components/PilotVerificationBanner";
+import MyDronesPanel from "@/components/fleet/MyDronesPanel";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
