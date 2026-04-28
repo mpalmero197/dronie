@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BadgeCheck, Check, Clock, ExternalLink, Loader2, ShieldAlert, ShieldCheck, X } from "lucide-react";
+import { BadgeCheck, Check, Clock, ExternalLink, Loader2, Plane, ShieldAlert, ShieldCheck, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -52,6 +52,15 @@ function VerificationCard({
   const [notes, setNotes] = useState(v.admin_notes ?? "");
   const isPending = v.status === "pending";
   const isBusy = busy === v.id;
+
+  // FAA Airmen Inquiry is a public web form (CAPTCHA-protected, no API).
+  // We deep-link the admin to it pre-focused on the pilot's last name; the
+  // admin completes the search and confirms the pilot holds a Remote Pilot
+  // certificate (Part 107) before approving.
+  const faaLookupUrl = `https://amsrvs.registry.faa.gov/airmeninquiry/Main.aspx?lastName=${encodeURIComponent(v.legal_last_name)}`;
+  const dobHint = v.date_of_birth
+    ? `DOB on file: ${new Date(v.date_of_birth).toLocaleDateString()}`
+    : "No DOB on file — search by last name only";
   return (
     <div className={`bg-card rounded-xl border-2 ${STATUS_BORDER[v.status]} p-5 space-y-4`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -125,6 +134,25 @@ function VerificationCard({
           <p className="text-sm text-foreground bg-muted/40 rounded-md p-3 whitespace-pre-wrap">{v.pilot_notes}</p>
         </div>
       )}
+
+      {/* FAA Airmen Registry lookup — verify Remote Pilot (Part 107) certificate */}
+      <div className="rounded-lg border border-sky/30 bg-sky/5 p-3 space-y-2">
+        <div className="flex items-start gap-2">
+          <Plane className="w-4 h-4 text-sky mt-0.5 flex-shrink-0" />
+          <div className="min-w-0 flex-1 text-sm">
+            <p className="font-semibold text-foreground">Verify with FAA Airmen Registry</p>
+            <p className="text-xs text-muted-foreground">
+              Open the FAA inquiry, search for <span className="font-mono">{v.legal_last_name}</span>, then
+              confirm the record lists a <strong>Remote Pilot</strong> certificate. {dobHint}.
+            </p>
+          </div>
+        </div>
+        <Button asChild size="sm" variant="outline" className="gap-1.5">
+          <a href={faaLookupUrl} target="_blank" rel="noopener noreferrer">
+            <ExternalLink className="w-3.5 h-3.5" /> Look up on FAA Airmen Registry
+          </a>
+        </Button>
+      </div>
 
       {isPending ? (
         <div className="space-y-3 pt-2 border-t border-border">
