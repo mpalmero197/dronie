@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Loader2, Plane, MapPin, Briefcase } from "lucide-react";
+import { ArrowLeft, Loader2, Plane, MapPin, Briefcase, Shield } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import PilotVerificationBanner from "@/components/PilotVerificationBanner";
 import { Button } from "@/components/ui/button";
