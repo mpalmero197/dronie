@@ -110,6 +110,30 @@ export default function PilotDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
+  // Live verification status — keep the header pill in sync without refresh.
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel(`pilot-dashboard-verification:${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "pilot_verifications",
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const row = (payload.new ?? payload.old) as { status?: VerificationStatus } | undefined;
+          if (row?.status) setVerificationStatus(row.status);
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
   async function toggleAvailability(next: boolean) {
     if (!profile || !user) return;
     setSavingAvailability(true);
