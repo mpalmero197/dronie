@@ -194,6 +194,20 @@ export default function Compliance() {
 
       {loading ? <CenteredSpinner /> : (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5 space-y-5">
+          {/* Recertification banner */}
+          {certs.some((c) => +new Date(c.expires_at) < Date.now() && !c.recert_confirmed_at) && (
+            <div className="rounded-2xl border border-destructive/40 bg-destructive/10 p-4 flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="font-semibold text-foreground">Action required: certifications need recertification</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  One or more of your certifications have expired. You will be hidden from new client matches until you confirm
+                  your recertification dates below.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* KPI strip */}
           <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <Kpi
@@ -246,6 +260,7 @@ export default function Compliance() {
                 )}
                 {certs.map((c) => {
                   const days = Math.ceil((+new Date(c.expires_at) - Date.now()) / 86400000);
+                  const needsRecert = days < 0 && !c.recert_confirmed_at;
                   return (
                     <div key={c.id} className="px-4 py-3 flex items-center justify-between gap-3">
                       <div className="min-w-0">
@@ -253,11 +268,20 @@ export default function Compliance() {
                         <p className="text-[11px] text-muted-foreground">Issued {c.issued_at} · expires {c.expires_at}</p>
                         {c.notes && <p className="text-[11px] text-muted-foreground truncate">{c.notes}</p>}
                       </div>
-                      {days < 0
-                        ? <Badge variant="destructive" className="text-[10px]"><AlertTriangle className="w-3 h-3 mr-1" /> Expired</Badge>
-                        : days < 60
-                          ? <Badge className="bg-accent/15 text-accent border-accent/20 text-[10px]">{days}d left</Badge>
-                          : <Badge className="bg-primary/15 text-primary border-primary/20 text-[10px]">{days}d</Badge>}
+                      <div className="flex items-center gap-2">
+                        {needsRecert ? (
+                          <>
+                            <Badge variant="destructive" className="text-[10px]"><AlertTriangle className="w-3 h-3 mr-1" /> Expired</Badge>
+                            <Button size="sm" variant="outline" onClick={() => openRecert(c)}>Confirm recert</Button>
+                          </>
+                        ) : days < 0 ? (
+                          <Badge className="bg-primary/15 text-primary border-primary/20 text-[10px]">Recertified</Badge>
+                        ) : days < 60 ? (
+                          <Badge className="bg-accent/15 text-accent border-accent/20 text-[10px]">{days}d left</Badge>
+                        ) : (
+                          <Badge className="bg-primary/15 text-primary border-primary/20 text-[10px]">{days}d</Badge>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
