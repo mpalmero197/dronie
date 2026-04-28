@@ -45,13 +45,12 @@ export default function PilotsMap() {
   const [vertical, setVertical] = useState<IndustryVertical | "all">("all");
 
   useEffect(() => {
-    supabase
-      .rpc("get_public_pilots")
-      .then(({ data, error }) => {
-        if (error) console.error(error);
-        setPilots((data ?? []) as PublicPilot[]);
-      })
-      .finally(() => setLoading(false));
+    (async () => {
+      const { data, error } = await supabase.rpc("get_public_pilots");
+      if (error) console.error(error);
+      setPilots((data ?? []) as unknown as PublicPilot[]);
+      setLoading(false);
+    })();
   }, []);
 
   const filtered = useMemo(() => {
