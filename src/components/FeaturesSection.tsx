@@ -8,9 +8,27 @@ import {
   Globe,
   Share2,
   ShieldCheck,
+  Sparkles,
+  Camera,
+  Plane,
+  Brain,
 } from "lucide-react";
 
 const features = [
+  {
+    icon: Sparkles,
+    title: "Gaussian Splatting",
+    desc: "Photorealistic 3D scenes from your drone imagery. Upload .ply / .splat / .ksplat and explore in a fluid in-browser viewer with cinematic orbit.",
+    color: "text-primary",
+    bg: "bg-primary/10",
+  },
+  {
+    icon: Camera,
+    title: "Public Portfolio",
+    desc: "Every pilot gets a shareable site at dronie.app/u/your-name with curated albums, photos, videos, and links to your finished 3D projects.",
+    color: "text-accent",
+    bg: "bg-accent/10",
+  },
   {
     icon: Map,
     title: "Orthomosaic Maps",
@@ -40,6 +58,20 @@ const features = [
     bg: "bg-secondary",
   },
   {
+    icon: Plane,
+    title: "Fleet & Swarm Ops",
+    desc: "Manage multiple drones with live telemetry from OpenSky, assign pilots, broadcast camera feeds, and orchestrate multi-aircraft missions.",
+    color: "text-highlight",
+    bg: "bg-highlight/10",
+  },
+  {
+    icon: Brain,
+    title: "AI Insights & Reports",
+    desc: "Auto-generated volume calcs, classification metrics, and one-click PDF deliverables pulled straight from your processed outputs.",
+    color: "text-accent",
+    bg: "bg-accent/10",
+  },
+  {
     icon: Zap,
     title: "Cloud Processing",
     desc: "No local compute required. Upload your images and track processing progress in real time from any browser.",
@@ -62,8 +94,8 @@ const features = [
   },
   {
     icon: ShieldCheck,
-    title: "GDPR Compliant",
-    desc: "Your data is encrypted at rest and in transit. Hosted on ISO 27001-certified infrastructure with daily backups.",
+    title: "Part 107 & LAANC Ready",
+    desc: "Track pilot certifications, maintenance cycles, and airspace clearance from one compliance dashboard. Encrypted, GDPR-friendly storage.",
     color: "text-accent",
     bg: "bg-accent/10",
   },
