@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import LiabilityNotice from "@/components/LiabilityNotice";
 
 interface FlightLogRow {
   id: string;
@@ -37,6 +38,8 @@ interface CertRow {
   issued_at: string;
   expires_at: string;
   notes: string | null;
+  recert_required?: boolean;
+  recert_confirmed_at?: string | null;
 }
 interface JobRow { id: string; mission_type: string; started_at: string; ended_at: string | null; }
 interface DroneRow { id: string; name: string; }
@@ -56,6 +59,9 @@ export default function Compliance() {
   // New cert dialog
   const [certOpen, setCertOpen] = useState(false);
   const [certDraft, setCertDraft] = useState({ cert_type: "Part 107", issued_at: "", expires_at: "", notes: "" });
+  const [recertOpen, setRecertOpen] = useState(false);
+  const [recertingCert, setRecertingCert] = useState<CertRow | null>(null);
+  const [recertDraft, setRecertDraft] = useState({ issued_at: "", expires_at: "" });
 
   useEffect(() => {
     if (!user) return;
@@ -68,7 +74,7 @@ export default function Compliance() {
         supabase.from("jobs").select("id, mission_type, started_at, ended_at").eq("pilot_id", user.id).order("started_at", { ascending: false }).limit(50),
         supabase.from("drones").select("id, name"),
         supabase.from("drone_maintenance").select("id, drone_id, task, due_date, cycles_left, health_pct, status").order("due_date", { ascending: true }),
-        supabase.from("pilot_certifications").select("id, cert_type, issued_at, expires_at, notes").eq("user_id", user.id).order("expires_at", { ascending: true }),
+        supabase.from("pilot_certifications").select("id, cert_type, issued_at, expires_at, notes, recert_required, recert_confirmed_at").eq("user_id", user.id).order("expires_at", { ascending: true }),
       ]);
       if (cancelled) return;
       setLogs((logsRes.data ?? []) as FlightLogRow[]);
@@ -132,6 +138,37 @@ export default function Compliance() {
     setCerts((data ?? []) as CertRow[]);
   }
 
+  function openRecert(c: CertRow) {
+    setRecertingCert(c);
+    setRecertDraft({ issued_at: "", expires_at: "" });
+    setRecertOpen(true);
+  }
+
+  async function confirmRecert() {
+    if (!user || !recertingCert) return;
+    if (!recertDraft.issued_at || !recertDraft.expires_at) {
+      toast({ title: "Both dates required", variant: "destructive" });
+      return;
+    }
+    const { error } = await supabase
+      .from("pilot_certifications")
+      .update({
+        issued_at: recertDraft.issued_at,
+        expires_at: recertDraft.expires_at,
+        recert_confirmed_at: new Date().toISOString(),
+        recert_required: false,
+      })
+      .eq("id", recertingCert.id);
+    if (error) {
+      toast({ title: "Could not save", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Recertification confirmed" });
+    setRecertOpen(false);
+    const { data } = await supabase.from("pilot_certifications").select("id, cert_type, issued_at, expires_at, notes, recert_required, recert_confirmed_at").eq("user_id", user.id).order("expires_at", { ascending: true });
+    setCerts((data ?? []) as CertRow[]);
+  }
+
   if (authLoading) return <CenteredSpinner />;
   if (!user) { navigate("/auth"); return null; }
 
@@ -157,6 +194,20 @@ export default function Compliance() {
 
       {loading ? <CenteredSpinner /> : (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5 space-y-5">
+          {/* Recertification banner */}
+          {certs.some((c) => +new Date(c.expires_at) < Date.now() && !c.recert_confirmed_at) && (
+            <div className="rounded-2xl border border-destructive/40 bg-destructive/10 p-4 flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="font-semibold text-foreground">Action required: certifications need recertification</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  One or more of your certifications have expired. You will be hidden from new client matches until you confirm
+                  your recertification dates below.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* KPI strip */}
           <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <Kpi
@@ -209,6 +260,7 @@ export default function Compliance() {
                 )}
                 {certs.map((c) => {
                   const days = Math.ceil((+new Date(c.expires_at) - Date.now()) / 86400000);
+                  const needsRecert = days < 0 && !c.recert_confirmed_at;
                   return (
                     <div key={c.id} className="px-4 py-3 flex items-center justify-between gap-3">
                       <div className="min-w-0">
@@ -216,11 +268,20 @@ export default function Compliance() {
                         <p className="text-[11px] text-muted-foreground">Issued {c.issued_at} · expires {c.expires_at}</p>
                         {c.notes && <p className="text-[11px] text-muted-foreground truncate">{c.notes}</p>}
                       </div>
-                      {days < 0
-                        ? <Badge variant="destructive" className="text-[10px]"><AlertTriangle className="w-3 h-3 mr-1" /> Expired</Badge>
-                        : days < 60
-                          ? <Badge className="bg-accent/15 text-accent border-accent/20 text-[10px]">{days}d left</Badge>
-                          : <Badge className="bg-primary/15 text-primary border-primary/20 text-[10px]">{days}d</Badge>}
+                      <div className="flex items-center gap-2">
+                        {needsRecert ? (
+                          <>
+                            <Badge variant="destructive" className="text-[10px]"><AlertTriangle className="w-3 h-3 mr-1" /> Expired</Badge>
+                            <Button size="sm" variant="outline" onClick={() => openRecert(c)}>Confirm recert</Button>
+                          </>
+                        ) : days < 0 ? (
+                          <Badge className="bg-primary/15 text-primary border-primary/20 text-[10px]">Recertified</Badge>
+                        ) : days < 60 ? (
+                          <Badge className="bg-accent/15 text-accent border-accent/20 text-[10px]">{days}d left</Badge>
+                        ) : (
+                          <Badge className="bg-primary/15 text-primary border-primary/20 text-[10px]">{days}d</Badge>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
@@ -304,6 +365,25 @@ export default function Compliance() {
           </section>
         </div>
       )}
+
+      <Dialog open={recertOpen} onOpenChange={setRecertOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Confirm recertification — {recertingCert?.cert_type}</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Enter the new issued and expiration dates from your renewed certificate. This is a self-attestation; you remain solely
+            responsible for keeping documentation up to date.
+          </p>
+          <div className="grid grid-cols-2 gap-3 mt-3">
+            <div><Label>New issued</Label><Input type="date" value={recertDraft.issued_at} onChange={(e) => setRecertDraft({ ...recertDraft, issued_at: e.target.value })} /></div>
+            <div><Label>New expires</Label><Input type="date" value={recertDraft.expires_at} onChange={(e) => setRecertDraft({ ...recertDraft, expires_at: e.target.value })} /></div>
+          </div>
+          <DialogFooter><Button onClick={confirmRecert}>Confirm</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-8">
+        <LiabilityNotice context="pilot" />
+      </div>
     </div>
   );
 }

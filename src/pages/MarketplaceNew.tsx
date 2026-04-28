@@ -22,6 +22,7 @@ import {
   VERTICAL_LABELS,
   DELIVERABLE_OPTIONS,
 } from "@/lib/marketplace";
+import LiabilityNotice from "@/components/LiabilityNotice";
 
 export default function MarketplaceNew() {
   const { user, loading: authLoading } = useAuth();
@@ -192,6 +193,8 @@ export default function MarketplaceNew() {
             {submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
             Post request
           </Button>
+
+          <LiabilityNotice context="client" />
         </form>
       </div>
     </div>

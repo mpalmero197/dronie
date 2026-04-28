@@ -365,6 +365,124 @@ export type Database = {
         }
         Relationships: []
       }
+      organization_invites: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          org_id: string
+          token: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          org_id: string
+          token: string
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          org_id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_invites_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_members: {
+        Row: {
+          created_at: string
+          id: string
+          invited_email: string | null
+          org_id: string
+          role: string
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          invited_email?: string | null
+          org_id: string
+          role?: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          invited_email?: string | null
+          org_id?: string
+          role?: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_members_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organizations: {
+        Row: {
+          bio: string | null
+          contact_email: string | null
+          created_at: string
+          id: string
+          name: string
+          owner_id: string
+          phone: string | null
+          updated_at: string
+          verified: boolean
+          website: string | null
+        }
+        Insert: {
+          bio?: string | null
+          contact_email?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          owner_id: string
+          phone?: string | null
+          updated_at?: string
+          verified?: boolean
+          website?: string | null
+        }
+        Update: {
+          bio?: string | null
+          contact_email?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          owner_id?: string
+          phone?: string | null
+          updated_at?: string
+          verified?: boolean
+          website?: string | null
+        }
+        Relationships: []
+      }
       pilot_certifications: {
         Row: {
           cert_type: string
@@ -373,6 +491,8 @@ export type Database = {
           id: string
           issued_at: string
           notes: string | null
+          recert_confirmed_at: string | null
+          recert_required: boolean
           updated_at: string
           user_id: string
         }
@@ -383,6 +503,8 @@ export type Database = {
           id?: string
           issued_at: string
           notes?: string | null
+          recert_confirmed_at?: string | null
+          recert_required?: boolean
           updated_at?: string
           user_id: string
         }
@@ -393,6 +515,8 @@ export type Database = {
           id?: string
           issued_at?: string
           notes?: string | null
+          recert_confirmed_at?: string | null
+          recert_required?: boolean
           updated_at?: string
           user_id?: string
         }
@@ -400,15 +524,19 @@ export type Database = {
       }
       pilot_profiles: {
         Row: {
+          accepted_terms_at: string | null
           available: boolean
           bio: string | null
           contact_email: string | null
           created_at: string
+          display_lat: number | null
+          display_lng: number | null
           display_name: string
           equipment: string[]
           hourly_rate_cents: number | null
           id: string
           insured: boolean
+          location_privacy: boolean
           part_107: boolean
           phone: string | null
           portfolio_url: string | null
@@ -416,6 +544,7 @@ export type Database = {
           service_lat: number | null
           service_lng: number | null
           service_radius_km: number
+          show_on_map: boolean
           skills: string[]
           updated_at: string
           user_id: string
@@ -423,15 +552,19 @@ export type Database = {
           years_experience: number
         }
         Insert: {
+          accepted_terms_at?: string | null
           available?: boolean
           bio?: string | null
           contact_email?: string | null
           created_at?: string
+          display_lat?: number | null
+          display_lng?: number | null
           display_name: string
           equipment?: string[]
           hourly_rate_cents?: number | null
           id?: string
           insured?: boolean
+          location_privacy?: boolean
           part_107?: boolean
           phone?: string | null
           portfolio_url?: string | null
@@ -439,6 +572,7 @@ export type Database = {
           service_lat?: number | null
           service_lng?: number | null
           service_radius_km?: number
+          show_on_map?: boolean
           skills?: string[]
           updated_at?: string
           user_id: string
@@ -446,15 +580,19 @@ export type Database = {
           years_experience?: number
         }
         Update: {
+          accepted_terms_at?: string | null
           available?: boolean
           bio?: string | null
           contact_email?: string | null
           created_at?: string
+          display_lat?: number | null
+          display_lng?: number | null
           display_name?: string
           equipment?: string[]
           hourly_rate_cents?: number | null
           id?: string
           insured?: boolean
+          location_privacy?: boolean
           part_107?: boolean
           phone?: string | null
           portfolio_url?: string | null
@@ -462,6 +600,7 @@ export type Database = {
           service_lat?: number | null
           service_lng?: number | null
           service_radius_km?: number
+          show_on_map?: boolean
           skills?: string[]
           updated_at?: string
           user_id?: string
@@ -904,6 +1043,26 @@ export type Database = {
           years_experience: number
         }[]
       }
+      get_public_pilots: {
+        Args: never
+        Returns: {
+          bio: string
+          display_lat: number
+          display_lng: number
+          display_name: string
+          equipment: string[]
+          hourly_rate_cents: number
+          insured: boolean
+          part_107: boolean
+          pilot_id: string
+          portfolio_url: string
+          service_area_label: string
+          service_radius_km: number
+          skills: string[]
+          verticals: Database["public"]["Enums"]["industry_vertical"][]
+          years_experience: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -914,6 +1073,14 @@ export type Database = {
       haversine_km: {
         Args: { lat1: number; lat2: number; lng1: number; lng2: number }
         Returns: number
+      }
+      is_org_manager: {
+        Args: { _org_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_org_member: {
+        Args: { _org_id: string; _user_id: string }
+        Returns: boolean
       }
       is_reserved_username: { Args: { _name: string }; Returns: boolean }
     }

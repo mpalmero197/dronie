@@ -22,6 +22,11 @@ export interface PilotProfile {
   insured: boolean;
   available: boolean;
   portfolio_url: string | null;
+  show_on_map: boolean;
+  location_privacy: boolean;
+  display_lat: number | null;
+  display_lng: number | null;
+  accepted_terms_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -94,6 +99,9 @@ export const pilotProfileSchema = z.object({
   insured: z.boolean(),
   available: z.boolean(),
   portfolio_url: z.string().trim().url("Invalid URL").max(255).or(z.literal("")).optional(),
+  show_on_map: z.boolean(),
+  location_privacy: z.boolean(),
+  accepted_terms: z.boolean().refine((v) => v === true, "You must accept the responsibility notice"),
 });
 
 export type PilotProfileInput = z.infer<typeof pilotProfileSchema>;

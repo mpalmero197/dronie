@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Loader2, Plane, MapPin, Briefcase } from "lucide-react";
+import { ArrowLeft, Loader2, Plane, MapPin, Briefcase, Shield } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,8 @@ import {
   EQUIPMENT_OPTIONS,
   type PilotProfile,
 } from "@/lib/pilots";
+import { jitterCoord } from "@/lib/jitter";
+import LiabilityNotice from "@/components/LiabilityNotice";
 
 const VERTICAL_KEYS = Object.keys(VERTICAL_LABELS).filter((k) => k !== "other") as IndustryVertical[];
 
@@ -53,6 +55,9 @@ export default function PilotSignup() {
   const [insured, setInsured] = useState(false);
   const [available, setAvailable] = useState(true);
   const [portfolioUrl, setPortfolioUrl] = useState("");
+  const [showOnMap, setShowOnMap] = useState(true);
+  const [locationPrivacy, setLocationPrivacy] = useState(true);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/auth");
@@ -82,6 +87,9 @@ export default function PilotSignup() {
           setInsured(p.insured);
           setAvailable(p.available);
           setPortfolioUrl(p.portfolio_url ?? "");
+          setShowOnMap(p.show_on_map);
+          setLocationPrivacy(p.location_privacy);
+          setAcceptedTerms(!!p.accepted_terms_at);
         }
       })
       .catch(() => {})
@@ -125,6 +133,9 @@ export default function PilotSignup() {
       insured,
       available,
       portfolio_url: portfolioUrl || "",
+      show_on_map: showOnMap,
+      location_privacy: locationPrivacy,
+      accepted_terms: acceptedTerms,
     };
 
     const parsed = pilotProfileSchema.safeParse(input);
@@ -140,6 +151,21 @@ export default function PilotSignup() {
 
     setSubmitting(true);
     try {
+      // Compute display coords (jittered or exact based on privacy preference)
+      const sLat = parsed.data.service_lat;
+      const sLng = parsed.data.service_lng;
+      let displayLat: number | null = null;
+      let displayLng: number | null = null;
+      if (sLat != null && sLng != null) {
+        if (parsed.data.location_privacy) {
+          const j = jitterCoord(sLat, sLng);
+          displayLat = j.lat;
+          displayLng = j.lng;
+        } else {
+          displayLat = sLat;
+          displayLng = sLng;
+        }
+      }
       const payload = {
         ...parsed.data,
         user_id: user.id,
@@ -149,7 +175,12 @@ export default function PilotSignup() {
         service_area_label: parsed.data.service_area_label || null,
         portfolio_url: parsed.data.portfolio_url || null,
         verticals: parsed.data.verticals as IndustryVertical[],
+        display_lat: displayLat,
+        display_lng: displayLng,
+        accepted_terms_at: existing?.accepted_terms_at ?? new Date().toISOString(),
       };
+      // accepted_terms is a form-only flag, not a DB column
+      delete (payload as any).accepted_terms;
       const { error } = existing
         ? await supabase.from("pilot_profiles").update(payload as any).eq("user_id", user.id)
         : await supabase.from("pilot_profiles").insert(payload as any);
@@ -345,6 +376,41 @@ export default function PilotSignup() {
               <Switch checked={available} onCheckedChange={setAvailable} />
             </label>
           </section>
+
+          {/* Privacy */}
+          <section className="bg-card rounded-2xl border border-border p-6 space-y-4">
+            <div className="flex items-center gap-2">
+              <Shield className="w-4 h-4 text-primary" />
+              <h2 className="font-display font-700 text-foreground">Privacy</h2>
+            </div>
+            <label className="flex items-center justify-between gap-3 py-2">
+              <div>
+                <p className="text-sm font-semibold text-foreground">Show me on the public pilot map</p>
+                <p className="text-xs text-muted-foreground">Clients can browse pilots in their area at /pilots</p>
+              </div>
+              <Switch checked={showOnMap} onCheckedChange={setShowOnMap} />
+            </label>
+            <label className="flex items-center justify-between gap-3 py-2 border-t border-border">
+              <div>
+                <p className="text-sm font-semibold text-foreground">Hide my exact location (recommended)</p>
+                <p className="text-xs text-muted-foreground">
+                  Your pin on the public map is shifted by roughly 5 miles in a random direction so clients can see your service
+                  area without targeting your exact base. Turn this off only if you're comfortable showing your precise location.
+                </p>
+              </div>
+              <Switch checked={locationPrivacy} onCheckedChange={setLocationPrivacy} />
+            </label>
+          </section>
+
+          {/* Liability acknowledgement */}
+          <LiabilityNotice context="pilot" />
+          <label className="flex items-start gap-3 p-4 rounded-xl border border-border bg-card cursor-pointer">
+            <Checkbox checked={acceptedTerms} onCheckedChange={(v) => setAcceptedTerms(v === true)} className="mt-0.5" />
+            <span className="text-sm text-foreground">
+              I confirm I am solely responsible for keeping my certifications, insurance, and regulatory compliance current, and I
+              accept the <Link to="/terms" className="text-primary underline">Dronie Terms of Service</Link>.
+            </span>
+          </label>
 
           <Button type="submit" disabled={submitting} size="lg" className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-semibold">
             {submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
