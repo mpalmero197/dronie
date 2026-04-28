@@ -263,6 +263,7 @@ Deno.serve(async (req) => {
 
 /* ────── Helper: update progress ────── */
 async function updateProgress(client: ReturnType<typeof createClient>, projectId: string, progress: number) {
+  // Legacy helper, kept for callsites we don't migrate.
   await client.from("projects").update({ progress }).eq("id", projectId);
 }
 
