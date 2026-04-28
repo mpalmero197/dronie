@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Map, LogOut, LayoutDashboard, Loader2 } from "lucide-react";
+import { Menu, X, Map, LogOut, LayoutDashboard, Loader2, ChevronDown, Briefcase } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { VERTICAL_LIST } from "@/pages/solutions/verticals.config";
 
 const navLinks = [
 { label: "Features", href: "#features" },
@@ -59,6 +60,32 @@ export default function Navbar() {
               {l.label}
             </a>
           )}
+          {/* Solutions dropdown */}
+          <div className="relative group">
+            <button className="inline-flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+              Solutions <ChevronDown className="w-3.5 h-3.5" />
+            </button>
+            <div className="absolute left-0 top-full pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
+              <div className="bg-card border border-border rounded-xl shadow-lg p-2 min-w-[220px]">
+                {VERTICAL_LIST.map((v) => {
+                  const VIcon = v.icon;
+                  return (
+                    <Link
+                      key={v.slug}
+                      to={`/solutions/${v.slug}`}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-secondary transition-colors text-sm text-foreground"
+                    >
+                      <VIcon className="w-4 h-4 text-primary" />
+                      {v.name}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+          <Link to="/marketplace" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+            Marketplace
+          </Link>
         </nav>
 
         {/* CTA */}
@@ -127,6 +154,17 @@ export default function Navbar() {
               {l.label}
             </a>
         )}
+          <Link to="/marketplace" onClick={() => setOpen(false)} className="block py-2 text-sm font-medium text-muted-foreground hover:text-foreground">
+            <span className="inline-flex items-center gap-2"><Briefcase className="w-4 h-4" />Marketplace</span>
+          </Link>
+          <div className="pt-2 border-t border-border">
+            <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1">Solutions</p>
+            {VERTICAL_LIST.map((v) => (
+              <Link key={v.slug} to={`/solutions/${v.slug}`} onClick={() => setOpen(false)} className="block py-1.5 text-sm text-foreground">
+                {v.name}
+              </Link>
+            ))}
+          </div>
           <div className="pt-3 flex flex-col gap-2">
             {user ?
           <>
