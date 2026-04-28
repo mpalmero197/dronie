@@ -763,10 +763,38 @@ export default function ProjectDetail() {
 
           {/* Right: Settings Panel */}
           <div className="space-y-6">
+            {/* Preset Picker */}
+            <div className="bg-card rounded-2xl border border-border p-5 space-y-3">
+              <h2 className="font-display font-700 text-foreground flex items-center gap-2">
+                <Settings2 className="w-4 h-4 text-primary" />
+                Industry Preset
+              </h2>
+              <PresetPicker value={presetId} onChange={applyPreset} disabled={isProcessing} />
+            </div>
+
+            {/* Estimate */}
+            <EstimatePanel
+              estimate={estimateProcessing({
+                imageCount: project.image_count || droneImages.length,
+                areaHa: project.area_ha,
+                settings,
+              })}
+            />
+
+            {/* Image QA */}
+            {(droneImages.length > 0 || (project.gps_points && Array.isArray(project.gps_points))) && (
+              <ImageQAReport
+                qa={runImageQa({
+                  totalImages: project.image_count || droneImages.length,
+                  gpsPoints: (Array.isArray(project.gps_points) ? (project.gps_points as GpsPoint[]) : []),
+                })}
+              />
+            )}
+
             <div className="bg-card rounded-2xl border border-border p-5 space-y-5 sticky top-24">
               <h2 className="font-display font-700 text-foreground flex items-center gap-2">
                 <Sliders className="w-4 h-4 text-primary" />
-                Processing Settings
+                Advanced Settings
               </h2>
 
               {/* Quality */}
