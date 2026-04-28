@@ -380,6 +380,43 @@ export default function ProjectDetail() {
     toast({ title: "Description saved" });
   }
 
+  /* ── Apply preset ── */
+  function applyPreset(id: PresetId) {
+    setPresetId(id);
+    const p = PRESETS.find((x) => x.id === id);
+    if (!p) return;
+    setSettings({ ...p.settings, preset: id });
+  }
+
+  /* ── Cancel processing ── */
+  async function cancelProcessing() {
+    if (!project) return;
+    setCancelling(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+      const pid = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const res = await fetch(`https://${pid}.supabase.co/functions/v1/cancel-project`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify({ project_id: project.id }),
+      });
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}));
+        throw new Error(e.error || "Cancel failed");
+      }
+      toast({ title: "Cancellation requested", description: "The pipeline will stop at the next checkpoint." });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setCancelling(false);
+    }
+  }
+
   /* ── Submit processing ── */
   async function submitForProcessing() {
     if (project?.status === "processing") return;
