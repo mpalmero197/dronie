@@ -29,6 +29,68 @@ function toggle<T>(arr: T[], v: T): T[] {
   return arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v];
 }
 
+function CustomDronePicker({ onAdd }: { onAdd: (name: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState("");
+
+  function commit() {
+    if (!value.trim()) return;
+    onAdd(value);
+    setValue("");
+    setOpen(false);
+  }
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border border-dashed border-border text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+      >
+        <Plus className="w-3 h-3" />
+        Other drone…
+      </button>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1 bg-secondary rounded-full pl-2 pr-1 py-0.5">
+      <Input
+        autoFocus
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            commit();
+          }
+          if (e.key === "Escape") {
+            setValue("");
+            setOpen(false);
+          }
+        }}
+        placeholder="e.g. DJI FlyCart 30"
+        maxLength={60}
+        className="h-7 w-44 text-xs border-0 bg-transparent focus-visible:ring-0 px-1"
+      />
+      <Button type="button" size="sm" onClick={commit} className="h-7 px-2 text-xs">
+        Add
+      </Button>
+      <button
+        type="button"
+        onClick={() => {
+          setValue("");
+          setOpen(false);
+        }}
+        className="p-1 text-muted-foreground hover:text-destructive"
+        aria-label="Cancel"
+      >
+        <X className="w-3 h-3" />
+      </button>
+    </span>
+  );
+}
+
 export default function PilotSignup() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
