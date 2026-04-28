@@ -382,6 +382,7 @@ export default function ProjectDetail() {
 
   /* ── Submit processing ── */
   async function submitForProcessing() {
+    if (project?.status === "processing") return;
     if (!project || !user) return;
     setSubmitting(true);
     try {
