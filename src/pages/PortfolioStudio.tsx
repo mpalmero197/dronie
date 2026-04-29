@@ -1028,6 +1028,7 @@ function PosterPickerDialog({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const blobRef = useRef<Blob | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     return () => { if (previewUrl) URL.revokeObjectURL(previewUrl); };
@@ -1099,6 +1100,26 @@ function PosterPickerDialog({
               {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
               Capture this frame
             </Button>
+            <Button size="sm" variant="outline" className="gap-1.5 w-full" onClick={() => fileInputRef.current?.click()} disabled={busy}>
+              <Upload className="w-3.5 h-3.5" />
+              Upload image from device
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.currentTarget.value = "";
+                if (!f) return;
+                if (!f.type.startsWith("image/")) return;
+                if (f.size > 8 * 1024 * 1024) return;
+                blobRef.current = f;
+                if (previewUrl) URL.revokeObjectURL(previewUrl);
+                setPreviewUrl(URL.createObjectURL(f));
+              }}
+            />
           </div>
 
           <div className="space-y-2">
