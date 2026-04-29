@@ -722,6 +722,12 @@ export default function PortfolioStudio() {
         items={items}
         onClose={() => setAlbumDialog({ open: false })}
         onSave={saveAlbum}
+        onUploadCover={async (file) => {
+          const ext = (file.name.match(/\.[a-zA-Z0-9]+$/)?.[0] ?? ".jpg").toLowerCase();
+          const safe = file.name.replace(/\.[^.]+$/, "").replace(/[^a-zA-Z0-9._-]/g, "_") || "cover";
+          const { url } = await uploadBlobToBucket(file, `album-cover-${safe}${ext}`, file.type || "image/jpeg");
+          return url;
+        }}
       />
 
       {posterFor && (
@@ -852,16 +858,19 @@ function ItemCard({
 }
 
 function AlbumDialog({
-  open, album, items, onClose, onSave,
+  open, album, items, onClose, onSave, onUploadCover,
 }: {
   open: boolean;
   album?: PortfolioAlbum;
   items: PortfolioItem[];
   onClose: () => void;
   onSave: (a: Partial<PortfolioAlbum>) => void;
+  onUploadCover: (file: File) => Promise<string>;
 }) {
   const [draft, setDraft] = useState<Partial<PortfolioAlbum>>({});
   const [picker, setPicker] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const coverFileRef = useRef<HTMLInputElement | null>(null);
   useEffect(() => {
     setDraft(album ?? { visibility: "public" });
     setPicker(false);
@@ -914,6 +923,29 @@ function AlbumDialog({
               </div>
               <div className="flex-1 space-y-2">
                 <div className="flex flex-wrap gap-2">
+                  <Button size="sm" variant="outline" type="button" className="gap-1.5" onClick={() => coverFileRef.current?.click()} disabled={uploadingCover}>
+                    {uploadingCover ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                    {uploadingCover ? "Uploading…" : "Upload from device"}
+                  </Button>
+                  <input
+                    ref={coverFileRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const f = e.target.files?.[0];
+                      e.currentTarget.value = "";
+                      if (!f) return;
+                      if (f.size > 8 * 1024 * 1024) return;
+                      setUploadingCover(true);
+                      try {
+                        const url = await onUploadCover(f);
+                        setDraft((d) => ({ ...d, cover_url: url }));
+                      } finally {
+                        setUploadingCover(false);
+                      }
+                    }}
+                  />
                   <Button size="sm" variant="outline" type="button" className="gap-1.5" onClick={() => setPicker((v) => !v)}>
                     <ImageLucide className="w-3.5 h-3.5" /> {picker ? "Hide media" : "Pick from media"}
                   </Button>
