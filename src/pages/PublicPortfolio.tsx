@@ -409,3 +409,9 @@ function Lightbox({ item, onClose }: { item: PortfolioItem; onClose: () => void 
     </div>
   );
 }
+
+function autoCover(albumId: string, items: PortfolioItem[]): string | null {
+  const inAlbum = items.filter((i) => i.album_id === albumId && (i.thumb_url || i.media_url));
+  const first = inAlbum[0];
+  return first ? first.thumb_url || first.media_url : null;
+}
