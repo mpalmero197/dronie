@@ -30,15 +30,37 @@ function createVideoElement(source: File | string): Promise<{
     video.muted = true;
     video.playsInline = true;
     video.preload = "auto";
-    video.crossOrigin = "anonymous";
+    // Only set CORS for remote URLs. Setting it on blob: URLs can break
+    // playback in some browsers, and it's unnecessary for local files.
+    if (typeof source === "string") {
+      video.crossOrigin = "anonymous";
+    }
 
     const url = typeof source === "string" ? source : URL.createObjectURL(source);
     const revoke = () => {
       if (typeof source !== "string") URL.revokeObjectURL(url);
     };
 
-    video.onloadedmetadata = () => resolve({ video, revoke });
+    let settled = false;
+    const cleanup = () => {
+      video.onloadedmetadata = null;
+      video.onloadeddata = null;
+      video.onerror = null;
+    };
+    // Wait for loadeddata (a frame is actually decodable) rather than just
+    // metadata — seeking before a frame is ready can fail on some browsers.
+    const onReady = () => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolve({ video, revoke });
+    };
+    video.onloadedmetadata = onReady;
+    video.onloadeddata = onReady;
     video.onerror = () => {
+      if (settled) return;
+      settled = true;
+      cleanup();
       revoke();
       reject(new Error("Could not load video"));
     };
