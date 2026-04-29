@@ -5,10 +5,12 @@ import {
   Loader2, Lock, ExternalLink, Camera, Eye, EyeOff, Link2,
   Linkedin, Twitter, Youtube, Music2, FileText, Mail,
   AlertTriangle, RefreshCw, LifeBuoy, User as UserIcon,
+  Phone, BadgeCheck, Send, CircleDot,
 } from "lucide-react";
 import {
   fetchPortfolioByUsername, fetchPublicAlbumsByUser, fetchPublicItemsByUser,
   fetchAlbumBySlug, fetchItemsForAlbum,
+  normalizePrefs,
   type PortfolioProfile, type PortfolioAlbum, type PortfolioItem,
 } from "@/lib/portfolio";
 import { Button } from "@/components/ui/button";
