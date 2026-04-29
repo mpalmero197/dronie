@@ -3,6 +3,7 @@ import { Link, useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, MapPin, Globe, Instagram, ImageIcon, Film, Sparkles,
   Loader2, Lock, ExternalLink, Camera, Eye, EyeOff, Link2,
+  Linkedin, Twitter, Youtube, Music2, FileText, Mail,
 } from "lucide-react";
 import {
   fetchPortfolioByUsername, fetchPublicAlbumsByUser, fetchPublicItemsByUser,
