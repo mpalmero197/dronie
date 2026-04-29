@@ -24,7 +24,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
   PORTFOLIO_BUCKET, validateUsername, slugify,
+  DEFAULT_VISIBILITY_PREFS, normalizePrefs,
   type PortfolioAlbum, type PortfolioItem, type PortfolioVisibility,
+  type VisibilityPrefs,
 } from "@/lib/portfolio";
 import { captureVideoFrame } from "@/lib/videoFrame";
 import {
