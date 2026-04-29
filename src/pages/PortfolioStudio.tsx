@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft, Camera, Save, Upload, Loader2, Plus, Trash2, Pencil, Eye,
   Globe, Lock, Link as LinkIcon, Check, X, ImageIcon, Film, Sparkles,
@@ -33,6 +33,7 @@ export default function PortfolioStudio() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [profile, setProfile] = useState<any | null>(null);
   const [albums, setAlbums] = useState<PortfolioAlbum[]>([]);
@@ -50,11 +51,47 @@ export default function PortfolioStudio() {
   // Filter
   const [filterAlbumId, setFilterAlbumId] = useState<string>("all");
 
+  // Highlight the publish toggle when arriving via the "Publish now" deep link
+  const [pulsePublish, setPulsePublish] = useState(false);
+
   useEffect(() => {
     if (authLoading) return;
     if (!user) { navigate("/auth"); return; }
     refresh();
   }, [user, authLoading]);
+
+  // Handle ?publish=1 deep link from the unpublished-preview banner.
+  // Auto-publishes (if not already), scrolls to the toggle, and pulses it.
+  useEffect(() => {
+    if (!profile || !user) return;
+    if (searchParams.get("publish") !== "1") return;
+
+    const run = async () => {
+      if (!profile.portfolio_published) {
+        const { error } = await supabase
+          .from("profiles")
+          .update({ portfolio_published: true })
+          .eq("id", user.id);
+        if (error) {
+          toast({ title: "Couldn't publish", description: error.message, variant: "destructive" });
+        } else {
+          setProfile((p: any) => ({ ...p, portfolio_published: true }));
+          toast({ title: "Portfolio published", description: "Anyone with your link can now see it." });
+        }
+      }
+      setPulsePublish(true);
+      setTimeout(() => {
+        document.getElementById("publish-toggle")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 50);
+      setTimeout(() => setPulsePublish(false), 3000);
+      // Clean the URL so a refresh doesn't re-trigger.
+      const next = new URLSearchParams(searchParams);
+      next.delete("publish");
+      setSearchParams(next, { replace: true });
+    };
+    run();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.id]);
 
   async function refresh() {
     if (!user) return;
