@@ -388,11 +388,13 @@ export default function PublicPortfolio({ mode }: Props) {
         />
       </main>
 
-      <footer className="border-t border-border mt-12 py-6 text-center text-xs text-muted-foreground">
-        <Link to="/" className="hover:text-foreground">
-          Build your own drone portfolio with <span className="font-display font-700 text-foreground">Dronie</span>
-        </Link>
-      </footer>
+      {prefs.show_powered_by && (
+        <footer className="border-t border-border mt-12 py-6 text-center text-xs text-muted-foreground">
+          <Link to="/" className="hover:text-foreground">
+            Build your own drone portfolio with <span className="font-display font-700 text-foreground">Dronie</span>
+          </Link>
+        </footer>
+      )}
 
       {lightbox && (
         <Lightbox item={lightbox} onClose={() => setLightbox(null)} />
