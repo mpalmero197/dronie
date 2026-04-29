@@ -375,7 +375,12 @@ export default function PortfolioStudio() {
         <section className="rounded-2xl border border-border bg-card p-5 space-y-4">
           <div className="flex items-center justify-between gap-2">
             <h2 className="font-display font-700 text-lg">Public profile</h2>
-            <div className="flex items-center gap-2">
+            <div
+              id="publish-toggle"
+              className={`flex items-center gap-2 rounded-full px-2 py-1 transition-all scroll-mt-24 ${
+                pulsePublish ? "ring-2 ring-amber-400 bg-amber-500/10 animate-pulse" : ""
+              }`}
+            >
               <Label htmlFor="pub" className="text-xs text-muted-foreground">Published</Label>
               <Switch id="pub" checked={!!profile.portfolio_published} onCheckedChange={(v) => setProfile((p: any) => ({ ...p, portfolio_published: v }))} />
             </div>
