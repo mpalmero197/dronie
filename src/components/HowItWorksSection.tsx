@@ -42,7 +42,7 @@ const steps = [
     icon: Camera,
     step: "05",
     title: "Publish Your Portfolio",
-    desc: "Showcase finished projects, photos, and videos on your own public page at /u/your-name. Curate albums, control per-item visibility, and win the next gig.",
+    desc: "Showcase finished projects, photos, and videos on your own public page at dronieapp.com/u/your-name. Curate albums, control per-item visibility, and win the next gig.",
     detail: "Custom URL · Albums · Per-item privacy",
     color: "text-accent",
     accent: "bg-accent",
