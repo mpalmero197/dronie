@@ -5,7 +5,8 @@ import {
   Loader2, Lock, ExternalLink, Camera, Eye, EyeOff, Link2,
   Linkedin, Twitter, Youtube, Music2, FileText, Mail,
   AlertTriangle, RefreshCw, LifeBuoy, User as UserIcon,
-  Phone, BadgeCheck, Send, CircleDot,
+  Phone, BadgeCheck, Send, CircleDot, ChevronLeft, ChevronRight,
+  Play, Zap, Clock, Award, X as XIcon,
 } from "lucide-react";
 import {
   fetchPortfolioByUsername, fetchPublicAlbumsByUser, fetchPublicItemsByUser,
@@ -107,9 +108,17 @@ export default function PublicPortfolio({ mode }: Props) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [lightbox, setLightbox] = useState<PortfolioItem | null>(null);
+  const [showStickyCta, setShowStickyCta] = useState(false);
 
   const theme = useMemo(() => normalizeTheme(profile?.theme ?? null), [profile?.theme]);
   useEffect(() => { ensureFontLoaded(theme.font); }, [theme.font]);
+
+  // Show floating Hire CTA after the user scrolls past the hero.
+  useEffect(() => {
+    const onScroll = () => setShowStickyCta(window.scrollY > 480);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -326,42 +335,68 @@ export default function PublicPortfolio({ mode }: Props) {
           </div>
         )}
 
+        {/* Stats strip — only on home, only when there's something to brag about */}
+        {mode === "home" && allItems.length > 0 && (
+          <StatsStrip
+            photos={allItems.filter((i) => i.kind === "photo").length}
+            videos={allItems.filter((i) => i.kind === "video").length}
+            albums={albums.length}
+            available={!!profile.available_for_hire && prefs.show_availability}
+          />
+        )}
+
+        {/* Featured reel — one large hero piece on top of the grid */}
+        {mode === "home" && items.length > 0 && (
+          <FeaturedReel item={items[0]} onOpen={setLightbox} />
+        )}
+
         {/* Albums grid (home only) */}
         {mode === "home" && albums.length > 0 && (
           <section className="space-y-4">
-            <div className="flex items-end justify-between">
-              <h2 className="font-display font-700 text-2xl tracking-tight">Albums</h2>
-              <span className="text-xs text-muted-foreground">{albums.length} {albums.length === 1 ? "album" : "albums"}</span>
-            </div>
+            <SectionHeading
+              eyebrow="Collections"
+              title="Albums"
+              subtitle="Curated bodies of work"
+              right={`${albums.length} ${albums.length === 1 ? "album" : "albums"}`}
+            />
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {albums.map((a) => {
                 const cover = a.cover_url || autoCover(a.id, allItems);
+                const count = allItems.filter((i) => i.album_id === a.id).length;
                 return (
                 <Link
                   key={a.id}
                   to={`/u/${profile.username}/album/${a.slug}`}
-                  className="group rounded-2xl border border-border overflow-hidden bg-card hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all"
+                  className="group rounded-2xl border border-border overflow-hidden bg-card hover:border-primary/60 hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary/10 transition-all duration-300"
                 >
                   <div className="aspect-[4/3] bg-secondary relative overflow-hidden">
                     {cover ? (
-                      <img src={cover} alt={a.title} className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-700" loading="lazy" />
+                      <img src={cover} alt={a.title} className="w-full h-full object-cover group-hover:scale-[1.06] transition-transform duration-[1200ms]" loading="lazy" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-muted-foreground">
                         <ImageIcon className="w-8 h-8" />
                       </div>
                     )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+                    {count > 0 && (
+                      <span className="absolute top-2 left-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/55 backdrop-blur text-white text-[10px] font-medium border border-white/15">
+                        <ImageIcon className="w-3 h-3" /> {count}
+                      </span>
+                    )}
                     {a.visibility !== "public" && (
                       <div className="absolute top-2 right-2">
                         <VisibilityPill visibility={a.visibility} kind="album" />
                       </div>
                     )}
-                  </div>
-                  <div className="p-3">
-                    <p className="font-display font-700 text-sm">{a.title}</p>
-                    {a.description && (
-                      <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{a.description}</p>
-                    )}
+                    <div className="absolute inset-x-0 bottom-0 p-3">
+                      <p className="font-display font-700 text-base text-white drop-shadow-lg">{a.title}</p>
+                      {a.description && (
+                        <p className="text-xs text-white/75 line-clamp-1 mt-0.5">{a.description}</p>
+                      )}
+                    </div>
+                    <div className="absolute bottom-3 right-3 w-8 h-8 rounded-full bg-primary/90 text-primary-foreground flex items-center justify-center translate-x-2 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all duration-300">
+                      <ChevronRight className="w-4 h-4" />
+                    </div>
                   </div>
                 </Link>
                 );
@@ -372,7 +407,7 @@ export default function PublicPortfolio({ mode }: Props) {
 
         {/* Featured / item grid */}
         <MediaGrid
-          items={items}
+          items={mode === "home" ? items.slice(1) : items}
           emptyLabel={
             mode === "home"
               ? (isOwner ? "Add photos and videos in your Portfolio Studio to bring this page to life." : "No public work yet")
@@ -383,8 +418,12 @@ export default function PublicPortfolio({ mode }: Props) {
           }
           ownerCta={isOwner && items.length === 0}
           onOpen={setLightbox}
-          heading={mode === "home" && items.length > 0 ? "Featured" : undefined}
+          heading={mode === "home" && items.length > 1 ? "Selected work" : undefined}
+          eyebrow={mode === "home" && items.length > 1 ? "Portfolio" : undefined}
+          subtitle={mode === "home" && items.length > 1 ? "A taste of recent shoots" : undefined}
           showVisibility={isOwner}
+          username={profile.username}
+          showSeeAll={mode === "home" && allItems.length > items.length}
         />
       </main>
 
@@ -397,7 +436,27 @@ export default function PublicPortfolio({ mode }: Props) {
       )}
 
       {lightbox && (
-        <Lightbox item={lightbox} onClose={() => setLightbox(null)} />
+        <Lightbox
+          items={items.filter((i) => i.kind !== "project_link" && (i.thumb_url || i.media_url))}
+          current={lightbox}
+          onClose={() => setLightbox(null)}
+          onNavigate={(it) => setLightbox(it)}
+        />
+      )}
+
+      {/* Floating sticky Hire CTA — appears once user scrolls past hero */}
+      {prefs.show_hire_cta && hireEmail && mode === "home" && (
+        <div
+          className={`fixed bottom-4 right-4 z-40 transition-all duration-300 ${
+            showStickyCta ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-4 pointer-events-none"
+          }`}
+        >
+          <a href={`mailto:${hireEmail}?subject=${encodeURIComponent(`Hiring inquiry for ${displayName}`)}`}>
+            <Button size="lg" className="gap-2 shadow-2xl shadow-primary/30 rounded-full px-5">
+              <Send className="w-4 h-4" /> Hire {profile.full_name?.split(" ")[0] || displayName}
+            </Button>
+          </a>
+        </div>
       )}
     </div>
   );
