@@ -6,6 +6,7 @@ import {
   ExternalLink, Copy, Image as ImageLucide, Wand2, Linkedin, Twitter,
   Youtube, Music2, FileText, Mail, User as UserIcon,
   Palette, Type as TypeIcon, LayoutTemplate,
+  Phone, BadgeCheck, Briefcase, EyeOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -507,6 +508,10 @@ export default function PortfolioStudio() {
             <div>
               <Label className="text-xs flex items-center gap-1.5"><Mail className="w-3 h-3" /> Public contact email</Label>
               <Input className="mt-1" placeholder="hello@yourstudio.com" value={profile.contact_email ?? ""} onChange={(e) => setProfile((p: any) => ({ ...p, contact_email: e.target.value }))} />
+            </div>
+            <div>
+              <Label className="text-xs flex items-center gap-1.5"><Phone className="w-3 h-3" /> Public phone</Label>
+              <Input className="mt-1" placeholder="+1 555 123 4567" value={profile.phone ?? ""} onChange={(e) => setProfile((p: any) => ({ ...p, phone: e.target.value }))} />
             </div>
             <div>
               <Label className="text-xs flex items-center gap-1.5"><Linkedin className="w-3 h-3" /> LinkedIn</Label>
