@@ -55,7 +55,7 @@ export const VERTICALS: Record<string, VerticalConfig> = {
       { title: "Cinematic photo + video", desc: "MLS-ready stills and 60-second highlight reels." },
       { title: "Gaussian splat walkthroughs", desc: "Photorealistic 3D scenes prospects can explore in-browser." },
       { title: "Property line overlays", desc: "Annotated parcel maps that show the full lot." },
-      { title: "Branded portfolio site", desc: "Every pilot gets a public showcase at dronie.app/u/your-name." },
+      { title: "Branded portfolio site", desc: "Every pilot gets a public showcase at dronieapp.com/u/your-name." },
     ],
     deliverables: ["Aerial photos", "Aerial video", "3D scene", "Parcel overlay"],
     exampleClients: "Realtors, brokerages, developers, AirBnB hosts",
