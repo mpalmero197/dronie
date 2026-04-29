@@ -85,12 +85,12 @@ export async function fetchPortfolioByUsername(username: string) {
   return data as PortfolioProfile | null;
 }
 
-export async function fetchPublicAlbumsByUser(userId: string) {
+export async function fetchPublicAlbumsByUser(userId: string, includePrivate = false) {
   const { data, error } = await supabase
     .from("portfolio_albums")
     .select("*")
     .eq("user_id", userId)
-    .eq("visibility", "public")
+    .in("visibility", includePrivate ? ["public", "unlisted", "private"] : ["public"])
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: false });
   if (error) throw error;
@@ -100,14 +100,15 @@ export async function fetchPublicAlbumsByUser(userId: string) {
 export async function fetchPublicItemsByUser(
   userId: string,
   kind?: "photo" | "video" | "project_link",
+  includePrivate = false,
 ) {
   let q = supabase
     .from("portfolio_items")
     .select("*")
     .eq("user_id", userId)
-    .eq("visibility", "public")
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: false });
+  if (!includePrivate) q = q.eq("visibility", "public");
   if (kind) q = q.eq("kind", kind);
   const { data, error } = await q;
   if (error) throw error;
