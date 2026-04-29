@@ -4,6 +4,7 @@ import {
   ArrowLeft, MapPin, Globe, Instagram, ImageIcon, Film, Sparkles,
   Loader2, Lock, ExternalLink, Camera, Eye, EyeOff, Link2,
   Linkedin, Twitter, Youtube, Music2, FileText, Mail,
+  AlertTriangle, RefreshCw, LifeBuoy, User as UserIcon,
 } from "lucide-react";
 import {
   fetchPortfolioByUsername, fetchPublicAlbumsByUser, fetchPublicItemsByUser,
@@ -30,13 +31,15 @@ export default function PublicPortfolio({ mode }: Props) {
   const [album, setAlbum] = useState<PortfolioAlbum | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const [lightbox, setLightbox] = useState<PortfolioItem | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       if (!username) return;
-      setLoading(true); setNotFound(false);
+      setLoading(true); setNotFound(false); setLoadError(null);
       try {
         const p = await fetchPortfolioByUsername(username);
         if (cancelled) return;
@@ -65,13 +68,15 @@ export default function PublicPortfolio({ mode }: Props) {
         }
       } catch (e) {
         console.error(e);
-        setNotFound(true);
+        if (!cancelled) {
+          setLoadError(e instanceof Error ? e.message : "Something went wrong while loading this portfolio.");
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
     })();
     return () => { cancelled = true; };
-  }, [username, slug, mode, user?.id]);
+  }, [username, slug, mode, user?.id, retryCount]);
 
   // Document title for SEO
   useEffect(() => {
@@ -92,6 +97,49 @@ export default function PublicPortfolio({ mode }: Props) {
     );
   }
 
+  if (loadError) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center bg-background">
+        <div className="w-14 h-14 rounded-2xl bg-destructive/10 border border-destructive/30 flex items-center justify-center mb-4">
+          <AlertTriangle className="w-7 h-7 text-destructive" />
+        </div>
+        <h1 className="font-display font-700 text-2xl mb-1">We couldn't load this portfolio</h1>
+        <p className="text-sm text-muted-foreground mb-1 max-w-md">
+          Something went wrong on our end. This is usually temporary — please try again in a moment.
+        </p>
+        <p className="text-[11px] font-mono text-muted-foreground/70 mb-5 max-w-md break-words">
+          {loadError}
+        </p>
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <Button onClick={() => setRetryCount((n) => n + 1)} className="gap-1.5">
+            <RefreshCw className="w-4 h-4" /> Try again
+          </Button>
+          {user ? (
+            <Link to="/portfolio">
+              <Button variant="outline" className="gap-1.5">
+                <UserIcon className="w-4 h-4" /> Back to my profile
+              </Button>
+            </Link>
+          ) : (
+            <Link to="/auth">
+              <Button variant="outline" className="gap-1.5">
+                <UserIcon className="w-4 h-4" /> Sign in
+              </Button>
+            </Link>
+          )}
+          <a href="mailto:support@dronieapp.com?subject=Portfolio%20failed%20to%20load">
+            <Button variant="ghost" className="gap-1.5">
+              <LifeBuoy className="w-4 h-4" /> Contact support
+            </Button>
+          </a>
+        </div>
+        <Link to="/" className="mt-6 text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
+          <ArrowLeft className="w-3 h-3" /> Back home
+        </Link>
+      </div>
+    );
+  }
+
   if (notFound || !profile) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center">
@@ -100,7 +148,23 @@ export default function PublicPortfolio({ mode }: Props) {
         <p className="text-sm text-muted-foreground mb-5">
           This portfolio is private, doesn't exist yet, or the link is wrong.
         </p>
-        <Button onClick={() => navigate("/")} variant="outline">Go home</Button>
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <Button onClick={() => navigate("/")} variant="outline" className="gap-1.5">
+            <ArrowLeft className="w-4 h-4" /> Go home
+          </Button>
+          {user && (
+            <Link to="/portfolio">
+              <Button variant="outline" className="gap-1.5">
+                <UserIcon className="w-4 h-4" /> My profile
+              </Button>
+            </Link>
+          )}
+          <a href="mailto:support@dronieapp.com?subject=Portfolio%20not%20found">
+            <Button variant="ghost" className="gap-1.5">
+              <LifeBuoy className="w-4 h-4" /> Contact support
+            </Button>
+          </a>
+        </div>
       </div>
     );
   }
