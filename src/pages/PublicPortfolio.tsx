@@ -240,15 +240,17 @@ export default function PublicPortfolio({ mode }: Props) {
               <span className="text-xs text-muted-foreground">{albums.length} {albums.length === 1 ? "album" : "albums"}</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {albums.map((a) => (
+              {albums.map((a) => {
+                const cover = a.cover_url || autoCover(a.id, allItems);
+                return (
                 <Link
                   key={a.id}
                   to={`/u/${profile.username}/album/${a.slug}`}
                   className="group rounded-2xl border border-border overflow-hidden bg-card hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all"
                 >
                   <div className="aspect-[4/3] bg-secondary relative overflow-hidden">
-                    {a.cover_url ? (
-                      <img src={a.cover_url} alt={a.title} className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-700" loading="lazy" />
+                    {cover ? (
+                      <img src={cover} alt={a.title} className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-700" loading="lazy" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-muted-foreground">
                         <ImageIcon className="w-8 h-8" />
@@ -268,7 +270,8 @@ export default function PublicPortfolio({ mode }: Props) {
                     )}
                   </div>
                 </Link>
-              ))}
+                );
+              })}
             </div>
           </section>
         )}
