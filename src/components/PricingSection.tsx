@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, Zap, Loader2 } from "lucide-react";
+import { Check, Zap, Loader2, Rocket, Crown, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -23,7 +23,8 @@ const plans = [
       "GeoTIFF download",
       "1 GB storage",
     ],
-    cta: "Get Started",
+    cta: "Start Free",
+    ctaSub: "No credit card required",
     ctaAction: "auth" as const,
     highlight: false,
   },
@@ -32,6 +33,7 @@ const plans = [
     price: "$49",
     period: "/ month",
     tagline: "For freelancers & survey crews",
+    valueProp: "Win bigger jobs · Process 10× faster",
     tier: "professional" as const,
     features: [
       "Unlimited projects",
@@ -43,7 +45,8 @@ const plans = [
       "Priority processing",
       "Share links",
     ],
-    cta: "Subscribe",
+    cta: "Upgrade to Professional",
+    ctaSub: "7-day free trial · Cancel anytime",
     ctaAction: "checkout" as const,
     highlight: true,
     badge: "Most Popular",
@@ -53,6 +56,7 @@ const plans = [
     price: "$149",
     period: "/ month",
     tagline: "For agencies & large operations",
+    valueProp: "White-label, API & SLA — pays for itself in one project",
     tier: "enterprise" as const,
     features: [
       "Unlimited images / project",
@@ -64,7 +68,8 @@ const plans = [
       "SLA guarantee",
       "Dedicated support",
     ],
-    cta: "Subscribe",
+    cta: "Go Enterprise",
+    ctaSub: "7-day free trial · Cancel anytime",
     ctaAction: "checkout" as const,
     highlight: false,
   },
@@ -229,6 +234,15 @@ export default function PricingSection() {
                       </span>
                     )}
                   </div>
+                  {"valueProp" in plan && plan.valueProp && (
+                    <p
+                      className={`mt-3 text-xs font-semibold tracking-wide ${
+                        plan.highlight ? "text-accent" : "text-primary"
+                      }`}
+                    >
+                      {plan.valueProp}
+                    </p>
+                  )}
                 </div>
 
                 <ul className="space-y-3 mb-8 flex-1">
@@ -249,20 +263,57 @@ export default function PricingSection() {
                 <Button
                   onClick={() => handleCTA(plan)}
                   disabled={current || (!!plan.tier && loadingTier === plan.tier)}
-                  className={`w-full font-semibold transition-all active:scale-[0.97] ${
+                  size="lg"
+                  className={`group w-full font-semibold transition-all active:scale-[0.97] gap-2 ${
                     plan.highlight
-                      ? "bg-accent text-accent-foreground hover:bg-accent/90 shadow-md"
+                      ? "bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg hover:shadow-xl hover:shadow-accent/30"
+                      : plan.tier
+                      ? "bg-foreground text-background hover:bg-foreground/90 shadow-md hover:shadow-lg"
                       : "bg-primary text-primary-foreground hover:bg-primary/90"
                   }`}
                 >
                   {plan.tier && loadingTier === plan.tier ? (
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : plan.tier === "professional" ? (
+                    <Rocket className="w-4 h-4" />
+                  ) : plan.tier === "enterprise" ? (
+                    <Crown className="w-4 h-4" />
                   ) : null}
-                  {getButtonLabel(plan)}
+                  <span>{getButtonLabel(plan)}</span>
+                  {!current && (
+                    <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+                  )}
                 </Button>
+                {!current && plan.ctaSub && (
+                  <p
+                    className={`mt-2.5 text-center text-[11px] ${
+                      plan.highlight
+                        ? "text-primary-foreground/70"
+                        : "text-muted-foreground"
+                    }`}
+                  >
+                    {plan.ctaSub}
+                  </p>
+                )}
               </div>
             );
           })}
+        </div>
+
+        {/* Trust strip — reinforces the upgrade decision */}
+        <div className="mt-10 flex flex-wrap items-center justify-center gap-x-8 gap-y-2 text-xs text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5">
+            <Check className="w-3.5 h-3.5 text-primary" /> 7-day free trial on paid plans
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <Check className="w-3.5 h-3.5 text-primary" /> Cancel anytime
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <Check className="w-3.5 h-3.5 text-primary" /> Secure payments by Stripe
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <Check className="w-3.5 h-3.5 text-primary" /> Used by surveyors in 40+ countries
+          </span>
         </div>
 
         <p className="text-center text-sm text-muted-foreground mt-8">
