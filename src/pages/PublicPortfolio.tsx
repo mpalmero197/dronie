@@ -281,10 +281,22 @@ export default function PublicPortfolio({ mode }: Props) {
 
       {/* Hero / about */}
       {mode === "home" && (
-        <section className="relative border-b border-border overflow-hidden">
+        <section className={`relative border-b border-border overflow-hidden ${layout === "grid" ? "pb-0" : ""}`}>
           {/* Cinematic backdrop */}
           <div className="absolute inset-0 -z-10">
             {(() => {
+              if (banner) {
+                return (
+                  <img
+                    src={banner}
+                    alt=""
+                    aria-hidden
+                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                    className="w-full h-full object-cover opacity-70"
+                  />
+                );
+              }
+              if (theme.hideBackdrop) return null;
               const firstItem = items.find((i) => i.thumb_url || i.media_url);
               const firstAlbumCover = albums.find((a) => a.cover_url)?.cover_url;
               const backdrop =
@@ -309,9 +321,22 @@ export default function PublicPortfolio({ mode }: Props) {
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_hsl(var(--primary)/0.18),_transparent_60%)]" />
           </div>
 
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-14 pb-16 sm:pt-20 sm:pb-24">
-            <div className="grid sm:grid-cols-[auto_1fr] gap-8 items-center">
-              <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-3xl bg-primary/15 flex items-center justify-center text-4xl font-display font-700 text-primary overflow-hidden ring-1 ring-primary/30 shadow-2xl shadow-primary/10">
+          <div className={`max-w-6xl mx-auto px-4 sm:px-6 ${layout === "grid" ? "pt-10 pb-6 sm:pt-12 sm:pb-8" : "pt-14 pb-16 sm:pt-20 sm:pb-24"}`}>
+            <div className={
+              layout === "editorial"
+                ? "max-w-3xl space-y-4"
+                : layout === "grid"
+                  ? "grid sm:grid-cols-[auto_1fr] gap-5 items-center"
+                  : "grid sm:grid-cols-[auto_1fr] gap-8 items-center"
+            }>
+              <div
+                className={
+                  layout === "grid"
+                    ? "relative w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-primary/15 flex items-center justify-center text-2xl font-display font-700 text-primary overflow-hidden ring-1 ring-primary/30"
+                    : "relative w-28 h-28 sm:w-32 sm:h-32 rounded-3xl bg-primary/15 flex items-center justify-center text-4xl font-display font-700 text-primary overflow-hidden ring-1 ring-primary/30 shadow-2xl shadow-primary/10"
+                }
+                style={{ fontFamily: "var(--portfolio-display-font)" }}
+              >
                 {profile.avatar_url ? (
                   <img src={profile.avatar_url} alt={displayName} className="w-full h-full object-cover" />
                 ) : (
@@ -322,7 +347,16 @@ export default function PublicPortfolio({ mode }: Props) {
                 <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-[11px] font-medium uppercase tracking-wider">
                   <Camera className="w-3 h-3" /> Drone photographer
                 </div>
-                <h1 className="font-display font-700 text-4xl sm:text-6xl tracking-tight leading-[1.05]">
+                <h1
+                  className={
+                    layout === "grid"
+                      ? "font-700 text-2xl sm:text-3xl tracking-tight leading-[1.1]"
+                      : layout === "editorial"
+                        ? "font-700 text-5xl sm:text-7xl tracking-tight leading-[1.02]"
+                        : "font-700 text-4xl sm:text-6xl tracking-tight leading-[1.05]"
+                  }
+                  style={{ fontFamily: "var(--portfolio-display-font)" }}
+                >
                   {displayName}
                 </h1>
                 {profile.headline && (
