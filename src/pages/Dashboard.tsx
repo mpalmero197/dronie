@@ -464,17 +464,27 @@ export default function Dashboard() {
             <span className="text-xs font-semibold text-accent">Admin</span>
           </div>
         )}
-        <div className="flex items-center gap-2.5 px-1">
-          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-            <UserIcon className="w-4 h-4 text-primary-foreground" />
+        <Link
+          to="/portfolio"
+          onClick={closeMobileNav}
+          title="Edit your profile"
+          className="flex items-center gap-2.5 px-2 py-1.5 -mx-1 rounded-lg hover:bg-sidebar-accent/60 transition-colors group"
+        >
+          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0 overflow-hidden ring-2 ring-transparent group-hover:ring-sidebar-primary/50 transition">
+            {user?.user_metadata?.avatar_url ? (
+              <img src={user.user_metadata.avatar_url} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <UserIcon className="w-4 h-4 text-primary-foreground" />
+            )}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-sidebar-foreground truncate">
+            <p className="text-xs font-semibold text-sidebar-foreground truncate group-hover:text-sidebar-primary transition-colors">
               {user?.user_metadata?.full_name || 'Pilot'}
             </p>
             <p className="text-xs text-sidebar-foreground/50 truncate">{user?.email}</p>
           </div>
-        </div>
+          <UserIcon className="w-3.5 h-3.5 text-sidebar-foreground/30 group-hover:text-sidebar-primary flex-shrink-0 transition-colors" />
+        </Link>
         <button
           onClick={() => { closeMobileNav(); handleSignOut(); }}
           className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
