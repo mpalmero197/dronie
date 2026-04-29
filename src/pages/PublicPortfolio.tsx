@@ -322,13 +322,14 @@ export default function PublicPortfolio({ mode }: Props) {
 }
 
 function MediaGrid({
-  items, emptyLabel, onOpen, heading, ownerCta,
+  items, emptyLabel, onOpen, heading, ownerCta, showVisibility,
 }: {
   items: PortfolioItem[];
   emptyLabel: string;
   onOpen: (i: PortfolioItem) => void;
   heading?: string;
   ownerCta?: boolean;
+  showVisibility?: boolean;
 }) {
   const hasItems = items.length > 0;
   return (
@@ -348,7 +349,7 @@ function MediaGrid({
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
           {items.map((it) => (
-            <MediaCard key={it.id} item={it} onOpen={onOpen} />
+            <MediaCard key={it.id} item={it} onOpen={onOpen} showVisibility={showVisibility} />
           ))}
         </div>
       )}
@@ -356,7 +357,7 @@ function MediaGrid({
   );
 }
 
-function MediaCard({ item, onOpen }: { item: PortfolioItem; onOpen: (i: PortfolioItem) => void }) {
+function MediaCard({ item, onOpen, showVisibility }: { item: PortfolioItem; onOpen: (i: PortfolioItem) => void; showVisibility?: boolean }) {
   if (item.kind === "project_link") {
     return (
       <Link
