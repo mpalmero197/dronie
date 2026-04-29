@@ -840,19 +840,34 @@ function SocialIcon({ href, icon: Icon, label }: { href: string; icon: React.Com
 }
 
 function MediaGrid({
-  items, emptyLabel, onOpen, heading, ownerCta, showVisibility,
+  items, emptyLabel, onOpen, heading, eyebrow, subtitle, ownerCta, showVisibility, username, showSeeAll,
 }: {
   items: PortfolioItem[];
   emptyLabel: string;
   onOpen: (i: PortfolioItem) => void;
   heading?: string;
+  eyebrow?: string;
+  subtitle?: string;
   ownerCta?: boolean;
   showVisibility?: boolean;
+  username?: string;
+  showSeeAll?: boolean;
 }) {
   const hasItems = items.length > 0;
   return (
-    <section className="space-y-3">
-      {heading && hasItems && <h2 className="font-display font-700 text-2xl tracking-tight">{heading}</h2>}
+    <section className="space-y-4">
+      {heading && hasItems && (
+        <SectionHeading
+          eyebrow={eyebrow}
+          title={heading}
+          subtitle={subtitle}
+          right={showSeeAll && username ? (
+            <Link to={`/u/${username}/photos`} className="inline-flex items-center gap-1 text-xs text-primary hover:text-primary/80">
+              See everything <ChevronRight className="w-3.5 h-3.5" />
+            </Link>
+          ) : undefined}
+        />
+      )}
       {!hasItems ? (
         <div className="rounded-2xl border border-dashed border-border p-12 text-center text-sm text-muted-foreground space-y-3">
           <p>{emptyLabel}</p>
@@ -865,9 +880,11 @@ function MediaGrid({
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
+        <div className="columns-2 sm:columns-3 lg:columns-4 gap-2 sm:gap-3 [column-fill:_balance]">
           {items.map((it) => (
-            <MediaCard key={it.id} item={it} onOpen={onOpen} showVisibility={showVisibility} />
+            <div key={it.id} className="mb-2 sm:mb-3 break-inside-avoid">
+              <MediaCard item={it} onOpen={onOpen} showVisibility={showVisibility} />
+            </div>
           ))}
         </div>
       )}
@@ -880,7 +897,7 @@ function MediaCard({ item, onOpen, showVisibility }: { item: PortfolioItem; onOp
     return (
       <Link
         to={item.project_id ? `/viewer/${item.project_id}` : "#"}
-        className="aspect-square rounded-xl border border-border bg-card relative overflow-hidden group"
+        className="block aspect-square rounded-xl border border-border bg-card relative overflow-hidden group hover:border-primary/50 transition-colors"
       >
         {item.thumb_url ? (
           <img src={item.thumb_url} alt={item.title ?? ""} className="w-full h-full object-cover" loading="lazy" />
@@ -905,12 +922,12 @@ function MediaCard({ item, onOpen, showVisibility }: { item: PortfolioItem; onOp
   return (
     <button
       onClick={() => onOpen(item)}
-      className="aspect-square rounded-xl border border-border bg-secondary relative overflow-hidden group"
+      className="block w-full rounded-xl border border-border bg-secondary relative overflow-hidden group hover:border-primary/50 transition-all"
     >
       {item.kind === "video" && !item.thumb_url ? (
         <video
           src={item.media_url ?? ""}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          className="w-full h-auto object-cover group-hover:scale-[1.04] transition-transform duration-700"
           muted
           playsInline
           preload="metadata"
@@ -919,7 +936,7 @@ function MediaCard({ item, onOpen, showVisibility }: { item: PortfolioItem; onOp
         <img
           src={item.thumb_url}
           alt={item.title ?? item.caption ?? ""}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          className="w-full h-auto object-cover group-hover:scale-[1.04] transition-transform duration-700"
           loading="lazy"
           onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
         />
@@ -927,17 +944,24 @@ function MediaCard({ item, onOpen, showVisibility }: { item: PortfolioItem; onOp
         <img
           src={item.media_url}
           alt={item.title ?? item.caption ?? ""}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          className="w-full h-auto object-cover group-hover:scale-[1.04] transition-transform duration-700"
           loading="lazy"
           onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
         />
       ) : (
-        <div className="w-full h-full bg-gradient-to-br from-primary/10 to-accent/5" />
+        <div className="w-full aspect-square bg-gradient-to-br from-primary/10 to-accent/5" />
+      )}
+      {/* Title overlay on hover */}
+      {(item.title || item.caption) && (
+        <div className="absolute inset-x-0 bottom-0 p-2.5 bg-gradient-to-t from-black/80 via-black/30 to-transparent translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
+          {item.title && <p className="text-xs font-semibold text-white truncate">{item.title}</p>}
+          {item.caption && <p className="text-[10px] text-white/70 truncate">{item.caption}</p>}
+        </div>
       )}
       {item.kind === "video" && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-          <div className="w-10 h-10 rounded-full bg-white/90 flex items-center justify-center">
-            <Film className="w-5 h-5 text-foreground" />
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="w-12 h-12 rounded-full bg-white/95 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+            <Play className="w-5 h-5 text-foreground fill-foreground ml-0.5" />
           </div>
         </div>
       )}
@@ -950,17 +974,66 @@ function MediaCard({ item, onOpen, showVisibility }: { item: PortfolioItem; onOp
   );
 }
 
-function Lightbox({ item, onClose }: { item: PortfolioItem; onClose: () => void }) {
+function Lightbox({
+  items, current, onClose, onNavigate,
+}: {
+  items: PortfolioItem[];
+  current: PortfolioItem;
+  onClose: () => void;
+  onNavigate: (it: PortfolioItem) => void;
+}) {
+  const idx = Math.max(0, items.findIndex((i) => i.id === current.id));
+  const total = items.length;
+  const go = (delta: number) => {
+    if (total <= 1) return;
+    const next = (idx + delta + total) % total;
+    onNavigate(items[next]);
+  };
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      else if (e.key === "ArrowRight") go(1);
+      else if (e.key === "ArrowLeft") go(-1);
+    };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [onClose, idx, total]);
+  const item = current;
   return (
-    <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="max-w-6xl w-full max-h-full" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors"
+        aria-label="Close"
+      >
+        <XIcon className="w-5 h-5" />
+      </button>
+      {total > 1 && (
+        <span className="absolute top-5 left-1/2 -translate-x-1/2 text-xs text-white/70 font-mono tabular-nums">
+          {idx + 1} / {total}
+        </span>
+      )}
+      {total > 1 && (
+        <>
+          <button
+            onClick={(e) => { e.stopPropagation(); go(-1); }}
+            className="absolute left-3 sm:left-6 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors"
+            aria-label="Previous"
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); go(1); }}
+            className="absolute right-3 sm:right-6 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors"
+            aria-label="Next"
+          >
+            <ChevronRight className="w-6 h-6" />
+          </button>
+        </>
+      )}
+      <div className="max-w-6xl w-full max-h-full animate-scale-in" onClick={(e) => e.stopPropagation()}>
         {item.kind === "video" ? (
-          <video src={item.media_url ?? ""} controls autoPlay className="w-full max-h-[80vh] rounded-lg" />
+          <video src={item.media_url ?? ""} controls autoPlay className="w-full max-h-[80vh] rounded-lg shadow-2xl" />
         ) : (
           <img src={item.media_url ?? ""} alt={item.title ?? ""} className="w-full max-h-[80vh] object-contain rounded-lg" />
         )}
