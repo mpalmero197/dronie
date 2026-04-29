@@ -317,6 +317,14 @@ export default function MarketplaceDetail() {
                           {q.eta_days && <span className="text-sm text-muted-foreground font-normal"> · {q.eta_days} days</span>}
                         </p>
                         {q.message && <p className="text-sm text-muted-foreground mt-1">{q.message}</p>}
+                        {isOwner && pilotInfo[q.pilot_id]?.part_107 && (
+                          <div className="mt-2">
+                            <FaaLookupButton
+                              displayName={pilotInfo[q.pilot_id].display_name}
+                              size="compact"
+                            />
+                          </div>
+                        )}
                       </div>
                       <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
                         q.status === "accepted" ? "bg-primary/10 text-primary" :
