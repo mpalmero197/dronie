@@ -140,11 +140,16 @@ export default function PortfolioStudio() {
         vimeo: profile.vimeo ?? null,
         tiktok: profile.tiktok ?? null,
         contact_email: profile.contact_email ?? null,
+        phone: profile.phone ?? null,
         avatar_url: profile.avatar_url ?? null,
         resume_url: profile.resume_url ?? null,
         portfolio_published: !!profile.portfolio_published,
         banner_url: profile.banner_url ?? null,
         theme: normalizeTheme(profile.theme) as any,
+        services: Array.isArray(profile.services) ? profile.services : [],
+        hourly_rate_cents: typeof profile.hourly_rate_cents === "number" ? profile.hourly_rate_cents : null,
+        available_for_hire: profile.available_for_hire !== false,
+        visibility_prefs: normalizePrefs(profile.visibility_prefs) as any,
       })
       .eq("id", user.id);
     setSavingProfile(false);
