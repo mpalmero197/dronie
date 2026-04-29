@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, Zap, Loader2 } from "lucide-react";
+import { Check, Zap, Loader2, Rocket, Crown, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -23,7 +23,8 @@ const plans = [
       "GeoTIFF download",
       "1 GB storage",
     ],
-    cta: "Get Started",
+    cta: "Start Free",
+    ctaSub: "No credit card required",
     ctaAction: "auth" as const,
     highlight: false,
   },
@@ -32,6 +33,7 @@ const plans = [
     price: "$49",
     period: "/ month",
     tagline: "For freelancers & survey crews",
+    valueProp: "Win bigger jobs · Process 10× faster",
     tier: "professional" as const,
     features: [
       "Unlimited projects",
@@ -43,7 +45,8 @@ const plans = [
       "Priority processing",
       "Share links",
     ],
-    cta: "Subscribe",
+    cta: "Upgrade to Professional",
+    ctaSub: "7-day free trial · Cancel anytime",
     ctaAction: "checkout" as const,
     highlight: true,
     badge: "Most Popular",
@@ -53,6 +56,7 @@ const plans = [
     price: "$149",
     period: "/ month",
     tagline: "For agencies & large operations",
+    valueProp: "White-label, API & SLA — pays for itself in one project",
     tier: "enterprise" as const,
     features: [
       "Unlimited images / project",
@@ -64,7 +68,8 @@ const plans = [
       "SLA guarantee",
       "Dedicated support",
     ],
-    cta: "Subscribe",
+    cta: "Go Enterprise",
+    ctaSub: "7-day free trial · Cancel anytime",
     ctaAction: "checkout" as const,
     highlight: false,
   },
