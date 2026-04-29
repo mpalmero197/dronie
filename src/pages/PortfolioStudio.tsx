@@ -6,6 +6,7 @@ import {
   ExternalLink, Copy, Image as ImageLucide, Wand2, Linkedin, Twitter,
   Youtube, Music2, FileText, Mail, User as UserIcon,
   Palette, Type as TypeIcon, LayoutTemplate,
+  Phone, BadgeCheck, Briefcase, EyeOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,7 +25,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
   PORTFOLIO_BUCKET, validateUsername, slugify,
+  DEFAULT_VISIBILITY_PREFS, normalizePrefs,
   type PortfolioAlbum, type PortfolioItem, type PortfolioVisibility,
+  type VisibilityPrefs,
 } from "@/lib/portfolio";
 import { captureVideoFrame } from "@/lib/videoFrame";
 import {
@@ -138,11 +141,16 @@ export default function PortfolioStudio() {
         vimeo: profile.vimeo ?? null,
         tiktok: profile.tiktok ?? null,
         contact_email: profile.contact_email ?? null,
+        phone: profile.phone ?? null,
         avatar_url: profile.avatar_url ?? null,
         resume_url: profile.resume_url ?? null,
         portfolio_published: !!profile.portfolio_published,
         banner_url: profile.banner_url ?? null,
         theme: normalizeTheme(profile.theme) as any,
+        services: Array.isArray(profile.services) ? profile.services : [],
+        hourly_rate_cents: typeof profile.hourly_rate_cents === "number" ? profile.hourly_rate_cents : null,
+        available_for_hire: profile.available_for_hire !== false,
+        visibility_prefs: normalizePrefs(profile.visibility_prefs) as any,
       })
       .eq("id", user.id);
     setSavingProfile(false);
@@ -502,6 +510,10 @@ export default function PortfolioStudio() {
               <Input className="mt-1" placeholder="hello@yourstudio.com" value={profile.contact_email ?? ""} onChange={(e) => setProfile((p: any) => ({ ...p, contact_email: e.target.value }))} />
             </div>
             <div>
+              <Label className="text-xs flex items-center gap-1.5"><Phone className="w-3 h-3" /> Public phone</Label>
+              <Input className="mt-1" placeholder="+1 555 123 4567" value={profile.phone ?? ""} onChange={(e) => setProfile((p: any) => ({ ...p, phone: e.target.value }))} />
+            </div>
+            <div>
               <Label className="text-xs flex items-center gap-1.5"><Linkedin className="w-3 h-3" /> LinkedIn</Label>
               <Input className="mt-1" placeholder="https://linkedin.com/in/you" value={profile.linkedin ?? ""} onChange={(e) => setProfile((p: any) => ({ ...p, linkedin: e.target.value }))} />
             </div>
@@ -583,6 +595,22 @@ export default function PortfolioStudio() {
             await supabase.from("profiles").update({ banner_url: null }).eq("id", user.id);
             setProfile((p: any) => ({ ...p, banner_url: null }));
           }}
+          onSave={saveProfile}
+          saving={savingProfile}
+        />
+
+        {/* Hire-me details */}
+        <HireMeSection
+          profile={profile}
+          setProfile={setProfile}
+          onSave={saveProfile}
+          saving={savingProfile}
+        />
+
+        {/* Visibility toggles */}
+        <VisibilitySection
+          prefs={normalizePrefs(profile.visibility_prefs)}
+          onPatch={(patch) => setProfile((p: any) => ({ ...p, visibility_prefs: { ...normalizePrefs(p?.visibility_prefs), ...patch } }))}
           onSave={saveProfile}
           saving={savingProfile}
         />
@@ -1331,4 +1359,182 @@ function hexToHslString(hex: string): string {
     h *= 60;
   }
   return `${Math.round(h)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+ * Hire-me / professional details
+ * ─────────────────────────────────────────────────────────────── */
+function HireMeSection({
+  profile, setProfile, onSave, saving,
+}: {
+  profile: any;
+  setProfile: React.Dispatch<React.SetStateAction<any>>;
+  onSave: () => void;
+  saving: boolean;
+}) {
+  const services: string[] = Array.isArray(profile.services) ? profile.services : [];
+  const [draft, setDraft] = useState("");
+
+  function addService(raw: string) {
+    const v = raw.trim();
+    if (!v) return;
+    if (services.map((s) => s.toLowerCase()).includes(v.toLowerCase())) return;
+    setProfile((p: any) => ({ ...p, services: [...services, v].slice(0, 12) }));
+    setDraft("");
+  }
+  function removeService(idx: number) {
+    setProfile((p: any) => ({ ...p, services: services.filter((_, i) => i !== idx) }));
+  }
+
+  const SUGGESTIONS = [
+    "Real estate", "Construction", "Inspections", "Events",
+    "Weddings", "Mapping & survey", "Cinematography", "Tourism",
+  ];
+
+  return (
+    <section className="rounded-2xl border border-border bg-card p-5 space-y-5">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Briefcase className="w-4 h-4 text-primary" />
+          <h2 className="font-display font-700 text-lg">Hire me</h2>
+        </div>
+        <Button onClick={onSave} disabled={saving} size="sm" className="gap-1.5">
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save
+        </Button>
+      </div>
+      <p className="text-xs text-muted-foreground -mt-2">
+        Help prospects qualify you in seconds. These details power the call-to-action and badges on your public page.
+      </p>
+
+      <div className="grid sm:grid-cols-2 gap-4">
+        <div className="rounded-xl border border-border bg-secondary/30 p-3 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-medium">Available for hire</p>
+            <p className="text-[11px] text-muted-foreground">Shows a green “available” pulse on your portfolio.</p>
+          </div>
+          <Switch
+            checked={profile.available_for_hire !== false}
+            onCheckedChange={(v) => setProfile((p: any) => ({ ...p, available_for_hire: v }))}
+          />
+        </div>
+
+        <div>
+          <Label className="text-xs flex items-center gap-1.5"><BadgeCheck className="w-3 h-3" /> Hourly rate (USD)</Label>
+          <Input
+            type="number"
+            min={0}
+            placeholder="150"
+            className="mt-1"
+            value={typeof profile.hourly_rate_cents === "number" ? Math.round(profile.hourly_rate_cents / 100) : ""}
+            onChange={(e) => {
+              const num = e.target.value === "" ? null : Math.max(0, Math.round(Number(e.target.value)));
+              setProfile((p: any) => ({ ...p, hourly_rate_cents: num === null ? null : num * 100 }));
+            }}
+          />
+          <p className="text-[11px] text-muted-foreground mt-1">Optional. Hidden by default — enable “Show rate” in the visibility section to display it.</p>
+        </div>
+      </div>
+
+      <div>
+        <Label className="text-xs">Services you offer</Label>
+        <div className="mt-1 flex flex-wrap gap-1.5 mb-2 min-h-[28px]">
+          {services.length === 0 && (
+            <span className="text-[11px] text-muted-foreground italic">No services yet — add a few so visitors instantly know what you do.</span>
+          )}
+          {services.map((s, i) => (
+            <span key={`${s}-${i}`} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/30 text-xs">
+              {s}
+              <button onClick={() => removeService(i)} className="text-muted-foreground hover:text-destructive">
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <Input
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addService(draft); } }}
+            placeholder="Add a service and press Enter…"
+            className="text-sm"
+          />
+          <Button size="sm" variant="outline" onClick={() => addService(draft)} disabled={!draft.trim()}>Add</Button>
+        </div>
+        <div className="flex flex-wrap gap-1 mt-2">
+          {SUGGESTIONS.filter((s) => !services.map((x) => x.toLowerCase()).includes(s.toLowerCase())).map((s) => (
+            <button
+              key={s}
+              onClick={() => addService(s)}
+              className="text-[11px] px-2 py-0.5 rounded-full border border-dashed border-border text-muted-foreground hover:text-primary hover:border-primary/50"
+            >
+              + {s}
+            </button>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────
+ * Visibility toggles — pick what shows on the public portfolio
+ * ─────────────────────────────────────────────────────────────── */
+function VisibilitySection({
+  prefs, onPatch, onSave, saving,
+}: {
+  prefs: Required<VisibilityPrefs>;
+  onPatch: (patch: Partial<VisibilityPrefs>) => void;
+  onSave: () => void;
+  saving: boolean;
+}) {
+  const ROWS: { key: keyof VisibilityPrefs; label: string; help: string }[] = [
+    { key: "show_hire_cta",     label: "“Hire me” button",        help: "Big primary CTA in the hero that opens an email to you." },
+    { key: "show_availability", label: "Availability badge",      help: "Shows whether you’re currently taking on work." },
+    { key: "show_services",     label: "Services chips",          help: "Lists the services you offer (real estate, inspections…)." },
+    { key: "show_rate",         label: "Hourly rate",             help: "Display your rate as a public badge. Off by default." },
+    { key: "show_email",        label: "Email address",           help: "Shown in the contact rail under the hero." },
+    { key: "show_phone",        label: "Phone number",            help: "Shown in the contact rail. Click-to-call on mobile." },
+    { key: "show_location",     label: "Location",                help: "Your service area or city." },
+    { key: "show_website",      label: "Website",                 help: "Your studio or portfolio website." },
+    { key: "show_socials",      label: "Social links",            help: "Instagram, LinkedIn, X, YouTube, Vimeo, TikTok." },
+    { key: "show_resume",       label: "Résumé / CV button",      help: "A button to download your résumé." },
+    { key: "show_powered_by",   label: "“Powered by Dronie” footer", help: "A small credit at the bottom of your portfolio." },
+  ];
+
+  return (
+    <section className="rounded-2xl border border-border bg-card p-5 space-y-4">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <EyeOff className="w-4 h-4 text-primary" />
+          <h2 className="font-display font-700 text-lg">What to show on your public page</h2>
+        </div>
+        <Button onClick={onSave} disabled={saving} size="sm" className="gap-1.5">
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save
+        </Button>
+      </div>
+      <p className="text-xs text-muted-foreground -mt-2">
+        Toggle any detail on or off. Empty fields are always hidden — these switches only affect items that have a value.
+      </p>
+      <div className="grid sm:grid-cols-2 gap-2">
+        {ROWS.map((row) => {
+          const enabled = prefs[row.key as keyof typeof prefs];
+          return (
+            <label
+              key={row.key as string}
+              className="flex items-start justify-between gap-3 rounded-xl border border-border bg-secondary/30 hover:bg-secondary/50 p-3 cursor-pointer transition-colors"
+            >
+              <div className="min-w-0">
+                <p className="text-sm font-medium">{row.label}</p>
+                <p className="text-[11px] text-muted-foreground leading-snug">{row.help}</p>
+              </div>
+              <Switch
+                checked={!!enabled}
+                onCheckedChange={(v) => onPatch({ [row.key]: v } as any)}
+              />
+            </label>
+          );
+        })}
+      </div>
+    </section>
+  );
 }

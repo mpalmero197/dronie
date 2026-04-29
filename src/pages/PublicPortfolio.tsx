@@ -5,10 +5,12 @@ import {
   Loader2, Lock, ExternalLink, Camera, Eye, EyeOff, Link2,
   Linkedin, Twitter, Youtube, Music2, FileText, Mail,
   AlertTriangle, RefreshCw, LifeBuoy, User as UserIcon,
+  Phone, BadgeCheck, Send, CircleDot,
 } from "lucide-react";
 import {
   fetchPortfolioByUsername, fetchPublicAlbumsByUser, fetchPublicItemsByUser,
   fetchAlbumBySlug, fetchItemsForAlbum,
+  normalizePrefs,
   type PortfolioProfile, type PortfolioAlbum, type PortfolioItem,
 } from "@/lib/portfolio";
 import { Button } from "@/components/ui/button";
@@ -244,6 +246,17 @@ export default function PublicPortfolio({ mode }: Props) {
   const isUnpublished = !profile.portfolio_published;
   const banner = profile.banner_url ?? null;
   const layout = theme.layout;
+  const prefs = normalizePrefs(profile.visibility_prefs);
+
+  const hasAnySocial =
+    !!profile.instagram || !!profile.linkedin || !!profile.twitter ||
+    !!profile.youtube || !!profile.vimeo || !!profile.tiktok;
+
+  const hireEmail = profile.contact_email || null;
+  const formattedRate =
+    typeof profile.hourly_rate_cents === "number" && profile.hourly_rate_cents > 0
+      ? `$${Math.round(profile.hourly_rate_cents / 100).toLocaleString()}/hr`
+      : null;
 
   return (
     <div
@@ -281,163 +294,19 @@ export default function PublicPortfolio({ mode }: Props) {
 
       {/* Hero / about */}
       {mode === "home" && (
-        <section className={`relative border-b border-border overflow-hidden ${layout === "grid" ? "pb-0" : ""}`}>
-          {/* Cinematic backdrop */}
-          <div className="absolute inset-0 -z-10">
-            {(() => {
-              if (banner) {
-                return (
-                  <img
-                    src={banner}
-                    alt=""
-                    aria-hidden
-                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-                    className="w-full h-full object-cover opacity-70"
-                  />
-                );
-              }
-              if (theme.hideBackdrop) return null;
-              const firstItem = items.find((i) => i.thumb_url || i.media_url);
-              const firstAlbumCover = albums.find((a) => a.cover_url)?.cover_url;
-              const backdrop =
-                firstItem?.thumb_url ||
-                firstItem?.media_url ||
-                firstAlbumCover ||
-                profile.avatar_url ||
-                null;
-              return backdrop ? (
-                <img
-                  src={backdrop}
-                  alt=""
-                  aria-hidden
-                  onError={(e) => {
-                    (e.currentTarget as HTMLImageElement).style.display = "none";
-                  }}
-                  className="w-full h-full object-cover opacity-30 scale-110 blur-sm"
-                />
-              ) : null;
-            })()}
-            <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/85 to-background" />
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_hsl(var(--primary)/0.18),_transparent_60%)]" />
-          </div>
-
-          <div className={`max-w-6xl mx-auto px-4 sm:px-6 ${layout === "grid" ? "pt-10 pb-6 sm:pt-12 sm:pb-8" : "pt-14 pb-16 sm:pt-20 sm:pb-24"}`}>
-            <div className={
-              layout === "editorial"
-                ? "max-w-3xl space-y-4"
-                : layout === "grid"
-                  ? "grid sm:grid-cols-[auto_1fr] gap-5 items-center"
-                  : "grid sm:grid-cols-[auto_1fr] gap-8 items-center"
-            }>
-              <div
-                className={
-                  layout === "grid"
-                    ? "relative w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-primary/15 flex items-center justify-center text-2xl font-display font-700 text-primary overflow-hidden ring-1 ring-primary/30"
-                    : "relative w-28 h-28 sm:w-32 sm:h-32 rounded-3xl bg-primary/15 flex items-center justify-center text-4xl font-display font-700 text-primary overflow-hidden ring-1 ring-primary/30 shadow-2xl shadow-primary/10"
-                }
-                style={{ fontFamily: "var(--portfolio-display-font)" }}
-              >
-                {profile.avatar_url ? (
-                  <img src={profile.avatar_url} alt={displayName} className="w-full h-full object-cover" />
-                ) : (
-                  displayName[0]?.toUpperCase()
-                )}
-              </div>
-              <div className="space-y-3">
-                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-[11px] font-medium uppercase tracking-wider">
-                  <Camera className="w-3 h-3" /> Drone photographer
-                </div>
-                <h1
-                  className={
-                    layout === "grid"
-                      ? "font-700 text-2xl sm:text-3xl tracking-tight leading-[1.1]"
-                      : layout === "editorial"
-                        ? "font-700 text-5xl sm:text-7xl tracking-tight leading-[1.02]"
-                        : "font-700 text-4xl sm:text-6xl tracking-tight leading-[1.05]"
-                  }
-                  style={{ fontFamily: "var(--portfolio-display-font)" }}
-                >
-                  {displayName}
-                </h1>
-                {profile.headline && (
-                  <p className="text-lg sm:text-xl text-foreground/85 max-w-2xl leading-relaxed">
-                    {profile.headline}
-                  </p>
-                )}
-                {profile.bio && (
-                  <p className="text-sm text-muted-foreground max-w-2xl whitespace-pre-line leading-relaxed">
-                    {profile.bio}
-                  </p>
-                )}
-                <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground pt-1">
-                  {profile.location && (
-                    <span className="inline-flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" /> {profile.location}</span>
-                  )}
-                  {profile.website && (
-                    <a href={profile.website} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-primary transition-colors">
-                      <Globe className="w-3.5 h-3.5" /> {profile.website.replace(/^https?:\/\//, "")}
-                    </a>
-                  )}
-                  {profile.instagram && (
-                    <a href={`https://instagram.com/${profile.instagram.replace(/^@/, "")}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-primary transition-colors">
-                      <Instagram className="w-3.5 h-3.5" /> @{profile.instagram.replace(/^@/, "")}
-                    </a>
-                  )}
-                  {profile.linkedin && (
-                    <a href={profile.linkedin.startsWith("http") ? profile.linkedin : `https://linkedin.com/in/${profile.linkedin.replace(/^@/, "")}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-primary transition-colors">
-                      <Linkedin className="w-3.5 h-3.5" /> LinkedIn
-                    </a>
-                  )}
-                  {profile.twitter && (
-                    <a href={`https://x.com/${profile.twitter.replace(/^@/, "")}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-primary transition-colors">
-                      <Twitter className="w-3.5 h-3.5" /> @{profile.twitter.replace(/^@/, "")}
-                    </a>
-                  )}
-                  {profile.youtube && (
-                    <a href={profile.youtube.startsWith("http") ? profile.youtube : `https://youtube.com/${profile.youtube.startsWith("@") ? profile.youtube : "@" + profile.youtube}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-primary transition-colors">
-                      <Youtube className="w-3.5 h-3.5" /> YouTube
-                    </a>
-                  )}
-                  {profile.vimeo && (
-                    <a href={profile.vimeo.startsWith("http") ? profile.vimeo : `https://vimeo.com/${profile.vimeo.replace(/^@/, "")}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-primary transition-colors">
-                      <Film className="w-3.5 h-3.5" /> Vimeo
-                    </a>
-                  )}
-                  {profile.tiktok && (
-                    <a href={`https://tiktok.com/@${profile.tiktok.replace(/^@/, "")}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-primary transition-colors">
-                      <Music2 className="w-3.5 h-3.5" /> @{profile.tiktok.replace(/^@/, "")}
-                    </a>
-                  )}
-                  {profile.contact_email && (
-                    <a href={`mailto:${profile.contact_email}`} className="inline-flex items-center gap-1.5 hover:text-primary transition-colors">
-                      <Mail className="w-3.5 h-3.5" /> {profile.contact_email}
-                    </a>
-                  )}
-                </div>
-
-                <div className="flex flex-wrap gap-2 pt-4">
-                  <Link to={`/u/${profile.username}/photos`}>
-                    <Button size="sm" className="gap-1.5">
-                      <ImageIcon className="w-3.5 h-3.5" /> All photos
-                    </Button>
-                  </Link>
-                  <Link to={`/u/${profile.username}/videos`}>
-                    <Button size="sm" variant="outline" className="gap-1.5">
-                      <Film className="w-3.5 h-3.5" /> All videos
-                    </Button>
-                  </Link>
-                  {profile.resume_url && (
-                    <a href={profile.resume_url} target="_blank" rel="noreferrer">
-                      <Button size="sm" variant="outline" className="gap-1.5">
-                        <FileText className="w-3.5 h-3.5" /> Résumé
-                      </Button>
-                    </a>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
+        <PortfolioHero
+          profile={profile}
+          prefs={prefs}
+          layout={layout}
+          theme={theme}
+          banner={banner}
+          items={items}
+          albums={albums}
+          displayName={displayName}
+          formattedRate={formattedRate}
+          hireEmail={hireEmail}
+          hasAnySocial={hasAnySocial}
+        />
       )}
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-10">
@@ -519,16 +388,395 @@ export default function PublicPortfolio({ mode }: Props) {
         />
       </main>
 
-      <footer className="border-t border-border mt-12 py-6 text-center text-xs text-muted-foreground">
-        <Link to="/" className="hover:text-foreground">
-          Build your own drone portfolio with <span className="font-display font-700 text-foreground">Dronie</span>
-        </Link>
-      </footer>
+      {prefs.show_powered_by && (
+        <footer className="border-t border-border mt-12 py-6 text-center text-xs text-muted-foreground">
+          <Link to="/" className="hover:text-foreground">
+            Build your own drone portfolio with <span className="font-display font-700 text-foreground">Dronie</span>
+          </Link>
+        </footer>
+      )}
 
       {lightbox && (
         <Lightbox item={lightbox} onClose={() => setLightbox(null)} />
       )}
     </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────
+ * Hero — three visually distinct layouts
+ * ─────────────────────────────────────────────────────────────── */
+
+type PrefsT = ReturnType<typeof normalizePrefs>;
+
+function PortfolioHero({
+  profile, prefs, layout, theme, banner, items, albums, displayName,
+  formattedRate, hireEmail, hasAnySocial,
+}: {
+  profile: PortfolioProfile;
+  prefs: PrefsT;
+  layout: "cinematic" | "editorial" | "grid";
+  theme: { hideBackdrop?: boolean };
+  banner: string | null;
+  items: PortfolioItem[];
+  albums: PortfolioAlbum[];
+  displayName: string;
+  formattedRate: string | null;
+  hireEmail: string | null;
+  hasAnySocial: boolean;
+}) {
+  const firstItem = items.find((i) => i.thumb_url || i.media_url);
+  const firstAlbumCover = albums.find((a) => a.cover_url)?.cover_url;
+  const fallbackBackdrop =
+    !theme.hideBackdrop
+      ? (firstItem?.thumb_url || firstItem?.media_url || firstAlbumCover || profile.avatar_url || null)
+      : null;
+
+  const services = (profile.services ?? []).filter(Boolean).slice(0, 8);
+
+  const ctas = (
+    <div className="flex flex-wrap gap-2">
+      {prefs.show_hire_cta && hireEmail && (
+        <a href={`mailto:${hireEmail}?subject=${encodeURIComponent(`Hiring inquiry for ${displayName}`)}`}>
+          <Button size="lg" className="gap-1.5 shadow-lg shadow-primary/20">
+            <Send className="w-4 h-4" /> Hire {profile.full_name?.split(" ")[0] || "me"}
+          </Button>
+        </a>
+      )}
+      <Link to={`/u/${profile.username}/photos`}>
+        <Button size="lg" variant="outline" className="gap-1.5">
+          <ImageIcon className="w-4 h-4" /> Photos
+        </Button>
+      </Link>
+      <Link to={`/u/${profile.username}/videos`}>
+        <Button size="lg" variant="outline" className="gap-1.5">
+          <Film className="w-4 h-4" /> Videos
+        </Button>
+      </Link>
+      {prefs.show_resume && profile.resume_url && (
+        <a href={profile.resume_url} target="_blank" rel="noreferrer">
+          <Button size="lg" variant="ghost" className="gap-1.5">
+            <FileText className="w-4 h-4" /> Résumé
+          </Button>
+        </a>
+      )}
+    </div>
+  );
+
+  const meta = (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs">
+      {prefs.show_availability && (
+        <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full border ${
+          profile.available_for_hire
+            ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+            : "border-border bg-muted text-muted-foreground"
+        }`}>
+          <CircleDot className={`w-3 h-3 ${profile.available_for_hire ? "animate-pulse" : ""}`} />
+          {profile.available_for_hire ? "Available for hire" : "Currently booked"}
+        </span>
+      )}
+      {prefs.show_location && profile.location && (
+        <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+          <MapPin className="w-3.5 h-3.5" /> {profile.location}
+        </span>
+      )}
+      {prefs.show_rate && formattedRate && (
+        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-primary/10 border border-primary/30 text-primary font-medium">
+          <BadgeCheck className="w-3.5 h-3.5" /> {formattedRate}
+        </span>
+      )}
+    </div>
+  );
+
+  // ───── CINEMATIC ──────────────────────────────────────────────
+  // Full-bleed banner / backdrop image, content overlaid at bottom-left.
+  if (layout === "cinematic") {
+    return (
+      <section className="relative border-b border-border overflow-hidden">
+        <div className="relative h-[68vh] min-h-[480px] max-h-[760px] w-full">
+          {/* Backdrop */}
+          <div className="absolute inset-0">
+            {(banner || fallbackBackdrop) ? (
+              <img
+                src={banner || fallbackBackdrop || ""}
+                alt=""
+                aria-hidden
+                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-primary/30 via-background to-background" />
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-background/10" />
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_hsl(var(--primary)/0.25),_transparent_60%)]" />
+          </div>
+
+          <div className="relative h-full max-w-6xl mx-auto px-4 sm:px-6 flex items-end pb-10 sm:pb-16">
+            <div className="max-w-2xl space-y-4">
+              <Avatar profile={profile} displayName={displayName} size="lg" />
+              <div className="space-y-2">
+                <h1
+                  className="font-700 text-5xl sm:text-7xl tracking-tight leading-[0.95] drop-shadow-[0_4px_24px_rgba(0,0,0,0.5)]"
+                  style={{ fontFamily: "var(--portfolio-display-font)" }}
+                >
+                  {displayName}
+                </h1>
+                {profile.headline && (
+                  <p className="text-lg sm:text-xl text-foreground/90 leading-relaxed">
+                    {profile.headline}
+                  </p>
+                )}
+              </div>
+              {meta}
+              {prefs.show_services && services.length > 0 && (
+                <ServiceChips services={services} />
+              )}
+              {profile.bio && (
+                <p className="text-sm text-foreground/75 max-w-xl whitespace-pre-line leading-relaxed">
+                  {profile.bio}
+                </p>
+              )}
+              {ctas}
+            </div>
+          </div>
+        </div>
+        <ContactRail profile={profile} prefs={prefs} hasAnySocial={hasAnySocial} />
+      </section>
+    );
+  }
+
+  // ───── EDITORIAL ──────────────────────────────────────────────
+  // Magazine-style: huge serif headline left, vertical stripe + portrait right.
+  if (layout === "editorial") {
+    return (
+      <section className="relative border-b border-border overflow-hidden">
+        <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top_right,_hsl(var(--primary)/0.18),_transparent_60%)]" />
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-24 grid lg:grid-cols-[1.4fr_1fr] gap-10 lg:gap-16 items-center">
+          <div className="space-y-6 order-2 lg:order-1">
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-[11px] font-medium uppercase tracking-[0.2em]">
+              <Camera className="w-3 h-3" /> Aerial portfolio
+            </div>
+            <h1
+              className="font-700 text-6xl sm:text-8xl tracking-tight leading-[0.92]"
+              style={{ fontFamily: "var(--portfolio-display-font)" }}
+            >
+              {displayName}
+            </h1>
+            {profile.headline && (
+              <p className="text-xl sm:text-2xl text-foreground/85 leading-snug max-w-xl border-l-2 border-primary pl-4 italic">
+                {profile.headline}
+              </p>
+            )}
+            {meta}
+            {prefs.show_services && services.length > 0 && (
+              <ServiceChips services={services} />
+            )}
+            {profile.bio && (
+              <p className="text-base text-muted-foreground max-w-xl whitespace-pre-line leading-relaxed">
+                {profile.bio}
+              </p>
+            )}
+            {ctas}
+          </div>
+
+          <div className="relative order-1 lg:order-2">
+            <div className="relative aspect-[4/5] rounded-2xl overflow-hidden border border-border shadow-2xl shadow-primary/10">
+              {(banner || fallbackBackdrop) ? (
+                <img
+                  src={banner || fallbackBackdrop || ""}
+                  alt=""
+                  className="w-full h-full object-cover"
+                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-primary/40 to-primary/5" />
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-background/40 via-transparent to-transparent" />
+            </div>
+            <div className="absolute -bottom-6 -left-6 sm:-left-10">
+              <Avatar profile={profile} displayName={displayName} size="md" />
+            </div>
+          </div>
+        </div>
+        <ContactRail profile={profile} prefs={prefs} hasAnySocial={hasAnySocial} />
+      </section>
+    );
+  }
+
+  // ───── GRID-FIRST ─────────────────────────────────────────────
+  // Tight, card-style hero. Compact identity panel + 2x2 work preview.
+  return (
+    <section className="relative border-b border-border overflow-hidden">
+      {(banner || fallbackBackdrop) && !theme.hideBackdrop && (
+        <div className="absolute inset-0 -z-10">
+          <img
+            src={banner || fallbackBackdrop || ""}
+            alt=""
+            aria-hidden
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+            className="w-full h-full object-cover opacity-25 scale-110 blur-md"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/90 to-background" />
+        </div>
+      )}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-14 grid lg:grid-cols-[1fr_1.1fr] gap-6 lg:gap-10 items-stretch">
+        <div className="rounded-2xl bg-card/70 backdrop-blur-sm border border-border p-6 sm:p-8 space-y-4">
+          <div className="flex items-center gap-4">
+            <Avatar profile={profile} displayName={displayName} size="sm" />
+            <div className="min-w-0">
+              <h1
+                className="font-700 text-2xl sm:text-3xl tracking-tight leading-[1.05] truncate"
+                style={{ fontFamily: "var(--portfolio-display-font)" }}
+              >
+                {displayName}
+              </h1>
+              <p className="text-xs text-muted-foreground truncate">@{profile.username}</p>
+            </div>
+          </div>
+          {profile.headline && (
+            <p className="text-base text-foreground/85 leading-relaxed">{profile.headline}</p>
+          )}
+          {meta}
+          {prefs.show_services && services.length > 0 && (
+            <ServiceChips services={services} />
+          )}
+          {profile.bio && (
+            <p className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed line-clamp-5">
+              {profile.bio}
+            </p>
+          )}
+          {ctas}
+        </div>
+
+        {/* Mosaic preview */}
+        <div className="grid grid-cols-2 grid-rows-2 gap-2 sm:gap-3 min-h-[280px] sm:min-h-[360px]">
+          {(() => {
+            const previews = items.filter((i) => i.thumb_url || i.media_url).slice(0, 4);
+            const fillers = 4 - previews.length;
+            return [
+              ...previews.map((it, idx) => (
+                <div key={it.id} className={`relative rounded-xl overflow-hidden bg-secondary border border-border ${idx === 0 ? "row-span-2" : ""}`}>
+                  <img
+                    src={it.thumb_url || it.media_url || ""}
+                    alt={it.title ?? ""}
+                    loading="lazy"
+                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"
+                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                  />
+                </div>
+              )),
+              ...Array.from({ length: Math.max(0, fillers) }).map((_, i) => (
+                <div key={`f${i}`} className={`rounded-xl bg-gradient-to-br from-primary/15 to-primary/5 border border-border ${i === 0 && previews.length === 0 ? "row-span-2" : ""}`} />
+              )),
+            ];
+          })()}
+        </div>
+      </div>
+      <ContactRail profile={profile} prefs={prefs} hasAnySocial={hasAnySocial} />
+    </section>
+  );
+}
+
+function Avatar({ profile, displayName, size }: { profile: PortfolioProfile; displayName: string; size: "sm" | "md" | "lg" }) {
+  const cls =
+    size === "lg"
+      ? "w-24 h-24 sm:w-28 sm:h-28 rounded-2xl text-3xl"
+      : size === "md"
+        ? "w-20 h-20 sm:w-24 sm:h-24 rounded-2xl text-2xl"
+        : "w-14 h-14 rounded-xl text-xl";
+  return (
+    <div
+      className={`relative ${cls} bg-primary/15 flex items-center justify-center font-700 text-primary overflow-hidden ring-2 ring-primary/40 shadow-2xl shadow-primary/20 flex-shrink-0`}
+      style={{ fontFamily: "var(--portfolio-display-font)" }}
+    >
+      {profile.avatar_url ? (
+        <img src={profile.avatar_url} alt={displayName} className="w-full h-full object-cover" />
+      ) : (
+        displayName[0]?.toUpperCase()
+      )}
+    </div>
+  );
+}
+
+function ServiceChips({ services }: { services: string[] }) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {services.map((s, i) => (
+        <span
+          key={`${s}-${i}`}
+          className="inline-flex items-center px-2.5 py-1 rounded-full bg-secondary/80 border border-border text-xs font-medium"
+        >
+          {s}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function ContactRail({ profile, prefs, hasAnySocial }: { profile: PortfolioProfile; prefs: PrefsT; hasAnySocial: boolean }) {
+  const showEmail = prefs.show_email && !!profile.contact_email;
+  const showPhone = prefs.show_phone && !!profile.phone;
+  const showWebsite = prefs.show_website && !!profile.website;
+  const showSocials = prefs.show_socials && hasAnySocial;
+  if (!showEmail && !showPhone && !showWebsite && !showSocials) return null;
+
+  return (
+    <div className="border-t border-border bg-card/40 backdrop-blur-sm">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
+        {showEmail && (
+          <a href={`mailto:${profile.contact_email}`} className="inline-flex items-center gap-1.5 hover:text-primary transition-colors">
+            <Mail className="w-3.5 h-3.5" /> {profile.contact_email}
+          </a>
+        )}
+        {showPhone && (
+          <a href={`tel:${profile.phone}`} className="inline-flex items-center gap-1.5 hover:text-primary transition-colors">
+            <Phone className="w-3.5 h-3.5" /> {profile.phone}
+          </a>
+        )}
+        {showWebsite && (
+          <a href={profile.website!} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-primary transition-colors">
+            <Globe className="w-3.5 h-3.5" /> {profile.website!.replace(/^https?:\/\//, "")}
+          </a>
+        )}
+        {showSocials && (
+          <div className="ml-auto flex flex-wrap items-center gap-1">
+            {profile.instagram && (
+              <SocialIcon href={`https://instagram.com/${profile.instagram.replace(/^@/, "")}`} icon={Instagram} label="Instagram" />
+            )}
+            {profile.linkedin && (
+              <SocialIcon href={profile.linkedin.startsWith("http") ? profile.linkedin : `https://linkedin.com/in/${profile.linkedin.replace(/^@/, "")}`} icon={Linkedin} label="LinkedIn" />
+            )}
+            {profile.twitter && (
+              <SocialIcon href={`https://x.com/${profile.twitter.replace(/^@/, "")}`} icon={Twitter} label="X" />
+            )}
+            {profile.youtube && (
+              <SocialIcon href={profile.youtube.startsWith("http") ? profile.youtube : `https://youtube.com/${profile.youtube.startsWith("@") ? profile.youtube : "@" + profile.youtube}`} icon={Youtube} label="YouTube" />
+            )}
+            {profile.vimeo && (
+              <SocialIcon href={profile.vimeo.startsWith("http") ? profile.vimeo : `https://vimeo.com/${profile.vimeo.replace(/^@/, "")}`} icon={Film} label="Vimeo" />
+            )}
+            {profile.tiktok && (
+              <SocialIcon href={`https://tiktok.com/@${profile.tiktok.replace(/^@/, "")}`} icon={Music2} label="TikTok" />
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SocialIcon({ href, icon: Icon, label }: { href: string; icon: React.ComponentType<{ className?: string }>; label: string }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      aria-label={label}
+      title={label}
+      className="w-8 h-8 rounded-full border border-border bg-card flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary/50 transition-colors"
+    >
+      <Icon className="w-4 h-4" />
+    </a>
   );
 }
 
