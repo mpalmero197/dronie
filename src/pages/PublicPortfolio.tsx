@@ -450,3 +450,39 @@ function autoCover(albumId: string, items: PortfolioItem[]): string | null {
   const first = inAlbum[0];
   return first ? first.thumb_url || first.media_url : null;
 }
+
+function VisibilityPill({
+  visibility,
+  kind,
+}: {
+  visibility: "public" | "unlisted" | "private";
+  kind: "album" | "item";
+}) {
+  if (visibility === "public") return null;
+  const isUnlisted = visibility === "unlisted";
+  const Icon = isUnlisted ? Link2 : Lock;
+  const label = isUnlisted ? "Unlisted" : "Private";
+  const tip = isUnlisted
+    ? `This ${kind} is unlisted — only people with the direct link can see it. It won't appear in public listings.`
+    : `This ${kind} is private — only you can see it while signed in. Visitors won't see it at all.`;
+  return (
+    <TooltipProvider delayDuration={150}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span
+            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium uppercase tracking-wider backdrop-blur border cursor-help ${
+              isUnlisted
+                ? "bg-amber-500/15 text-amber-200 border-amber-500/40"
+                : "bg-rose-500/15 text-rose-200 border-rose-500/40"
+            }`}
+          >
+            <Icon className="w-3 h-3" /> {label}
+          </span>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-xs text-xs">
+          {tip}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
