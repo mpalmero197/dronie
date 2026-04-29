@@ -246,6 +246,17 @@ export default function PublicPortfolio({ mode }: Props) {
   const isUnpublished = !profile.portfolio_published;
   const banner = profile.banner_url ?? null;
   const layout = theme.layout;
+  const prefs = normalizePrefs(profile.visibility_prefs);
+
+  const hasAnySocial =
+    !!profile.instagram || !!profile.linkedin || !!profile.twitter ||
+    !!profile.youtube || !!profile.vimeo || !!profile.tiktok;
+
+  const hireEmail = profile.contact_email || null;
+  const formattedRate =
+    typeof profile.hourly_rate_cents === "number" && profile.hourly_rate_cents > 0
+      ? `$${Math.round(profile.hourly_rate_cents / 100).toLocaleString()}/hr`
+      : null;
 
   return (
     <div
