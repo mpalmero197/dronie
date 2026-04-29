@@ -90,6 +90,14 @@ export default function PortfolioStudio() {
         location: profile.location ?? null,
         website: profile.website ?? null,
         instagram: profile.instagram ?? null,
+        linkedin: profile.linkedin ?? null,
+        twitter: profile.twitter ?? null,
+        youtube: profile.youtube ?? null,
+        vimeo: profile.vimeo ?? null,
+        tiktok: profile.tiktok ?? null,
+        contact_email: profile.contact_email ?? null,
+        avatar_url: profile.avatar_url ?? null,
+        resume_url: profile.resume_url ?? null,
         portfolio_published: !!profile.portfolio_published,
       })
       .eq("id", user.id);
