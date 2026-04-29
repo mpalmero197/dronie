@@ -3,6 +3,50 @@ import type { PortfolioTheme } from "./portfolioTheme";
 
 export type PortfolioVisibility = "public" | "unlisted" | "private";
 
+/**
+ * Per-user toggles for what to surface on the public portfolio page.
+ * Stored as JSON in profiles.visibility_prefs. Defaults to "show" for
+ * everything that has a value — the public page also gates on the
+ * underlying data, so an empty field is never rendered regardless.
+ */
+export interface VisibilityPrefs {
+  show_email?: boolean;
+  show_phone?: boolean;
+  show_location?: boolean;
+  show_website?: boolean;
+  show_socials?: boolean;
+  show_resume?: boolean;
+  show_services?: boolean;
+  show_rate?: boolean;
+  show_hire_cta?: boolean;
+  show_availability?: boolean;
+  show_powered_by?: boolean;
+}
+
+export const DEFAULT_VISIBILITY_PREFS: Required<VisibilityPrefs> = {
+  show_email: true,
+  show_phone: true,
+  show_location: true,
+  show_website: true,
+  show_socials: true,
+  show_resume: true,
+  show_services: true,
+  show_rate: false,
+  show_hire_cta: true,
+  show_availability: true,
+  show_powered_by: true,
+};
+
+export function normalizePrefs(raw: any): Required<VisibilityPrefs> {
+  const base = { ...DEFAULT_VISIBILITY_PREFS };
+  if (raw && typeof raw === "object") {
+    for (const k of Object.keys(base) as (keyof VisibilityPrefs)[]) {
+      if (typeof raw[k] === "boolean") (base as any)[k] = raw[k];
+    }
+  }
+  return base;
+}
+
 export interface PortfolioProfile {
   id: string;
   username: string | null;
@@ -19,10 +63,15 @@ export interface PortfolioProfile {
   vimeo: string | null;
   tiktok: string | null;
   contact_email: string | null;
+  phone: string | null;
   resume_url: string | null;
   portfolio_published: boolean;
   banner_url: string | null;
   theme: PortfolioTheme | null;
+  services: string[];
+  hourly_rate_cents: number | null;
+  available_for_hire: boolean;
+  visibility_prefs: VisibilityPrefs | null;
 }
 
 export interface PortfolioAlbum {
@@ -88,7 +137,7 @@ export function slugify(s: string): string {
 export async function fetchPortfolioByUsername(username: string) {
   const { data, error } = await supabase
     .from("profiles")
-    .select("id,username,full_name,avatar_url,headline,bio,location,website,instagram,linkedin,twitter,youtube,vimeo,tiktok,contact_email,resume_url,portfolio_published,banner_url,theme")
+    .select("id,username,full_name,avatar_url,headline,bio,location,website,instagram,linkedin,twitter,youtube,vimeo,tiktok,contact_email,phone,resume_url,portfolio_published,banner_url,theme,services,hourly_rate_cents,available_for_hire,visibility_prefs")
     .ilike("username", username)
     .maybeSingle();
   if (error) throw error;
