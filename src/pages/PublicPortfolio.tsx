@@ -294,163 +294,19 @@ export default function PublicPortfolio({ mode }: Props) {
 
       {/* Hero / about */}
       {mode === "home" && (
-        <section className={`relative border-b border-border overflow-hidden ${layout === "grid" ? "pb-0" : ""}`}>
-          {/* Cinematic backdrop */}
-          <div className="absolute inset-0 -z-10">
-            {(() => {
-              if (banner) {
-                return (
-                  <img
-                    src={banner}
-                    alt=""
-                    aria-hidden
-                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-                    className="w-full h-full object-cover opacity-70"
-                  />
-                );
-              }
-              if (theme.hideBackdrop) return null;
-              const firstItem = items.find((i) => i.thumb_url || i.media_url);
-              const firstAlbumCover = albums.find((a) => a.cover_url)?.cover_url;
-              const backdrop =
-                firstItem?.thumb_url ||
-                firstItem?.media_url ||
-                firstAlbumCover ||
-                profile.avatar_url ||
-                null;
-              return backdrop ? (
-                <img
-                  src={backdrop}
-                  alt=""
-                  aria-hidden
-                  onError={(e) => {
-                    (e.currentTarget as HTMLImageElement).style.display = "none";
-                  }}
-                  className="w-full h-full object-cover opacity-30 scale-110 blur-sm"
-                />
-              ) : null;
-            })()}
-            <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/85 to-background" />
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_hsl(var(--primary)/0.18),_transparent_60%)]" />
-          </div>
-
-          <div className={`max-w-6xl mx-auto px-4 sm:px-6 ${layout === "grid" ? "pt-10 pb-6 sm:pt-12 sm:pb-8" : "pt-14 pb-16 sm:pt-20 sm:pb-24"}`}>
-            <div className={
-              layout === "editorial"
-                ? "max-w-3xl space-y-4"
-                : layout === "grid"
-                  ? "grid sm:grid-cols-[auto_1fr] gap-5 items-center"
-                  : "grid sm:grid-cols-[auto_1fr] gap-8 items-center"
-            }>
-              <div
-                className={
-                  layout === "grid"
-                    ? "relative w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-primary/15 flex items-center justify-center text-2xl font-display font-700 text-primary overflow-hidden ring-1 ring-primary/30"
-                    : "relative w-28 h-28 sm:w-32 sm:h-32 rounded-3xl bg-primary/15 flex items-center justify-center text-4xl font-display font-700 text-primary overflow-hidden ring-1 ring-primary/30 shadow-2xl shadow-primary/10"
-                }
-                style={{ fontFamily: "var(--portfolio-display-font)" }}
-              >
-                {profile.avatar_url ? (
-                  <img src={profile.avatar_url} alt={displayName} className="w-full h-full object-cover" />
-                ) : (
-                  displayName[0]?.toUpperCase()
-                )}
-              </div>
-              <div className="space-y-3">
-                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-[11px] font-medium uppercase tracking-wider">
-                  <Camera className="w-3 h-3" /> Drone photographer
-                </div>
-                <h1
-                  className={
-                    layout === "grid"
-                      ? "font-700 text-2xl sm:text-3xl tracking-tight leading-[1.1]"
-                      : layout === "editorial"
-                        ? "font-700 text-5xl sm:text-7xl tracking-tight leading-[1.02]"
-                        : "font-700 text-4xl sm:text-6xl tracking-tight leading-[1.05]"
-                  }
-                  style={{ fontFamily: "var(--portfolio-display-font)" }}
-                >
-                  {displayName}
-                </h1>
-                {profile.headline && (
-                  <p className="text-lg sm:text-xl text-foreground/85 max-w-2xl leading-relaxed">
-                    {profile.headline}
-                  </p>
-                )}
-                {profile.bio && (
-                  <p className="text-sm text-muted-foreground max-w-2xl whitespace-pre-line leading-relaxed">
-                    {profile.bio}
-                  </p>
-                )}
-                <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground pt-1">
-                  {profile.location && (
-                    <span className="inline-flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" /> {profile.location}</span>
-                  )}
-                  {profile.website && (
-                    <a href={profile.website} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-primary transition-colors">
-                      <Globe className="w-3.5 h-3.5" /> {profile.website.replace(/^https?:\/\//, "")}
-                    </a>
-                  )}
-                  {profile.instagram && (
-                    <a href={`https://instagram.com/${profile.instagram.replace(/^@/, "")}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-primary transition-colors">
-                      <Instagram className="w-3.5 h-3.5" /> @{profile.instagram.replace(/^@/, "")}
-                    </a>
-                  )}
-                  {profile.linkedin && (
-                    <a href={profile.linkedin.startsWith("http") ? profile.linkedin : `https://linkedin.com/in/${profile.linkedin.replace(/^@/, "")}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-primary transition-colors">
-                      <Linkedin className="w-3.5 h-3.5" /> LinkedIn
-                    </a>
-                  )}
-                  {profile.twitter && (
-                    <a href={`https://x.com/${profile.twitter.replace(/^@/, "")}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-primary transition-colors">
-                      <Twitter className="w-3.5 h-3.5" /> @{profile.twitter.replace(/^@/, "")}
-                    </a>
-                  )}
-                  {profile.youtube && (
-                    <a href={profile.youtube.startsWith("http") ? profile.youtube : `https://youtube.com/${profile.youtube.startsWith("@") ? profile.youtube : "@" + profile.youtube}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-primary transition-colors">
-                      <Youtube className="w-3.5 h-3.5" /> YouTube
-                    </a>
-                  )}
-                  {profile.vimeo && (
-                    <a href={profile.vimeo.startsWith("http") ? profile.vimeo : `https://vimeo.com/${profile.vimeo.replace(/^@/, "")}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-primary transition-colors">
-                      <Film className="w-3.5 h-3.5" /> Vimeo
-                    </a>
-                  )}
-                  {profile.tiktok && (
-                    <a href={`https://tiktok.com/@${profile.tiktok.replace(/^@/, "")}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-primary transition-colors">
-                      <Music2 className="w-3.5 h-3.5" /> @{profile.tiktok.replace(/^@/, "")}
-                    </a>
-                  )}
-                  {profile.contact_email && (
-                    <a href={`mailto:${profile.contact_email}`} className="inline-flex items-center gap-1.5 hover:text-primary transition-colors">
-                      <Mail className="w-3.5 h-3.5" /> {profile.contact_email}
-                    </a>
-                  )}
-                </div>
-
-                <div className="flex flex-wrap gap-2 pt-4">
-                  <Link to={`/u/${profile.username}/photos`}>
-                    <Button size="sm" className="gap-1.5">
-                      <ImageIcon className="w-3.5 h-3.5" /> All photos
-                    </Button>
-                  </Link>
-                  <Link to={`/u/${profile.username}/videos`}>
-                    <Button size="sm" variant="outline" className="gap-1.5">
-                      <Film className="w-3.5 h-3.5" /> All videos
-                    </Button>
-                  </Link>
-                  {profile.resume_url && (
-                    <a href={profile.resume_url} target="_blank" rel="noreferrer">
-                      <Button size="sm" variant="outline" className="gap-1.5">
-                        <FileText className="w-3.5 h-3.5" /> Résumé
-                      </Button>
-                    </a>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
+        <PortfolioHero
+          profile={profile}
+          prefs={prefs}
+          layout={layout}
+          theme={theme}
+          banner={banner}
+          items={items}
+          albums={albums}
+          displayName={displayName}
+          formattedRate={formattedRate}
+          hireEmail={hireEmail}
+          hasAnySocial={hasAnySocial}
+        />
       )}
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-10">
