@@ -1280,6 +1280,93 @@ export type Database = {
         }
         Relationships: []
       }
+      splat_jobs: {
+        Row: {
+          created_at: string
+          error: string | null
+          id: string
+          image_count: number | null
+          iterations: number
+          output_path: string | null
+          preset: string
+          project_id: string
+          psnr: number | null
+          sph_degree: number
+          status: string
+          training_seconds: number | null
+          updated_at: string
+          use_georef: boolean
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          id?: string
+          image_count?: number | null
+          iterations?: number
+          output_path?: string | null
+          preset?: string
+          project_id: string
+          psnr?: number | null
+          sph_degree?: number
+          status?: string
+          training_seconds?: number | null
+          updated_at?: string
+          use_georef?: boolean
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          id?: string
+          image_count?: number | null
+          iterations?: number
+          output_path?: string | null
+          preset?: string
+          project_id?: string
+          psnr?: number | null
+          sph_degree?: number
+          status?: string
+          training_seconds?: number | null
+          updated_at?: string
+          use_georef?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
+      splat_shares: {
+        Row: {
+          asset_name: string | null
+          asset_path: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          project_id: string
+          token: string
+          user_id: string
+        }
+        Insert: {
+          asset_name?: string | null
+          asset_path: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          project_id: string
+          token: string
+          user_id: string
+        }
+        Update: {
+          asset_name?: string | null
+          asset_path?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          project_id?: string
+          token?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string

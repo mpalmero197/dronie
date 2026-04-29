@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, FolderOpen, Loader2, RefreshCw, Sparkles, Upload, Trash2,
-  AlertCircle, Eye, FileBox, RotateCw, Download,
+  AlertCircle, Eye, FileBox, RotateCw, Download, ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -11,9 +11,17 @@ import { Label } from "@/components/ui/label";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { TrainDialog } from "@/components/splats/TrainDialog";
+import { JobList } from "@/components/splats/JobList";
+import { ShareDialog } from "@/components/splats/ShareDialog";
+import { track } from "@/lib/analytics";
 
 interface ProjectOpt { id: string; name: string; }
 interface SplatAsset { name: string; url: string; size: number; format: "ply" | "splat" | "ksplat"; }
@@ -46,6 +54,7 @@ export default function GaussianSplats() {
   const [viewerStatus, setViewerStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [jobsRefresh, setJobsRefresh] = useState(0);
 
   // Render controls
   const [splatScale, setSplatScale] = useState<number[]>([1.0]);
@@ -338,15 +347,58 @@ export default function GaussianSplats() {
             </div>
 
             {selected && (
-              <div className="rounded-2xl border border-border bg-card p-3 flex items-center justify-between gap-2 text-xs">
+              <div className="rounded-2xl border border-border bg-card p-3 flex items-center justify-between gap-2 text-xs flex-wrap">
                 <div className="flex items-center gap-2 min-w-0">
                   <Eye className="w-3.5 h-3.5 text-primary flex-shrink-0" />
                   <span className="font-mono truncate">{selected.name}</span>
                 </div>
                 <div className="flex items-center gap-1.5 flex-shrink-0">
-                  <a href={selected.url} download className="inline-flex items-center gap-1 px-2 py-1 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground">
-                    <Download className="w-3.5 h-3.5" /> Download
-                  </a>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button size="sm" variant="outline" className="h-7 gap-1 text-xs">
+                        <Download className="w-3.5 h-3.5" /> Export <ChevronDown className="w-3 h-3" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="text-xs">
+                      <DropdownMenuItem
+                        onClick={() => {
+                          track("splats_export", { format: selected.format, native: true });
+                          window.open(selected.url, "_blank");
+                        }}
+                      >
+                        Original (.{selected.format})
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          track("splats_export", { format: "ply" });
+                          toast({ title: ".ply export", description: selected.format === "ply" ? "This scene is already .ply — use Original above." : "Conversion runs server-side; coming online soon." });
+                        }}
+                      >
+                        .ply (raw)
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          track("splats_export", { format: "splat" });
+                          toast({ title: ".splat export", description: "Compact format — server-side conversion coming online soon." });
+                        }}
+                      >
+                        .splat (compact)
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          track("splats_export", { format: "ksplat" });
+                          toast({ title: ".ksplat export", description: "Web-optimized format — server-side conversion coming online soon." });
+                        }}
+                      >
+                        .ksplat (web-optimized)
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <ShareDialog
+                    projectId={projectId}
+                    assetPath={`${projectId}/${SPLAT_PREFIX}/${selected.name}`}
+                    assetName={selected.name}
+                  />
                   <button onClick={() => handleDelete(selected)} className="inline-flex items-center gap-1 px-2 py-1 rounded-md hover:bg-destructive/15 text-destructive">
                     <Trash2 className="w-3.5 h-3.5" /> Delete
                   </button>
@@ -355,8 +407,15 @@ export default function GaussianSplats() {
             )}
           </div>
 
-          {/* Controls + upload */}
+          {/* Controls + upload + training */}
           <div className="space-y-4">
+            <Tabs defaultValue="render" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="render">Render</TabsTrigger>
+                <TabsTrigger value="train">Train</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="render" className="space-y-4 mt-3">
             <div className="rounded-2xl border border-border bg-card p-4 space-y-4">
               <h3 className="font-display font-700 text-sm flex items-center gap-1.5">
                 <Sparkles className="w-4 h-4 text-primary" /> Render quality
@@ -432,6 +491,33 @@ export default function GaussianSplats() {
               </label>
               <p className="text-[10px] text-muted-foreground">Max 500 MB per scene. Stored under your project outputs.</p>
             </div>
+              </TabsContent>
+
+              <TabsContent value="train" className="space-y-4 mt-3">
+                <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <h3 className="font-display font-700 text-sm flex items-center gap-1.5">
+                        <Sparkles className="w-4 h-4 text-primary" /> Cloud training
+                      </h3>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        Inspired by Luma AI, DJI Terra and Nerfstudio.
+                      </p>
+                    </div>
+                    <TrainDialog
+                      projectId={projectId}
+                      disabled={!projectId}
+                      onJobCreated={() => setJobsRefresh((n) => n + 1)}
+                    />
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
+                  <h3 className="font-display font-700 text-sm">Recent jobs</h3>
+                  <JobList projectId={projectId} refreshKey={jobsRefresh} />
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </div>

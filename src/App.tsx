@@ -29,6 +29,7 @@ import RtkAlignment from "./pages/RtkAlignment.tsx";
 import AiInsights from "./pages/AiInsights.tsx";
 import Compliance from "./pages/Compliance.tsx";
 import GaussianSplats from "./pages/GaussianSplats.tsx";
+import EmbedSplats from "./pages/EmbedSplats.tsx";
 import PortfolioStudio from "./pages/PortfolioStudio.tsx";
 import PublicPortfolio from "./pages/PublicPortfolio.tsx";
 import Marketplace from "./pages/Marketplace.tsx";
@@ -79,6 +80,7 @@ const App = () => (
             <Route path="/insights" element={<AiInsights />} />
             <Route path="/compliance" element={<Compliance />} />
             <Route path="/splats" element={<GaussianSplats />} />
+            <Route path="/embed/splats/:token" element={<EmbedSplats />} />
             <Route path="/portfolio" element={<PortfolioStudio />} />
             <Route path="/u/:username" element={<PublicPortfolio mode="home" />} />
             <Route path="/u/:username/photos" element={<PublicPortfolio mode="photos" />} />
