@@ -376,6 +376,11 @@ function MediaCard({ item, onOpen, showVisibility }: { item: PortfolioItem; onOp
             <ExternalLink className="w-3 h-3" /> {item.title || "View 3D project"}
           </p>
         </div>
+        {showVisibility && item.visibility !== "public" && (
+          <div className="absolute top-1.5 right-1.5">
+            <VisibilityPill visibility={item.visibility} kind="item" />
+          </div>
+        )}
       </Link>
     );
   }
@@ -416,6 +421,11 @@ function MediaCard({ item, onOpen, showVisibility }: { item: PortfolioItem; onOp
           <div className="w-10 h-10 rounded-full bg-white/90 flex items-center justify-center">
             <Film className="w-5 h-5 text-foreground" />
           </div>
+        </div>
+      )}
+      {showVisibility && item.visibility !== "public" && (
+        <div className="absolute top-1.5 right-1.5">
+          <VisibilityPill visibility={item.visibility} kind="item" />
         </div>
       )}
     </button>
