@@ -354,7 +354,6 @@ export default function Dashboard() {
     { id: "storage" as SidebarView, icon: HardDrive, label: "Storage" },
   ];
 
-  // Gallery link in sidebar nav items (rendered separately below)
 
   const closeMobileNav = () => setMobileNavOpen(false);
 
