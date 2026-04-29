@@ -363,11 +363,11 @@ export default function VideoEditor() {
       let thumbUrl: string | null = null;
       try {
         const objUrl = URL.createObjectURL(renderedBlob);
-        const poster = await captureVideoFrame(objUrl, 0.5);
+        const poster = await captureVideoFrame(objUrl, { time: 0.5 });
         URL.revokeObjectURL(objUrl);
-        if (poster) {
+        if (poster?.blob) {
           const posterPath = `${user.id}/edits/${Date.now()}_poster.jpg`;
-          const up2 = await supabase.storage.from(PORTFOLIO_BUCKET).upload(posterPath, poster, {
+          const up2 = await supabase.storage.from(PORTFOLIO_BUCKET).upload(posterPath, poster.blob, {
             contentType: "image/jpeg", upsert: true,
           });
           if (!up2.error) {
