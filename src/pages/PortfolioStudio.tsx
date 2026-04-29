@@ -120,6 +120,43 @@ export default function PortfolioStudio() {
     return { path, url: data.publicUrl };
   }
 
+  async function handleAvatarUpload(file: File | null) {
+    if (!file || !user) return;
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Pick an image file", variant: "destructive" }); return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "Image is too large", description: "Max 5 MB", variant: "destructive" }); return;
+    }
+    try {
+      const ext = (file.name.match(/\.[a-zA-Z0-9]+$/)?.[0] ?? ".jpg").toLowerCase();
+      const { url } = await uploadBlobToBucket(file, `avatar${ext}`, file.type);
+      const { error } = await supabase.from("profiles").update({ avatar_url: url }).eq("id", user.id);
+      if (error) throw error;
+      setProfile((p: any) => ({ ...p, avatar_url: url }));
+      toast({ title: "Avatar updated" });
+    } catch (e: any) {
+      toast({ title: "Upload failed", description: e?.message ?? String(e), variant: "destructive" });
+    }
+  }
+
+  async function handleResumeUpload(file: File | null) {
+    if (!file || !user) return;
+    if (file.size > 15 * 1024 * 1024) {
+      toast({ title: "File too large", description: "Max 15 MB", variant: "destructive" }); return;
+    }
+    try {
+      const ext = (file.name.match(/\.[a-zA-Z0-9]+$/)?.[0] ?? ".pdf").toLowerCase();
+      const { url } = await uploadBlobToBucket(file, `resume${ext}`, file.type || "application/pdf");
+      const { error } = await supabase.from("profiles").update({ resume_url: url }).eq("id", user.id);
+      if (error) throw error;
+      setProfile((p: any) => ({ ...p, resume_url: url }));
+      toast({ title: "Résumé uploaded" });
+    } catch (e: any) {
+      toast({ title: "Upload failed", description: e?.message ?? String(e), variant: "destructive" });
+    }
+  }
+
   async function handleUpload(files: FileList | null) {
     if (!files || !user) return;
     setUploading(true);
