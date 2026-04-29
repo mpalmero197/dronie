@@ -80,7 +80,6 @@ export async function fetchPortfolioByUsername(username: string) {
     .from("profiles")
     .select("id,username,full_name,avatar_url,headline,bio,location,website,instagram,portfolio_published")
     .ilike("username", username)
-    .eq("portfolio_published", true)
     .maybeSingle();
   if (error) throw error;
   return data as PortfolioProfile | null;
