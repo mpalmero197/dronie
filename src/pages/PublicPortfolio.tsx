@@ -5,7 +5,8 @@ import {
   Loader2, Lock, ExternalLink, Camera, Eye, EyeOff, Link2,
   Linkedin, Twitter, Youtube, Music2, FileText, Mail,
   AlertTriangle, RefreshCw, LifeBuoy, User as UserIcon,
-  Phone, BadgeCheck, Send, CircleDot,
+  Phone, BadgeCheck, Send, CircleDot, ChevronLeft, ChevronRight,
+  Play, Zap, Clock, Award, X as XIcon,
 } from "lucide-react";
 import {
   fetchPortfolioByUsername, fetchPublicAlbumsByUser, fetchPublicItemsByUser,
@@ -107,9 +108,17 @@ export default function PublicPortfolio({ mode }: Props) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [lightbox, setLightbox] = useState<PortfolioItem | null>(null);
+  const [showStickyCta, setShowStickyCta] = useState(false);
 
   const theme = useMemo(() => normalizeTheme(profile?.theme ?? null), [profile?.theme]);
   useEffect(() => { ensureFontLoaded(theme.font); }, [theme.font]);
+
+  // Show floating Hire CTA after the user scrolls past the hero.
+  useEffect(() => {
+    const onScroll = () => setShowStickyCta(window.scrollY > 480);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -326,42 +335,68 @@ export default function PublicPortfolio({ mode }: Props) {
           </div>
         )}
 
+        {/* Stats strip — only on home, only when there's something to brag about */}
+        {mode === "home" && allItems.length > 0 && (
+          <StatsStrip
+            photos={allItems.filter((i) => i.kind === "photo").length}
+            videos={allItems.filter((i) => i.kind === "video").length}
+            albums={albums.length}
+            available={!!profile.available_for_hire && prefs.show_availability}
+          />
+        )}
+
+        {/* Featured reel — one large hero piece on top of the grid */}
+        {mode === "home" && items.length > 0 && (
+          <FeaturedReel item={items[0]} onOpen={setLightbox} />
+        )}
+
         {/* Albums grid (home only) */}
         {mode === "home" && albums.length > 0 && (
           <section className="space-y-4">
-            <div className="flex items-end justify-between">
-              <h2 className="font-display font-700 text-2xl tracking-tight">Albums</h2>
-              <span className="text-xs text-muted-foreground">{albums.length} {albums.length === 1 ? "album" : "albums"}</span>
-            </div>
+            <SectionHeading
+              eyebrow="Collections"
+              title="Albums"
+              subtitle="Curated bodies of work"
+              right={`${albums.length} ${albums.length === 1 ? "album" : "albums"}`}
+            />
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {albums.map((a) => {
                 const cover = a.cover_url || autoCover(a.id, allItems);
+                const count = allItems.filter((i) => i.album_id === a.id).length;
                 return (
                 <Link
                   key={a.id}
                   to={`/u/${profile.username}/album/${a.slug}`}
-                  className="group rounded-2xl border border-border overflow-hidden bg-card hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all"
+                  className="group rounded-2xl border border-border overflow-hidden bg-card hover:border-primary/60 hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary/10 transition-all duration-300"
                 >
                   <div className="aspect-[4/3] bg-secondary relative overflow-hidden">
                     {cover ? (
-                      <img src={cover} alt={a.title} className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-700" loading="lazy" />
+                      <img src={cover} alt={a.title} className="w-full h-full object-cover group-hover:scale-[1.06] transition-transform duration-[1200ms]" loading="lazy" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-muted-foreground">
                         <ImageIcon className="w-8 h-8" />
                       </div>
                     )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+                    {count > 0 && (
+                      <span className="absolute top-2 left-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/55 backdrop-blur text-white text-[10px] font-medium border border-white/15">
+                        <ImageIcon className="w-3 h-3" /> {count}
+                      </span>
+                    )}
                     {a.visibility !== "public" && (
                       <div className="absolute top-2 right-2">
                         <VisibilityPill visibility={a.visibility} kind="album" />
                       </div>
                     )}
-                  </div>
-                  <div className="p-3">
-                    <p className="font-display font-700 text-sm">{a.title}</p>
-                    {a.description && (
-                      <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{a.description}</p>
-                    )}
+                    <div className="absolute inset-x-0 bottom-0 p-3">
+                      <p className="font-display font-700 text-base text-white drop-shadow-lg">{a.title}</p>
+                      {a.description && (
+                        <p className="text-xs text-white/75 line-clamp-1 mt-0.5">{a.description}</p>
+                      )}
+                    </div>
+                    <div className="absolute bottom-3 right-3 w-8 h-8 rounded-full bg-primary/90 text-primary-foreground flex items-center justify-center translate-x-2 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all duration-300">
+                      <ChevronRight className="w-4 h-4" />
+                    </div>
                   </div>
                 </Link>
                 );
@@ -372,7 +407,7 @@ export default function PublicPortfolio({ mode }: Props) {
 
         {/* Featured / item grid */}
         <MediaGrid
-          items={items}
+          items={mode === "home" ? items.slice(1) : items}
           emptyLabel={
             mode === "home"
               ? (isOwner ? "Add photos and videos in your Portfolio Studio to bring this page to life." : "No public work yet")
@@ -383,8 +418,12 @@ export default function PublicPortfolio({ mode }: Props) {
           }
           ownerCta={isOwner && items.length === 0}
           onOpen={setLightbox}
-          heading={mode === "home" && items.length > 0 ? "Featured" : undefined}
+          heading={mode === "home" && items.length > 1 ? "Selected work" : undefined}
+          eyebrow={mode === "home" && items.length > 1 ? "Portfolio" : undefined}
+          subtitle={mode === "home" && items.length > 1 ? "A taste of recent shoots" : undefined}
           showVisibility={isOwner}
+          username={profile.username}
+          showSeeAll={mode === "home" && allItems.length > items.length}
         />
       </main>
 
@@ -397,7 +436,27 @@ export default function PublicPortfolio({ mode }: Props) {
       )}
 
       {lightbox && (
-        <Lightbox item={lightbox} onClose={() => setLightbox(null)} />
+        <Lightbox
+          items={items.filter((i) => i.kind !== "project_link" && (i.thumb_url || i.media_url))}
+          current={lightbox}
+          onClose={() => setLightbox(null)}
+          onNavigate={(it) => setLightbox(it)}
+        />
+      )}
+
+      {/* Floating sticky Hire CTA — appears once user scrolls past hero */}
+      {prefs.show_hire_cta && hireEmail && mode === "home" && (
+        <div
+          className={`fixed bottom-4 right-4 z-40 transition-all duration-300 ${
+            showStickyCta ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-4 pointer-events-none"
+          }`}
+        >
+          <a href={`mailto:${hireEmail}?subject=${encodeURIComponent(`Hiring inquiry for ${displayName}`)}`}>
+            <Button size="lg" className="gap-2 shadow-2xl shadow-primary/30 rounded-full px-5">
+              <Send className="w-4 h-4" /> Hire {profile.full_name?.split(" ")[0] || displayName}
+            </Button>
+          </a>
+        </div>
       )}
     </div>
   );
@@ -781,19 +840,34 @@ function SocialIcon({ href, icon: Icon, label }: { href: string; icon: React.Com
 }
 
 function MediaGrid({
-  items, emptyLabel, onOpen, heading, ownerCta, showVisibility,
+  items, emptyLabel, onOpen, heading, eyebrow, subtitle, ownerCta, showVisibility, username, showSeeAll,
 }: {
   items: PortfolioItem[];
   emptyLabel: string;
   onOpen: (i: PortfolioItem) => void;
   heading?: string;
+  eyebrow?: string;
+  subtitle?: string;
   ownerCta?: boolean;
   showVisibility?: boolean;
+  username?: string;
+  showSeeAll?: boolean;
 }) {
   const hasItems = items.length > 0;
   return (
-    <section className="space-y-3">
-      {heading && hasItems && <h2 className="font-display font-700 text-2xl tracking-tight">{heading}</h2>}
+    <section className="space-y-4">
+      {heading && hasItems && (
+        <SectionHeading
+          eyebrow={eyebrow}
+          title={heading}
+          subtitle={subtitle}
+          right={showSeeAll && username ? (
+            <Link to={`/u/${username}/photos`} className="inline-flex items-center gap-1 text-xs text-primary hover:text-primary/80">
+              See everything <ChevronRight className="w-3.5 h-3.5" />
+            </Link>
+          ) : undefined}
+        />
+      )}
       {!hasItems ? (
         <div className="rounded-2xl border border-dashed border-border p-12 text-center text-sm text-muted-foreground space-y-3">
           <p>{emptyLabel}</p>
@@ -806,9 +880,11 @@ function MediaGrid({
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
+        <div className="columns-2 sm:columns-3 lg:columns-4 gap-2 sm:gap-3 [column-fill:_balance]">
           {items.map((it) => (
-            <MediaCard key={it.id} item={it} onOpen={onOpen} showVisibility={showVisibility} />
+            <div key={it.id} className="mb-2 sm:mb-3 break-inside-avoid">
+              <MediaCard item={it} onOpen={onOpen} showVisibility={showVisibility} />
+            </div>
           ))}
         </div>
       )}
@@ -821,7 +897,7 @@ function MediaCard({ item, onOpen, showVisibility }: { item: PortfolioItem; onOp
     return (
       <Link
         to={item.project_id ? `/viewer/${item.project_id}` : "#"}
-        className="aspect-square rounded-xl border border-border bg-card relative overflow-hidden group"
+        className="block aspect-square rounded-xl border border-border bg-card relative overflow-hidden group hover:border-primary/50 transition-colors"
       >
         {item.thumb_url ? (
           <img src={item.thumb_url} alt={item.title ?? ""} className="w-full h-full object-cover" loading="lazy" />
@@ -846,12 +922,12 @@ function MediaCard({ item, onOpen, showVisibility }: { item: PortfolioItem; onOp
   return (
     <button
       onClick={() => onOpen(item)}
-      className="aspect-square rounded-xl border border-border bg-secondary relative overflow-hidden group"
+      className="block w-full rounded-xl border border-border bg-secondary relative overflow-hidden group hover:border-primary/50 transition-all"
     >
       {item.kind === "video" && !item.thumb_url ? (
         <video
           src={item.media_url ?? ""}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          className="w-full h-auto object-cover group-hover:scale-[1.04] transition-transform duration-700"
           muted
           playsInline
           preload="metadata"
@@ -860,7 +936,7 @@ function MediaCard({ item, onOpen, showVisibility }: { item: PortfolioItem; onOp
         <img
           src={item.thumb_url}
           alt={item.title ?? item.caption ?? ""}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          className="w-full h-auto object-cover group-hover:scale-[1.04] transition-transform duration-700"
           loading="lazy"
           onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
         />
@@ -868,17 +944,24 @@ function MediaCard({ item, onOpen, showVisibility }: { item: PortfolioItem; onOp
         <img
           src={item.media_url}
           alt={item.title ?? item.caption ?? ""}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          className="w-full h-auto object-cover group-hover:scale-[1.04] transition-transform duration-700"
           loading="lazy"
           onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
         />
       ) : (
-        <div className="w-full h-full bg-gradient-to-br from-primary/10 to-accent/5" />
+        <div className="w-full aspect-square bg-gradient-to-br from-primary/10 to-accent/5" />
+      )}
+      {/* Title overlay on hover */}
+      {(item.title || item.caption) && (
+        <div className="absolute inset-x-0 bottom-0 p-2.5 bg-gradient-to-t from-black/80 via-black/30 to-transparent translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
+          {item.title && <p className="text-xs font-semibold text-white truncate">{item.title}</p>}
+          {item.caption && <p className="text-[10px] text-white/70 truncate">{item.caption}</p>}
+        </div>
       )}
       {item.kind === "video" && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-          <div className="w-10 h-10 rounded-full bg-white/90 flex items-center justify-center">
-            <Film className="w-5 h-5 text-foreground" />
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="w-12 h-12 rounded-full bg-white/95 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+            <Play className="w-5 h-5 text-foreground fill-foreground ml-0.5" />
           </div>
         </div>
       )}
@@ -891,17 +974,66 @@ function MediaCard({ item, onOpen, showVisibility }: { item: PortfolioItem; onOp
   );
 }
 
-function Lightbox({ item, onClose }: { item: PortfolioItem; onClose: () => void }) {
+function Lightbox({
+  items, current, onClose, onNavigate,
+}: {
+  items: PortfolioItem[];
+  current: PortfolioItem;
+  onClose: () => void;
+  onNavigate: (it: PortfolioItem) => void;
+}) {
+  const idx = Math.max(0, items.findIndex((i) => i.id === current.id));
+  const total = items.length;
+  const go = (delta: number) => {
+    if (total <= 1) return;
+    const next = (idx + delta + total) % total;
+    onNavigate(items[next]);
+  };
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      else if (e.key === "ArrowRight") go(1);
+      else if (e.key === "ArrowLeft") go(-1);
+    };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [onClose, idx, total]);
+  const item = current;
   return (
-    <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="max-w-6xl w-full max-h-full" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors"
+        aria-label="Close"
+      >
+        <XIcon className="w-5 h-5" />
+      </button>
+      {total > 1 && (
+        <span className="absolute top-5 left-1/2 -translate-x-1/2 text-xs text-white/70 font-mono tabular-nums">
+          {idx + 1} / {total}
+        </span>
+      )}
+      {total > 1 && (
+        <>
+          <button
+            onClick={(e) => { e.stopPropagation(); go(-1); }}
+            className="absolute left-3 sm:left-6 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors"
+            aria-label="Previous"
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); go(1); }}
+            className="absolute right-3 sm:right-6 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors"
+            aria-label="Next"
+          >
+            <ChevronRight className="w-6 h-6" />
+          </button>
+        </>
+      )}
+      <div className="max-w-6xl w-full max-h-full animate-scale-in" onClick={(e) => e.stopPropagation()}>
         {item.kind === "video" ? (
-          <video src={item.media_url ?? ""} controls autoPlay className="w-full max-h-[80vh] rounded-lg" />
+          <video src={item.media_url ?? ""} controls autoPlay className="w-full max-h-[80vh] rounded-lg shadow-2xl" />
         ) : (
           <img src={item.media_url ?? ""} alt={item.title ?? ""} className="w-full max-h-[80vh] object-contain rounded-lg" />
         )}
@@ -920,6 +1052,160 @@ function autoCover(albumId: string, items: PortfolioItem[]): string | null {
   const inAlbum = items.filter((i) => i.album_id === albumId && (i.thumb_url || i.media_url));
   const first = inAlbum[0];
   return first ? first.thumb_url || first.media_url : null;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+ * Polish components: section headings, stats strip, featured reel
+ * ─────────────────────────────────────────────────────────────── */
+
+function SectionHeading({
+  eyebrow, title, subtitle, right,
+}: {
+  eyebrow?: string;
+  title: string;
+  subtitle?: string;
+  right?: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-end justify-between gap-4 flex-wrap">
+      <div>
+        {eyebrow && (
+          <div className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.22em] text-primary mb-1.5">
+            <span className="w-5 h-px bg-primary/60" /> {eyebrow}
+          </div>
+        )}
+        <h2
+          className="font-700 text-3xl sm:text-4xl tracking-tight leading-[1.05]"
+          style={{ fontFamily: "var(--portfolio-display-font)" }}
+        >
+          {title}
+        </h2>
+        {subtitle && (
+          <p className="text-sm text-muted-foreground mt-1.5">{subtitle}</p>
+        )}
+      </div>
+      {right && <div className="text-xs text-muted-foreground">{right}</div>}
+    </div>
+  );
+}
+
+function StatsStrip({
+  photos, videos, albums, available,
+}: {
+  photos: number;
+  videos: number;
+  albums: number;
+  available: boolean;
+}) {
+  const stats = [
+    { icon: ImageIcon, label: "Photos", value: photos },
+    { icon: Film, label: "Videos", value: videos },
+    { icon: Award, label: "Collections", value: albums },
+  ].filter((s) => s.value > 0);
+
+  return (
+    <div className="rounded-2xl border border-border bg-gradient-to-br from-card via-card to-primary/5 p-4 sm:p-5">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+        {stats.map(({ icon: Icon, label, value }) => (
+          <div key={label} className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary flex-shrink-0">
+              <Icon className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <p
+                className="font-700 text-xl tabular-nums leading-none"
+                style={{ fontFamily: "var(--portfolio-display-font)" }}
+              >
+                {value}
+              </p>
+              <p className="text-[11px] text-muted-foreground uppercase tracking-wider mt-1">{label}</p>
+            </div>
+          </div>
+        ))}
+        <div className="flex items-center gap-3">
+          <div className={`w-10 h-10 rounded-xl border flex items-center justify-center flex-shrink-0 ${
+            available
+              ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
+              : "bg-muted border-border text-muted-foreground"
+          }`}>
+            {available ? <Zap className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
+          </div>
+          <div className="min-w-0">
+            <p
+              className="font-700 text-sm leading-tight"
+              style={{ fontFamily: "var(--portfolio-display-font)" }}
+            >
+              {available ? "Booking now" : "Reach out"}
+            </p>
+            <p className="text-[11px] text-muted-foreground uppercase tracking-wider mt-1">Status</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FeaturedReel({
+  item, onOpen,
+}: {
+  item: PortfolioItem;
+  onOpen: (i: PortfolioItem) => void;
+}) {
+  if (!item || (!item.thumb_url && !item.media_url) || item.kind === "project_link") return null;
+  const isVideo = item.kind === "video";
+  return (
+    <section className="space-y-3">
+      <SectionHeading eyebrow="Featured" title="Latest work" subtitle="The shot worth opening with" />
+      <button
+        onClick={() => onOpen(item)}
+        className="group relative block w-full rounded-2xl overflow-hidden border border-border bg-secondary aspect-[16/9] sm:aspect-[21/9] hover:border-primary/50 transition-colors"
+      >
+        {isVideo && !item.thumb_url ? (
+          <video
+            src={item.media_url ?? ""}
+            muted
+            playsInline
+            preload="metadata"
+            className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-[1500ms]"
+          />
+        ) : (
+          <img
+            src={item.thumb_url || item.media_url || ""}
+            alt={item.title ?? ""}
+            className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-[1500ms]"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+          />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
+        {isVideo && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/95 flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform">
+              <Play className="w-7 h-7 sm:w-8 sm:h-8 text-foreground fill-foreground ml-1" />
+            </div>
+          </div>
+        )}
+        <div className="absolute bottom-0 inset-x-0 p-5 sm:p-7 flex items-end justify-between gap-4">
+          <div className="min-w-0">
+            {item.title && (
+              <p
+                className="font-700 text-2xl sm:text-3xl text-white drop-shadow-lg leading-tight"
+                style={{ fontFamily: "var(--portfolio-display-font)" }}
+              >
+                {item.title}
+              </p>
+            )}
+            {item.caption && (
+              <p className="text-sm text-white/80 mt-1 line-clamp-1 max-w-2xl">{item.caption}</p>
+            )}
+          </div>
+          <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur border border-white/20 text-xs font-medium text-white whitespace-nowrap">
+            {isVideo ? <Film className="w-3.5 h-3.5" /> : <ImageIcon className="w-3.5 h-3.5" />}
+            {isVideo ? "Watch" : "View"} <ChevronRight className="w-3.5 h-3.5" />
+          </span>
+        </div>
+      </button>
+    </section>
+  );
 }
 
 function VisibilityPill({
