@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, MapPin, Globe, Instagram, ImageIcon, Film, Sparkles,
-  Loader2, Lock, ExternalLink, Camera, Eye, EyeOff,
+  Loader2, Lock, ExternalLink, Camera, Eye, EyeOff, Link2,
 } from "lucide-react";
 import {
   fetchPortfolioByUsername, fetchPublicAlbumsByUser, fetchPublicItemsByUser,
@@ -10,6 +10,7 @@ import {
   type PortfolioProfile, type PortfolioAlbum, type PortfolioItem,
 } from "@/lib/portfolio";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/contexts/AuthContext";
 
 type Mode = "home" | "photos" | "videos" | "album";
