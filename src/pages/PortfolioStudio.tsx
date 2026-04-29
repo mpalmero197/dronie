@@ -5,6 +5,7 @@ import {
   Globe, Lock, Link as LinkIcon, Check, X, ImageIcon, Film, Sparkles,
   ExternalLink, Copy, Image as ImageLucide, Wand2, Linkedin, Twitter,
   Youtube, Music2, FileText, Mail, User as UserIcon,
+  Palette, Type as TypeIcon, LayoutTemplate,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +27,10 @@ import {
   type PortfolioAlbum, type PortfolioItem, type PortfolioVisibility,
 } from "@/lib/portfolio";
 import { captureVideoFrame } from "@/lib/videoFrame";
+import {
+  DEFAULT_THEME, FONT_PAIRS, LAYOUTS, SWATCHES, ensureFontLoaded, normalizeTheme,
+  type PortfolioTheme,
+} from "@/lib/portfolioTheme";
 
 interface ProjectOpt { id: string; name: string; }
 
@@ -136,6 +141,8 @@ export default function PortfolioStudio() {
         avatar_url: profile.avatar_url ?? null,
         resume_url: profile.resume_url ?? null,
         portfolio_published: !!profile.portfolio_published,
+        banner_url: profile.banner_url ?? null,
+        theme: normalizeTheme(profile.theme) as any,
       })
       .eq("id", user.id);
     setSavingProfile(false);
@@ -192,6 +199,30 @@ export default function PortfolioStudio() {
     } catch (e: any) {
       toast({ title: "Upload failed", description: e?.message ?? String(e), variant: "destructive" });
     }
+  }
+
+  async function handleBannerUpload(file: File | null) {
+    if (!file || !user) return;
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Pick an image file", variant: "destructive" }); return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      toast({ title: "Banner is too large", description: "Max 8 MB", variant: "destructive" }); return;
+    }
+    try {
+      const ext = (file.name.match(/\.[a-zA-Z0-9]+$/)?.[0] ?? ".jpg").toLowerCase();
+      const { url } = await uploadBlobToBucket(file, `banner${ext}`, file.type);
+      const { error } = await supabase.from("profiles").update({ banner_url: url }).eq("id", user.id);
+      if (error) throw error;
+      setProfile((p: any) => ({ ...p, banner_url: url }));
+      toast({ title: "Banner updated" });
+    } catch (e: any) {
+      toast({ title: "Upload failed", description: e?.message ?? String(e), variant: "destructive" });
+    }
+  }
+
+  function patchTheme(patch: Partial<PortfolioTheme>) {
+    setProfile((p: any) => ({ ...p, theme: { ...normalizeTheme(p?.theme), ...patch } }));
   }
 
   async function handleUpload(files: FileList | null) {
