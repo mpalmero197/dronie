@@ -210,6 +210,36 @@ export default function PublicPortfolio({ mode }: Props) {
                       <Instagram className="w-3.5 h-3.5" /> @{profile.instagram.replace(/^@/, "")}
                     </a>
                   )}
+                  {profile.linkedin && (
+                    <a href={profile.linkedin.startsWith("http") ? profile.linkedin : `https://linkedin.com/in/${profile.linkedin.replace(/^@/, "")}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-primary transition-colors">
+                      <Linkedin className="w-3.5 h-3.5" /> LinkedIn
+                    </a>
+                  )}
+                  {profile.twitter && (
+                    <a href={`https://x.com/${profile.twitter.replace(/^@/, "")}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-primary transition-colors">
+                      <Twitter className="w-3.5 h-3.5" /> @{profile.twitter.replace(/^@/, "")}
+                    </a>
+                  )}
+                  {profile.youtube && (
+                    <a href={profile.youtube.startsWith("http") ? profile.youtube : `https://youtube.com/${profile.youtube.startsWith("@") ? profile.youtube : "@" + profile.youtube}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-primary transition-colors">
+                      <Youtube className="w-3.5 h-3.5" /> YouTube
+                    </a>
+                  )}
+                  {profile.vimeo && (
+                    <a href={profile.vimeo.startsWith("http") ? profile.vimeo : `https://vimeo.com/${profile.vimeo.replace(/^@/, "")}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-primary transition-colors">
+                      <Film className="w-3.5 h-3.5" /> Vimeo
+                    </a>
+                  )}
+                  {profile.tiktok && (
+                    <a href={`https://tiktok.com/@${profile.tiktok.replace(/^@/, "")}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-primary transition-colors">
+                      <Music2 className="w-3.5 h-3.5" /> @{profile.tiktok.replace(/^@/, "")}
+                    </a>
+                  )}
+                  {profile.contact_email && (
+                    <a href={`mailto:${profile.contact_email}`} className="inline-flex items-center gap-1.5 hover:text-primary transition-colors">
+                      <Mail className="w-3.5 h-3.5" /> {profile.contact_email}
+                    </a>
+                  )}
                 </div>
 
                 <div className="flex flex-wrap gap-2 pt-4">
@@ -223,6 +253,13 @@ export default function PublicPortfolio({ mode }: Props) {
                       <Film className="w-3.5 h-3.5" /> All videos
                     </Button>
                   </Link>
+                  {profile.resume_url && (
+                    <a href={profile.resume_url} target="_blank" rel="noreferrer">
+                      <Button size="sm" variant="outline" className="gap-1.5">
+                        <FileText className="w-3.5 h-3.5" /> Résumé
+                      </Button>
+                    </a>
+                  )}
                 </div>
               </div>
             </div>
