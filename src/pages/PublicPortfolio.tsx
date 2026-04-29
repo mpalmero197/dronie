@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, MapPin, Globe, Instagram, ImageIcon, Film, Sparkles,
-  Loader2, Lock, ExternalLink, Camera, Eye, EyeOff,
+  Loader2, Lock, ExternalLink, Camera, Eye, EyeOff, Link2,
 } from "lucide-react";
 import {
   fetchPortfolioByUsername, fetchPublicAlbumsByUser, fetchPublicItemsByUser,
@@ -10,6 +10,7 @@ import {
   type PortfolioProfile, type PortfolioAlbum, type PortfolioItem,
 } from "@/lib/portfolio";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/contexts/AuthContext";
 
 type Mode = "home" | "photos" | "videos" | "album";
@@ -271,9 +272,9 @@ export default function PublicPortfolio({ mode }: Props) {
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                     {a.visibility !== "public" && (
-                      <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-background/80 backdrop-blur text-[10px] font-medium uppercase tracking-wider border border-border">
-                        {a.visibility}
-                      </span>
+                      <div className="absolute top-2 right-2">
+                        <VisibilityPill visibility={a.visibility} kind="album" />
+                      </div>
                     )}
                   </div>
                   <div className="p-3">
@@ -303,6 +304,7 @@ export default function PublicPortfolio({ mode }: Props) {
           ownerCta={isOwner && items.length === 0}
           onOpen={setLightbox}
           heading={mode === "home" && items.length > 0 ? "Featured" : undefined}
+          showVisibility={isOwner}
         />
       </main>
 
@@ -320,13 +322,14 @@ export default function PublicPortfolio({ mode }: Props) {
 }
 
 function MediaGrid({
-  items, emptyLabel, onOpen, heading, ownerCta,
+  items, emptyLabel, onOpen, heading, ownerCta, showVisibility,
 }: {
   items: PortfolioItem[];
   emptyLabel: string;
   onOpen: (i: PortfolioItem) => void;
   heading?: string;
   ownerCta?: boolean;
+  showVisibility?: boolean;
 }) {
   const hasItems = items.length > 0;
   return (
@@ -346,7 +349,7 @@ function MediaGrid({
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
           {items.map((it) => (
-            <MediaCard key={it.id} item={it} onOpen={onOpen} />
+            <MediaCard key={it.id} item={it} onOpen={onOpen} showVisibility={showVisibility} />
           ))}
         </div>
       )}
@@ -354,7 +357,7 @@ function MediaGrid({
   );
 }
 
-function MediaCard({ item, onOpen }: { item: PortfolioItem; onOpen: (i: PortfolioItem) => void }) {
+function MediaCard({ item, onOpen, showVisibility }: { item: PortfolioItem; onOpen: (i: PortfolioItem) => void; showVisibility?: boolean }) {
   if (item.kind === "project_link") {
     return (
       <Link
@@ -373,6 +376,11 @@ function MediaCard({ item, onOpen }: { item: PortfolioItem; onOpen: (i: Portfoli
             <ExternalLink className="w-3 h-3" /> {item.title || "View 3D project"}
           </p>
         </div>
+        {showVisibility && item.visibility !== "public" && (
+          <div className="absolute top-1.5 right-1.5">
+            <VisibilityPill visibility={item.visibility} kind="item" />
+          </div>
+        )}
       </Link>
     );
   }
@@ -415,6 +423,11 @@ function MediaCard({ item, onOpen }: { item: PortfolioItem; onOpen: (i: Portfoli
           </div>
         </div>
       )}
+      {showVisibility && item.visibility !== "public" && (
+        <div className="absolute top-1.5 right-1.5">
+          <VisibilityPill visibility={item.visibility} kind="item" />
+        </div>
+      )}
     </button>
   );
 }
@@ -448,4 +461,40 @@ function autoCover(albumId: string, items: PortfolioItem[]): string | null {
   const inAlbum = items.filter((i) => i.album_id === albumId && (i.thumb_url || i.media_url));
   const first = inAlbum[0];
   return first ? first.thumb_url || first.media_url : null;
+}
+
+function VisibilityPill({
+  visibility,
+  kind,
+}: {
+  visibility: "public" | "unlisted" | "private";
+  kind: "album" | "item";
+}) {
+  if (visibility === "public") return null;
+  const isUnlisted = visibility === "unlisted";
+  const Icon = isUnlisted ? Link2 : Lock;
+  const label = isUnlisted ? "Unlisted" : "Private";
+  const tip = isUnlisted
+    ? `This ${kind} is unlisted — only people with the direct link can see it. It won't appear in public listings.`
+    : `This ${kind} is private — only you can see it while signed in. Visitors won't see it at all.`;
+  return (
+    <TooltipProvider delayDuration={150}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span
+            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium uppercase tracking-wider backdrop-blur border cursor-help ${
+              isUnlisted
+                ? "bg-amber-500/15 text-amber-200 border-amber-500/40"
+                : "bg-rose-500/15 text-rose-200 border-rose-500/40"
+            }`}
+          >
+            <Icon className="w-3 h-3" /> {label}
+          </span>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-xs text-xs">
+          {tip}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
 }
