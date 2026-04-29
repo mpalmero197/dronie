@@ -5,6 +5,7 @@ import {
   Globe, Lock, Link as LinkIcon, Check, X, ImageIcon, Film, Sparkles,
   ExternalLink, Copy, Image as ImageLucide, Wand2, Linkedin, Twitter,
   Youtube, Music2, FileText, Mail, User as UserIcon,
+  Palette, Type as TypeIcon, LayoutTemplate,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +27,10 @@ import {
   type PortfolioAlbum, type PortfolioItem, type PortfolioVisibility,
 } from "@/lib/portfolio";
 import { captureVideoFrame } from "@/lib/videoFrame";
+import {
+  DEFAULT_THEME, FONT_PAIRS, LAYOUTS, SWATCHES, ensureFontLoaded, normalizeTheme,
+  type PortfolioTheme,
+} from "@/lib/portfolioTheme";
 
 interface ProjectOpt { id: string; name: string; }
 
@@ -136,6 +141,8 @@ export default function PortfolioStudio() {
         avatar_url: profile.avatar_url ?? null,
         resume_url: profile.resume_url ?? null,
         portfolio_published: !!profile.portfolio_published,
+        banner_url: profile.banner_url ?? null,
+        theme: normalizeTheme(profile.theme) as any,
       })
       .eq("id", user.id);
     setSavingProfile(false);
@@ -192,6 +199,30 @@ export default function PortfolioStudio() {
     } catch (e: any) {
       toast({ title: "Upload failed", description: e?.message ?? String(e), variant: "destructive" });
     }
+  }
+
+  async function handleBannerUpload(file: File | null) {
+    if (!file || !user) return;
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Pick an image file", variant: "destructive" }); return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      toast({ title: "Banner is too large", description: "Max 8 MB", variant: "destructive" }); return;
+    }
+    try {
+      const ext = (file.name.match(/\.[a-zA-Z0-9]+$/)?.[0] ?? ".jpg").toLowerCase();
+      const { url } = await uploadBlobToBucket(file, `banner${ext}`, file.type);
+      const { error } = await supabase.from("profiles").update({ banner_url: url }).eq("id", user.id);
+      if (error) throw error;
+      setProfile((p: any) => ({ ...p, banner_url: url }));
+      toast({ title: "Banner updated" });
+    } catch (e: any) {
+      toast({ title: "Upload failed", description: e?.message ?? String(e), variant: "destructive" });
+    }
+  }
+
+  function patchTheme(patch: Partial<PortfolioTheme>) {
+    setProfile((p: any) => ({ ...p, theme: { ...normalizeTheme(p?.theme), ...patch } }));
   }
 
   async function handleUpload(files: FileList | null) {
@@ -540,6 +571,21 @@ export default function PortfolioStudio() {
             </div>
           </div>
         </section>
+
+        {/* Appearance */}
+        <AppearanceSection
+          theme={normalizeTheme(profile.theme)}
+          bannerUrl={profile.banner_url ?? null}
+          onPatchTheme={patchTheme}
+          onUploadBanner={handleBannerUpload}
+          onRemoveBanner={async () => {
+            if (!user) return;
+            await supabase.from("profiles").update({ banner_url: null }).eq("id", user.id);
+            setProfile((p: any) => ({ ...p, banner_url: null }));
+          }}
+          onSave={saveProfile}
+          saving={savingProfile}
+        />
 
         {/* Albums */}
         <section className="rounded-2xl border border-border bg-card p-5 space-y-4">
@@ -1024,4 +1070,265 @@ function PosterPickerDialog({
       </DialogContent>
     </Dialog>
   );
+}
+
+function AppearanceSection({
+  theme, bannerUrl, onPatchTheme, onUploadBanner, onRemoveBanner, onSave, saving,
+}: {
+  theme: PortfolioTheme;
+  bannerUrl: string | null;
+  onPatchTheme: (patch: Partial<PortfolioTheme>) => void;
+  onUploadBanner: (file: File | null) => void;
+  onRemoveBanner: () => void;
+  onSave: () => void;
+  saving: boolean;
+}) {
+  // Preload the active font so the live preview renders correctly.
+  useEffect(() => { ensureFontLoaded(theme.font); }, [theme.font]);
+
+  const swatch = SWATCHES.find((s) => s.id === theme.swatch) ?? SWATCHES[0];
+  const fontPair = FONT_PAIRS.find((f) => f.id === theme.font) ?? FONT_PAIRS[0];
+  const accent = theme.accent ?? swatch.accent;
+
+  return (
+    <section className="rounded-2xl border border-border bg-card p-5 space-y-5">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Palette className="w-4 h-4 text-primary" />
+          <h2 className="font-display font-700 text-lg">Appearance</h2>
+        </div>
+        <Button onClick={onSave} disabled={saving} size="sm" className="gap-1.5">
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save appearance
+        </Button>
+      </div>
+      <p className="text-xs text-muted-foreground -mt-2">
+        Pick a layout, palette, fonts and a banner. Changes show on your public portfolio after saving.
+      </p>
+
+      {/* Layout */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+          <LayoutTemplate className="w-3.5 h-3.5" /> Layout
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          {LAYOUTS.map((l) => {
+            const active = theme.layout === l.id;
+            return (
+              <button
+                key={l.id}
+                onClick={() => onPatchTheme({ layout: l.id })}
+                className={`text-left rounded-xl border p-3 transition-all ${active ? "border-primary ring-2 ring-primary/30 bg-primary/5" : "border-border hover:border-primary/40 bg-secondary/40"}`}
+              >
+                <LayoutPreview layout={l.id} />
+                <p className="font-display font-700 text-sm mt-2 flex items-center gap-1.5">
+                  {l.label}
+                  {active && <Check className="w-3.5 h-3.5 text-primary" />}
+                </p>
+                <p className="text-[11px] text-muted-foreground leading-snug">{l.description}</p>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Color swatches */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+          <Palette className="w-3.5 h-3.5" /> Palette
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {SWATCHES.map((s) => {
+            const active = theme.swatch === s.id;
+            return (
+              <button
+                key={s.id}
+                onClick={() => onPatchTheme({ swatch: s.id, accent: null })}
+                className={`group rounded-xl border px-3 py-2 transition-all ${active ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-primary/40"}`}
+                style={{ background: `hsl(${s.bg})` }}
+                title={s.label}
+              >
+                <div className="flex items-center gap-1.5">
+                  <span className="w-4 h-4 rounded-full" style={{ background: `hsl(${s.accent})` }} />
+                  <span className="w-4 h-4 rounded-full" style={{ background: `hsl(${s.surface})`, border: "1px solid rgba(255,255,255,.15)" }} />
+                </div>
+                <p className="text-[11px] mt-1 font-medium" style={{ color: `hsl(${s.text})` }}>{s.label}</p>
+              </button>
+            );
+          })}
+        </div>
+        <div className="flex items-center gap-2 pt-1">
+          <Label className="text-[11px] text-muted-foreground">Custom accent</Label>
+          <div className="relative">
+            <input
+              type="color"
+              value={hslStringToHex(accent)}
+              onChange={(e) => onPatchTheme({ accent: hexToHslString(e.target.value) })}
+              className="w-9 h-7 rounded cursor-pointer border border-border bg-transparent"
+              aria-label="Custom accent color"
+            />
+          </div>
+          {theme.accent && (
+            <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={() => onPatchTheme({ accent: null })}>
+              <X className="w-3 h-3" /> Reset
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Fonts */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+          <TypeIcon className="w-3.5 h-3.5" /> Fonts
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {FONT_PAIRS.map((f) => {
+            const active = theme.font === f.id;
+            return (
+              <button
+                key={f.id}
+                onClick={() => { onPatchTheme({ font: f.id }); ensureFontLoaded(f.id); }}
+                className={`rounded-xl border p-3 text-left transition-all ${active ? "border-primary ring-2 ring-primary/30 bg-primary/5" : "border-border hover:border-primary/40 bg-secondary/40"}`}
+              >
+                <div className="text-3xl leading-none" style={{ fontFamily: f.display }}>Aa</div>
+                <p className="text-xs font-display font-700 mt-2 flex items-center gap-1.5">
+                  {f.label}
+                  {active && <Check className="w-3 h-3 text-primary" />}
+                </p>
+                <p className="text-[10px] text-muted-foreground truncate" style={{ fontFamily: f.body }}>The quick brown fox</p>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Banner */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+          <ImageIcon className="w-3.5 h-3.5" /> Hero banner
+        </div>
+        <div
+          className="rounded-xl border border-border overflow-hidden h-36 sm:h-44 bg-secondary relative"
+          style={bannerUrl ? { backgroundImage: `url(${bannerUrl})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
+        >
+          {!bannerUrl && (
+            <div className="absolute inset-0 flex items-center justify-center text-xs text-muted-foreground">
+              No banner — upload a wide image to feature behind your hero.
+            </div>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md border border-border bg-secondary hover:bg-secondary/70 cursor-pointer">
+            <Upload className="w-3.5 h-3.5" />
+            {bannerUrl ? "Replace banner" : "Upload banner"}
+            <input type="file" accept="image/*" className="hidden" onChange={(e) => onUploadBanner(e.target.files?.[0] ?? null)} />
+          </label>
+          {bannerUrl && (
+            <Button size="sm" variant="ghost" className="h-7 gap-1.5 text-xs" onClick={onRemoveBanner}>
+              <Trash2 className="w-3.5 h-3.5" /> Remove
+            </Button>
+          )}
+          <label className="inline-flex items-center gap-2 text-[11px] text-muted-foreground ml-auto">
+            <Switch checked={!theme.hideBackdrop} onCheckedChange={(v) => onPatchTheme({ hideBackdrop: !v })} />
+            Show blurred photo backdrop when no banner
+          </label>
+        </div>
+      </div>
+
+      {/* Live preview */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+          <Eye className="w-3.5 h-3.5" /> Preview
+        </div>
+        <div
+          className="rounded-2xl overflow-hidden border border-border"
+          style={{ background: `hsl(${swatch.bg})`, color: `hsl(${swatch.text})`, fontFamily: fontPair.body }}
+        >
+          <div
+            className="h-24 sm:h-32 relative"
+            style={
+              bannerUrl
+                ? { backgroundImage: `url(${bannerUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
+                : { background: `radial-gradient(ellipse at top right, hsl(${accent} / 0.35), transparent 60%), hsl(${swatch.surface})` }
+            }
+          >
+            <div className="absolute inset-0" style={{ background: `linear-gradient(to bottom, transparent, hsl(${swatch.bg}))` }} />
+          </div>
+          <div className="p-4 -mt-10 relative">
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center font-display font-700 text-xl"
+                 style={{ background: `hsl(${accent} / 0.2)`, color: `hsl(${accent})`, border: `1px solid hsl(${accent} / 0.4)` }}>
+              Aa
+            </div>
+            <p className="mt-2 text-2xl leading-tight" style={{ fontFamily: fontPair.display, fontWeight: 700 }}>
+              Your portfolio name
+            </p>
+            <p className="text-xs opacity-70">Headline · Layout: {LAYOUTS.find((l) => l.id === theme.layout)?.label}</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function LayoutPreview({ layout }: { layout: PortfolioTheme["layout"] }) {
+  if (layout === "cinematic") {
+    return (
+      <div className="aspect-[16/9] rounded-md bg-gradient-to-br from-primary/30 to-primary/5 relative overflow-hidden border border-border">
+        <div className="absolute inset-x-2 bottom-2 flex items-end gap-1.5">
+          <div className="w-6 h-6 rounded-md bg-foreground/40" />
+          <div className="space-y-1 flex-1">
+            <div className="h-2 w-1/2 rounded bg-foreground/40" />
+            <div className="h-1 w-3/4 rounded bg-foreground/20" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+  if (layout === "editorial") {
+    return (
+      <div className="aspect-[16/9] rounded-md bg-secondary relative overflow-hidden border border-border p-2">
+        <div className="space-y-1">
+          <div className="h-2 w-2/3 rounded bg-foreground/50" />
+          <div className="h-2 w-1/2 rounded bg-foreground/30" />
+          <div className="h-1 w-3/4 rounded bg-foreground/20 mt-1" />
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="aspect-[16/9] rounded-md bg-secondary border border-border p-1.5 grid grid-cols-3 gap-1">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div key={i} className="rounded-sm bg-foreground/15" />
+      ))}
+    </div>
+  );
+}
+
+function hslStringToHex(hsl: string): string {
+  const m = hsl.trim().match(/^(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)%\s+(-?\d+(?:\.\d+)?)%$/);
+  if (!m) return "#3aa776";
+  const h = parseFloat(m[1]) / 360, s = parseFloat(m[2]) / 100, l = parseFloat(m[3]) / 100;
+  const k = (n: number) => (n + h * 12) % 12;
+  const a = s * Math.min(l, 1 - l);
+  const f = (n: number) => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+  const toHex = (x: number) => Math.round(255 * x).toString(16).padStart(2, "0");
+  return `#${toHex(f(0))}${toHex(f(8))}${toHex(f(4))}`;
+}
+
+function hexToHslString(hex: string): string {
+  const m = hex.replace("#", "").match(/^([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
+  if (!m) return "152 60% 38%";
+  const r = parseInt(m[1], 16) / 255, g = parseInt(m[2], 16) / 255, b = parseInt(m[3], 16) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, s = 0; const l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      case b: h = (r - g) / d + 4; break;
+    }
+    h *= 60;
+  }
+  return `${Math.round(h)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
 }

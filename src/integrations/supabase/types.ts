@@ -867,6 +867,7 @@ export type Database = {
         Row: {
           account_type: Database["public"]["Enums"]["account_type"]
           avatar_url: string | null
+          banner_url: string | null
           bio: string | null
           contact_email: string | null
           created_at: string
@@ -878,6 +879,7 @@ export type Database = {
           location: string | null
           portfolio_published: boolean
           resume_url: string | null
+          theme: Json
           tiktok: string | null
           twitter: string | null
           updated_at: string
@@ -889,6 +891,7 @@ export type Database = {
         Insert: {
           account_type?: Database["public"]["Enums"]["account_type"]
           avatar_url?: string | null
+          banner_url?: string | null
           bio?: string | null
           contact_email?: string | null
           created_at?: string
@@ -900,6 +903,7 @@ export type Database = {
           location?: string | null
           portfolio_published?: boolean
           resume_url?: string | null
+          theme?: Json
           tiktok?: string | null
           twitter?: string | null
           updated_at?: string
@@ -911,6 +915,7 @@ export type Database = {
         Update: {
           account_type?: Database["public"]["Enums"]["account_type"]
           avatar_url?: string | null
+          banner_url?: string | null
           bio?: string | null
           contact_email?: string | null
           created_at?: string
@@ -922,6 +927,7 @@ export type Database = {
           location?: string | null
           portfolio_published?: boolean
           resume_url?: string | null
+          theme?: Json
           tiktok?: string | null
           twitter?: string | null
           updated_at?: string
