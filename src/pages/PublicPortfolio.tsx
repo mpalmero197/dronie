@@ -1054,6 +1054,160 @@ function autoCover(albumId: string, items: PortfolioItem[]): string | null {
   return first ? first.thumb_url || first.media_url : null;
 }
 
+/* ─────────────────────────────────────────────────────────────────
+ * Polish components: section headings, stats strip, featured reel
+ * ─────────────────────────────────────────────────────────────── */
+
+function SectionHeading({
+  eyebrow, title, subtitle, right,
+}: {
+  eyebrow?: string;
+  title: string;
+  subtitle?: string;
+  right?: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-end justify-between gap-4 flex-wrap">
+      <div>
+        {eyebrow && (
+          <div className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.22em] text-primary mb-1.5">
+            <span className="w-5 h-px bg-primary/60" /> {eyebrow}
+          </div>
+        )}
+        <h2
+          className="font-700 text-3xl sm:text-4xl tracking-tight leading-[1.05]"
+          style={{ fontFamily: "var(--portfolio-display-font)" }}
+        >
+          {title}
+        </h2>
+        {subtitle && (
+          <p className="text-sm text-muted-foreground mt-1.5">{subtitle}</p>
+        )}
+      </div>
+      {right && <div className="text-xs text-muted-foreground">{right}</div>}
+    </div>
+  );
+}
+
+function StatsStrip({
+  photos, videos, albums, available,
+}: {
+  photos: number;
+  videos: number;
+  albums: number;
+  available: boolean;
+}) {
+  const stats = [
+    { icon: ImageIcon, label: "Photos", value: photos },
+    { icon: Film, label: "Videos", value: videos },
+    { icon: Award, label: "Collections", value: albums },
+  ].filter((s) => s.value > 0);
+
+  return (
+    <div className="rounded-2xl border border-border bg-gradient-to-br from-card via-card to-primary/5 p-4 sm:p-5">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+        {stats.map(({ icon: Icon, label, value }) => (
+          <div key={label} className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary flex-shrink-0">
+              <Icon className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <p
+                className="font-700 text-xl tabular-nums leading-none"
+                style={{ fontFamily: "var(--portfolio-display-font)" }}
+              >
+                {value}
+              </p>
+              <p className="text-[11px] text-muted-foreground uppercase tracking-wider mt-1">{label}</p>
+            </div>
+          </div>
+        ))}
+        <div className="flex items-center gap-3">
+          <div className={`w-10 h-10 rounded-xl border flex items-center justify-center flex-shrink-0 ${
+            available
+              ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
+              : "bg-muted border-border text-muted-foreground"
+          }`}>
+            {available ? <Zap className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
+          </div>
+          <div className="min-w-0">
+            <p
+              className="font-700 text-sm leading-tight"
+              style={{ fontFamily: "var(--portfolio-display-font)" }}
+            >
+              {available ? "Booking now" : "Reach out"}
+            </p>
+            <p className="text-[11px] text-muted-foreground uppercase tracking-wider mt-1">Status</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FeaturedReel({
+  item, onOpen,
+}: {
+  item: PortfolioItem;
+  onOpen: (i: PortfolioItem) => void;
+}) {
+  if (!item || (!item.thumb_url && !item.media_url) || item.kind === "project_link") return null;
+  const isVideo = item.kind === "video";
+  return (
+    <section className="space-y-3">
+      <SectionHeading eyebrow="Featured" title="Latest work" subtitle="The shot worth opening with" />
+      <button
+        onClick={() => onOpen(item)}
+        className="group relative block w-full rounded-2xl overflow-hidden border border-border bg-secondary aspect-[16/9] sm:aspect-[21/9] hover:border-primary/50 transition-colors"
+      >
+        {isVideo && !item.thumb_url ? (
+          <video
+            src={item.media_url ?? ""}
+            muted
+            playsInline
+            preload="metadata"
+            className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-[1500ms]"
+          />
+        ) : (
+          <img
+            src={item.thumb_url || item.media_url || ""}
+            alt={item.title ?? ""}
+            className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-[1500ms]"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+          />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
+        {isVideo && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/95 flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform">
+              <Play className="w-7 h-7 sm:w-8 sm:h-8 text-foreground fill-foreground ml-1" />
+            </div>
+          </div>
+        )}
+        <div className="absolute bottom-0 inset-x-0 p-5 sm:p-7 flex items-end justify-between gap-4">
+          <div className="min-w-0">
+            {item.title && (
+              <p
+                className="font-700 text-2xl sm:text-3xl text-white drop-shadow-lg leading-tight"
+                style={{ fontFamily: "var(--portfolio-display-font)" }}
+              >
+                {item.title}
+              </p>
+            )}
+            {item.caption && (
+              <p className="text-sm text-white/80 mt-1 line-clamp-1 max-w-2xl">{item.caption}</p>
+            )}
+          </div>
+          <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur border border-white/20 text-xs font-medium text-white whitespace-nowrap">
+            {isVideo ? <Film className="w-3.5 h-3.5" /> : <ImageIcon className="w-3.5 h-3.5" />}
+            {isVideo ? "Watch" : "View"} <ChevronRight className="w-3.5 h-3.5" />
+          </span>
+        </div>
+      </button>
+    </section>
+  );
+}
+
 function VisibilityPill({
   visibility,
   kind,
