@@ -188,7 +188,11 @@ export async function renderProject(project: EditorProject, onProgress: RenderPr
 
   onProgress(98, "Finalizing…");
   const out = await ff.readFile(finalFile);
-  const blob = new Blob([out as Uint8Array], { type: "video/mp4" });
+  const u8 = out as Uint8Array;
+  // Copy into a fresh ArrayBuffer to avoid SharedArrayBuffer typing issues with Blob.
+  const ab = new ArrayBuffer(u8.byteLength);
+  new Uint8Array(ab).set(u8);
+  const blob = new Blob([ab], { type: "video/mp4" });
 
   // cleanup
   for (const s of segs) { try { await ff.deleteFile(s); } catch {} }
