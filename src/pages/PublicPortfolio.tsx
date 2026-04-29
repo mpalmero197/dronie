@@ -143,14 +143,27 @@ export default function PublicPortfolio({ mode }: Props) {
         <section className="relative border-b border-border overflow-hidden">
           {/* Cinematic backdrop */}
           <div className="absolute inset-0 -z-10">
-            {items[0]?.media_url || items[0]?.thumb_url ? (
-              <img
-                src={items[0].thumb_url || items[0].media_url || ""}
-                alt=""
-                aria-hidden
-                className="w-full h-full object-cover opacity-30 scale-110 blur-sm"
-              />
-            ) : null}
+            {(() => {
+              const firstItem = items.find((i) => i.thumb_url || i.media_url);
+              const firstAlbumCover = albums.find((a) => a.cover_url)?.cover_url;
+              const backdrop =
+                firstItem?.thumb_url ||
+                firstItem?.media_url ||
+                firstAlbumCover ||
+                profile.avatar_url ||
+                null;
+              return backdrop ? (
+                <img
+                  src={backdrop}
+                  alt=""
+                  aria-hidden
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).style.display = "none";
+                  }}
+                  className="w-full h-full object-cover opacity-30 scale-110 blur-sm"
+                />
+              ) : null;
+            })()}
             <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/85 to-background" />
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_hsl(var(--primary)/0.18),_transparent_60%)]" />
           </div>
