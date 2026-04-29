@@ -272,9 +272,9 @@ export default function PublicPortfolio({ mode }: Props) {
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                     {a.visibility !== "public" && (
-                      <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-background/80 backdrop-blur text-[10px] font-medium uppercase tracking-wider border border-border">
-                        {a.visibility}
-                      </span>
+                      <div className="absolute top-2 right-2">
+                        <VisibilityPill visibility={a.visibility} kind="album" />
+                      </div>
                     )}
                   </div>
                   <div className="p-3">
@@ -304,6 +304,7 @@ export default function PublicPortfolio({ mode }: Props) {
           ownerCta={isOwner && items.length === 0}
           onOpen={setLightbox}
           heading={mode === "home" && items.length > 0 ? "Featured" : undefined}
+          showVisibility={isOwner}
         />
       </main>
 
