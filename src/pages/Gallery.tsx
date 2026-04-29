@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   Map, ArrowLeft, Eye, MapPin, Loader2, ImageOff, Upload,
   Search, SlidersHorizontal, Layers, Camera, Sparkles, Image as ImageIcon,
@@ -75,8 +75,27 @@ export default function Gallery() {
   const [projects, setProjects] = useState<EnrichedProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
-  const [vertical, setVertical] = useState<string>("all");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialVertical = searchParams.get("vertical") || "all";
+  const [vertical, setVerticalState] = useState<string>(initialVertical);
   const [sort, setSort] = useState<SortKey>("newest");
+
+  // Keep ?vertical=… in the URL in sync with the dropdown so the page is
+  // deep-linkable from the footer's Solutions column.
+  const setVertical = (next: string) => {
+    setVerticalState(next);
+    const params = new URLSearchParams(searchParams);
+    if (next === "all") params.delete("vertical");
+    else params.set("vertical", next);
+    setSearchParams(params, { replace: true });
+  };
+
+  // Sync state when the URL changes (e.g., user clicks another footer link
+  // while already on /gallery).
+  useEffect(() => {
+    const v = searchParams.get("vertical") || "all";
+    setVerticalState(v);
+  }, [searchParams]);
 
   useEffect(() => {
     let cancelled = false;
