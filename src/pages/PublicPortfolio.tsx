@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, MapPin, Globe, Instagram, ImageIcon, Film, Sparkles,
-  Loader2, Lock, ExternalLink, Camera,
+  Loader2, Lock, ExternalLink, Camera, Eye, EyeOff,
 } from "lucide-react";
 import {
   fetchPortfolioByUsername, fetchPublicAlbumsByUser, fetchPublicItemsByUser,
@@ -10,6 +10,7 @@ import {
   type PortfolioProfile, type PortfolioAlbum, type PortfolioItem,
 } from "@/lib/portfolio";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 
 type Mode = "home" | "photos" | "videos" | "album";
 
@@ -18,6 +19,7 @@ interface Props { mode: Mode }
 export default function PublicPortfolio({ mode }: Props) {
   const { username, slug } = useParams<{ username: string; slug?: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [profile, setProfile] = useState<PortfolioProfile | null>(null);
   const [albums, setAlbums] = useState<PortfolioAlbum[]>([]);
@@ -37,18 +39,19 @@ export default function PublicPortfolio({ mode }: Props) {
         if (cancelled) return;
         if (!p) { setNotFound(true); setLoading(false); return; }
         setProfile(p);
+        const isOwner = !!user && user.id === p.id;
 
         if (mode === "home") {
           const [a, i] = await Promise.all([
-            fetchPublicAlbumsByUser(p.id),
-            fetchPublicItemsByUser(p.id),
+            fetchPublicAlbumsByUser(p.id, isOwner),
+            fetchPublicItemsByUser(p.id, undefined, isOwner),
           ]);
           if (!cancelled) { setAlbums(a); setItems(i.slice(0, 12)); }
         } else if (mode === "photos") {
-          const i = await fetchPublicItemsByUser(p.id, "photo");
+          const i = await fetchPublicItemsByUser(p.id, "photo", isOwner);
           if (!cancelled) setItems(i);
         } else if (mode === "videos") {
-          const i = await fetchPublicItemsByUser(p.id, "video");
+          const i = await fetchPublicItemsByUser(p.id, "video", isOwner);
           if (!cancelled) setItems(i);
         } else if (mode === "album" && slug) {
           const al = await fetchAlbumBySlug(p.id, slug);
@@ -65,7 +68,7 @@ export default function PublicPortfolio({ mode }: Props) {
       }
     })();
     return () => { cancelled = true; };
-  }, [username, slug, mode]);
+  }, [username, slug, mode, user?.id]);
 
   // Document title for SEO
   useEffect(() => {
@@ -80,7 +83,7 @@ export default function PublicPortfolio({ mode }: Props) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-muted-foreground gap-2">
+      <div className="min-h-screen bg-background flex items-center justify-center text-muted-foreground gap-2">
         <Loader2 className="w-4 h-4 animate-spin" /> Loading portfolio…
       </div>
     );
@@ -100,9 +103,27 @@ export default function PublicPortfolio({ mode }: Props) {
   }
 
   const displayName = profile.full_name || profile.username || "Pilot";
+  const isOwner = !!user && user.id === profile.id;
+  const isUnpublished = !profile.portfolio_published;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      {isOwner && isUnpublished && (
+        <div className="bg-amber-500/10 border-b border-amber-500/30 text-amber-200">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-2.5 text-xs sm:text-sm flex flex-wrap items-center justify-between gap-2">
+            <span className="inline-flex items-center gap-2">
+              <EyeOff className="w-4 h-4" />
+              Preview mode — your portfolio is unpublished. Only you can see this page.
+            </span>
+            <Link to="/portfolio">
+              <Button size="sm" variant="outline" className="h-7 gap-1.5 border-amber-400/40 text-amber-100 hover:bg-amber-500/20">
+                <Eye className="w-3.5 h-3.5" /> Publish in Studio
+              </Button>
+            </Link>
+          </div>
+        </div>
+      )}
+
       <header className="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
           <Link to={`/u/${profile.username}`} className="flex items-center gap-2 min-w-0">
@@ -118,48 +139,75 @@ export default function PublicPortfolio({ mode }: Props) {
 
       {/* Hero / about */}
       {mode === "home" && (
-        <section className="border-b border-border bg-gradient-to-b from-secondary/40 to-background">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-14 grid sm:grid-cols-[auto_1fr] gap-6 items-center">
-            <div className="w-24 h-24 rounded-2xl bg-primary/15 flex items-center justify-center text-3xl font-display font-700 text-primary overflow-hidden">
-              {profile.avatar_url
-                ? <img src={profile.avatar_url} alt={displayName} className="w-full h-full object-cover" />
-                : displayName[0]?.toUpperCase()}
-            </div>
-            <div className="space-y-2">
-              <h1 className="font-display font-700 text-3xl sm:text-4xl tracking-tight">{displayName}</h1>
-              {profile.headline && (
-                <p className="text-base text-foreground/80">{profile.headline}</p>
-              )}
-              {profile.bio && (
-                <p className="text-sm text-muted-foreground max-w-2xl whitespace-pre-line">{profile.bio}</p>
-              )}
-              <div className="flex flex-wrap gap-3 text-xs text-muted-foreground pt-1">
-                {profile.location && (
-                  <span className="inline-flex items-center gap-1"><MapPin className="w-3 h-3" /> {profile.location}</span>
-                )}
-                {profile.website && (
-                  <a href={profile.website} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 hover:text-primary">
-                    <Globe className="w-3 h-3" /> {profile.website.replace(/^https?:\/\//, "")}
-                  </a>
-                )}
-                {profile.instagram && (
-                  <a href={`https://instagram.com/${profile.instagram.replace(/^@/, "")}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 hover:text-primary">
-                    <Instagram className="w-3 h-3" /> @{profile.instagram.replace(/^@/, "")}
-                  </a>
+        <section className="relative border-b border-border overflow-hidden">
+          {/* Cinematic backdrop */}
+          <div className="absolute inset-0 -z-10">
+            {items[0]?.media_url || items[0]?.thumb_url ? (
+              <img
+                src={items[0].thumb_url || items[0].media_url || ""}
+                alt=""
+                aria-hidden
+                className="w-full h-full object-cover opacity-30 scale-110 blur-sm"
+              />
+            ) : null}
+            <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/85 to-background" />
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_hsl(var(--primary)/0.18),_transparent_60%)]" />
+          </div>
+
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-14 pb-16 sm:pt-20 sm:pb-24">
+            <div className="grid sm:grid-cols-[auto_1fr] gap-8 items-center">
+              <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-3xl bg-primary/15 flex items-center justify-center text-4xl font-display font-700 text-primary overflow-hidden ring-1 ring-primary/30 shadow-2xl shadow-primary/10">
+                {profile.avatar_url ? (
+                  <img src={profile.avatar_url} alt={displayName} className="w-full h-full object-cover" />
+                ) : (
+                  displayName[0]?.toUpperCase()
                 )}
               </div>
+              <div className="space-y-3">
+                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-[11px] font-medium uppercase tracking-wider">
+                  <Camera className="w-3 h-3" /> Drone photographer
+                </div>
+                <h1 className="font-display font-700 text-4xl sm:text-6xl tracking-tight leading-[1.05]">
+                  {displayName}
+                </h1>
+                {profile.headline && (
+                  <p className="text-lg sm:text-xl text-foreground/85 max-w-2xl leading-relaxed">
+                    {profile.headline}
+                  </p>
+                )}
+                {profile.bio && (
+                  <p className="text-sm text-muted-foreground max-w-2xl whitespace-pre-line leading-relaxed">
+                    {profile.bio}
+                  </p>
+                )}
+                <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground pt-1">
+                  {profile.location && (
+                    <span className="inline-flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" /> {profile.location}</span>
+                  )}
+                  {profile.website && (
+                    <a href={profile.website} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-primary transition-colors">
+                      <Globe className="w-3.5 h-3.5" /> {profile.website.replace(/^https?:\/\//, "")}
+                    </a>
+                  )}
+                  {profile.instagram && (
+                    <a href={`https://instagram.com/${profile.instagram.replace(/^@/, "")}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-primary transition-colors">
+                      <Instagram className="w-3.5 h-3.5" /> @{profile.instagram.replace(/^@/, "")}
+                    </a>
+                  )}
+                </div>
 
-              <div className="flex gap-2 pt-3">
-                <Link to={`/u/${profile.username}/photos`}>
-                  <Button size="sm" variant="outline" className="gap-1.5">
-                    <ImageIcon className="w-3.5 h-3.5" /> All photos
-                  </Button>
-                </Link>
-                <Link to={`/u/${profile.username}/videos`}>
-                  <Button size="sm" variant="outline" className="gap-1.5">
-                    <Film className="w-3.5 h-3.5" /> All videos
-                  </Button>
-                </Link>
+                <div className="flex flex-wrap gap-2 pt-4">
+                  <Link to={`/u/${profile.username}/photos`}>
+                    <Button size="sm" className="gap-1.5">
+                      <ImageIcon className="w-3.5 h-3.5" /> All photos
+                    </Button>
+                  </Link>
+                  <Link to={`/u/${profile.username}/videos`}>
+                    <Button size="sm" variant="outline" className="gap-1.5">
+                      <Film className="w-3.5 h-3.5" /> All videos
+                    </Button>
+                  </Link>
+                </div>
               </div>
             </div>
           </div>
@@ -186,21 +234,30 @@ export default function PublicPortfolio({ mode }: Props) {
         {/* Albums grid (home only) */}
         {mode === "home" && albums.length > 0 && (
           <section className="space-y-4">
-            <h2 className="font-display font-700 text-xl">Albums</h2>
+            <div className="flex items-end justify-between">
+              <h2 className="font-display font-700 text-2xl tracking-tight">Albums</h2>
+              <span className="text-xs text-muted-foreground">{albums.length} {albums.length === 1 ? "album" : "albums"}</span>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {albums.map((a) => (
                 <Link
                   key={a.id}
                   to={`/u/${profile.username}/album/${a.slug}`}
-                  className="group rounded-2xl border border-border overflow-hidden bg-card hover:border-primary/40 transition-colors"
+                  className="group rounded-2xl border border-border overflow-hidden bg-card hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all"
                 >
                   <div className="aspect-[4/3] bg-secondary relative overflow-hidden">
                     {a.cover_url ? (
-                      <img src={a.cover_url} alt={a.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+                      <img src={a.cover_url} alt={a.title} className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-700" loading="lazy" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-muted-foreground">
                         <ImageIcon className="w-8 h-8" />
                       </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                    {a.visibility !== "public" && (
+                      <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-background/80 backdrop-blur text-[10px] font-medium uppercase tracking-wider border border-border">
+                        {a.visibility}
+                      </span>
                     )}
                   </div>
                   <div className="p-3">
@@ -219,11 +276,14 @@ export default function PublicPortfolio({ mode }: Props) {
         <MediaGrid
           items={items}
           emptyLabel={
-            mode === "home" ? "No public work yet" :
+            mode === "home"
+              ? (isOwner ? "Add photos and videos in your Portfolio Studio to bring this page to life." : "No public work yet")
+              :
             mode === "photos" ? "No public photos yet" :
             mode === "videos" ? "No public videos yet" :
             "This album is empty"
           }
+          ownerCta={isOwner && items.length === 0}
           onOpen={setLightbox}
           heading={mode === "home" && items.length > 0 ? "Featured" : undefined}
         />
@@ -243,20 +303,28 @@ export default function PublicPortfolio({ mode }: Props) {
 }
 
 function MediaGrid({
-  items, emptyLabel, onOpen, heading,
+  items, emptyLabel, onOpen, heading, ownerCta,
 }: {
   items: PortfolioItem[];
   emptyLabel: string;
   onOpen: (i: PortfolioItem) => void;
   heading?: string;
+  ownerCta?: boolean;
 }) {
   const hasItems = items.length > 0;
   return (
     <section className="space-y-3">
-      {heading && hasItems && <h2 className="font-display font-700 text-xl">{heading}</h2>}
+      {heading && hasItems && <h2 className="font-display font-700 text-2xl tracking-tight">{heading}</h2>}
       {!hasItems ? (
-        <div className="rounded-2xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
-          {emptyLabel}
+        <div className="rounded-2xl border border-dashed border-border p-12 text-center text-sm text-muted-foreground space-y-3">
+          <p>{emptyLabel}</p>
+          {ownerCta && (
+            <Link to="/portfolio">
+              <Button size="sm" variant="outline" className="gap-1.5 mt-1">
+                <Sparkles className="w-3.5 h-3.5" /> Open Portfolio Studio
+              </Button>
+            </Link>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
