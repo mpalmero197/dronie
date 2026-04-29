@@ -24,6 +24,7 @@ export default function PublicPortfolio({ mode }: Props) {
   const [profile, setProfile] = useState<PortfolioProfile | null>(null);
   const [albums, setAlbums] = useState<PortfolioAlbum[]>([]);
   const [items, setItems] = useState<PortfolioItem[]>([]);
+  const [allItems, setAllItems] = useState<PortfolioItem[]>([]);
   const [album, setAlbum] = useState<PortfolioAlbum | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -46,7 +47,7 @@ export default function PublicPortfolio({ mode }: Props) {
             fetchPublicAlbumsByUser(p.id, isOwner),
             fetchPublicItemsByUser(p.id, undefined, isOwner),
           ]);
-          if (!cancelled) { setAlbums(a); setItems(i.slice(0, 12)); }
+          if (!cancelled) { setAlbums(a); setAllItems(i); setItems(i.slice(0, 12)); }
         } else if (mode === "photos") {
           const i = await fetchPublicItemsByUser(p.id, "photo", isOwner);
           if (!cancelled) setItems(i);
@@ -239,15 +240,17 @@ export default function PublicPortfolio({ mode }: Props) {
               <span className="text-xs text-muted-foreground">{albums.length} {albums.length === 1 ? "album" : "albums"}</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {albums.map((a) => (
+              {albums.map((a) => {
+                const cover = a.cover_url || autoCover(a.id, allItems);
+                return (
                 <Link
                   key={a.id}
                   to={`/u/${profile.username}/album/${a.slug}`}
                   className="group rounded-2xl border border-border overflow-hidden bg-card hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all"
                 >
                   <div className="aspect-[4/3] bg-secondary relative overflow-hidden">
-                    {a.cover_url ? (
-                      <img src={a.cover_url} alt={a.title} className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-700" loading="lazy" />
+                    {cover ? (
+                      <img src={cover} alt={a.title} className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-700" loading="lazy" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-muted-foreground">
                         <ImageIcon className="w-8 h-8" />
@@ -267,7 +270,8 @@ export default function PublicPortfolio({ mode }: Props) {
                     )}
                   </div>
                 </Link>
-              ))}
+                );
+              })}
             </div>
           </section>
         )}
@@ -404,4 +408,10 @@ function Lightbox({ item, onClose }: { item: PortfolioItem; onClose: () => void 
       </div>
     </div>
   );
+}
+
+function autoCover(albumId: string, items: PortfolioItem[]): string | null {
+  const inAlbum = items.filter((i) => i.album_id === albumId && (i.thumb_url || i.media_url));
+  const first = inAlbum[0];
+  return first ? first.thumb_url || first.media_url : null;
 }
