@@ -1,5 +1,6 @@
 import { Map } from "lucide-react";
 import { Link } from "react-router-dom";
+import { track } from "@/lib/analytics";
 
 type FooterLink = { label: string; href: string; external?: boolean };
 
@@ -107,6 +108,14 @@ export default function FooterSection() {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors"
+                        onClick={() =>
+                          track("landing_footer_cta_click", {
+                            section: col.title,
+                            label: l.label,
+                            href: l.href,
+                            external: true,
+                          })
+                        }
                       >
                         {l.label}
                       </a>
@@ -114,6 +123,14 @@ export default function FooterSection() {
                       <Link
                         to={l.href}
                         className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors"
+                        onClick={() =>
+                          track("landing_footer_cta_click", {
+                            section: col.title,
+                            label: l.label,
+                            href: l.href,
+                            external: false,
+                          })
+                        }
                       >
                         {l.label}
                       </Link>
