@@ -381,12 +381,33 @@ function MediaCard({ item, onOpen }: { item: PortfolioItem; onOpen: (i: Portfoli
       onClick={() => onOpen(item)}
       className="aspect-square rounded-xl border border-border bg-secondary relative overflow-hidden group"
     >
-      <img
-        src={item.thumb_url || item.media_url || ""}
-        alt={item.title ?? item.caption ?? ""}
-        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-        loading="lazy"
-      />
+      {item.kind === "video" && !item.thumb_url ? (
+        <video
+          src={item.media_url ?? ""}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          muted
+          playsInline
+          preload="metadata"
+        />
+      ) : item.thumb_url ? (
+        <img
+          src={item.thumb_url}
+          alt={item.title ?? item.caption ?? ""}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          loading="lazy"
+          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+        />
+      ) : item.media_url ? (
+        <img
+          src={item.media_url}
+          alt={item.title ?? item.caption ?? ""}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          loading="lazy"
+          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+        />
+      ) : (
+        <div className="w-full h-full bg-gradient-to-br from-primary/10 to-accent/5" />
+      )}
       {item.kind === "video" && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/20">
           <div className="w-10 h-10 rounded-full bg-white/90 flex items-center justify-center">
