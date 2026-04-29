@@ -533,6 +533,13 @@ function ItemCard({
             >
               <Wand2 className="w-3 h-3" /> Pick frame
             </button>
+            <a
+              href={`/portfolio/edit/${item.id}`}
+              className="absolute bottom-1 right-1 bg-primary/90 hover:bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 rounded inline-flex items-center gap-1"
+              title="Open in the video editor"
+            >
+              <Film className="w-3 h-3" /> Edit
+            </a>
           </>
         ) : (
           <img src={item.thumb_url || item.media_url || ""} alt="" className="w-full h-full object-cover" loading="lazy" />

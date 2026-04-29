@@ -30,6 +30,7 @@ import Compliance from "./pages/Compliance.tsx";
 import GaussianSplats from "./pages/GaussianSplats.tsx";
 import EmbedSplats from "./pages/EmbedSplats.tsx";
 import PortfolioStudio from "./pages/PortfolioStudio.tsx";
+import VideoEditor from "./pages/VideoEditor.tsx";
 import PublicPortfolio from "./pages/PublicPortfolio.tsx";
 import Marketplace from "./pages/Marketplace.tsx";
 import MarketplaceNew from "./pages/MarketplaceNew.tsx";
@@ -80,6 +81,8 @@ const App = () => (
             <Route path="/splats" element={<GaussianSplats />} />
             <Route path="/embed/splats/:token" element={<EmbedSplats />} />
             <Route path="/portfolio" element={<PortfolioStudio />} />
+            <Route path="/portfolio/edit" element={<VideoEditor />} />
+            <Route path="/portfolio/edit/:itemId" element={<VideoEditor />} />
             <Route path="/u/:username" element={<PublicPortfolio mode="home" />} />
             <Route path="/u/:username/photos" element={<PublicPortfolio mode="photos" />} />
             <Route path="/u/:username/videos" element={<PublicPortfolio mode="videos" />} />
