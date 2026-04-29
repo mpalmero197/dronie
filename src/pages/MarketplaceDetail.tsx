@@ -19,11 +19,13 @@ import {
 } from "@/lib/marketplace";
 import { findMatchingPilots, type MatchedPilot } from "@/lib/pilots";
 import Conversation from "@/components/marketplace/Conversation";
+import FaaLookupButton from "@/components/marketplace/FaaLookupButton";
 
 interface PilotMini {
   user_id: string;
   display_name: string;
   avatar_url: string | null;
+  part_107: boolean;
 }
 
 export default function MarketplaceDetail() {
@@ -59,7 +61,7 @@ export default function MarketplaceDetail() {
         if (pilotIds.length > 0) {
           const { data: pp } = await supabase
             .from("pilot_profiles")
-            .select("user_id, display_name")
+            .select("user_id, display_name, part_107")
             .in("user_id", pilotIds);
           const { data: profs } = await supabase
             .from("profiles")
@@ -74,6 +76,7 @@ export default function MarketplaceDetail() {
               user_id: pid,
               display_name: pf?.display_name ?? pr?.full_name ?? "Pilot",
               avatar_url: pr?.avatar_url ?? null,
+              part_107: !!pf?.part_107,
             };
           }
           setPilotInfo(map);
