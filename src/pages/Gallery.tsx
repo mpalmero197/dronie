@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   Map, ArrowLeft, Eye, MapPin, Loader2, ImageOff, Upload,
-  Search, SlidersHorizontal, Layers, Camera, Sparkles, Image as ImageIcon,
+  Search, SlidersHorizontal, Layers, Camera, Sparkles, Image as ImageIcon, ArrowRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -75,8 +75,27 @@ export default function Gallery() {
   const [projects, setProjects] = useState<EnrichedProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
-  const [vertical, setVertical] = useState<string>("all");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialVertical = searchParams.get("vertical") || "all";
+  const [vertical, setVerticalState] = useState<string>(initialVertical);
   const [sort, setSort] = useState<SortKey>("newest");
+
+  // Keep ?vertical=… in the URL in sync with the dropdown so the page is
+  // deep-linkable from the footer's Solutions column.
+  const setVertical = (next: string) => {
+    setVerticalState(next);
+    const params = new URLSearchParams(searchParams);
+    if (next === "all") params.delete("vertical");
+    else params.set("vertical", next);
+    setSearchParams(params, { replace: true });
+  };
+
+  // Sync state when the URL changes (e.g., user clicks another footer link
+  // while already on /gallery).
+  useEffect(() => {
+    const v = searchParams.get("vertical") || "all";
+    setVerticalState(v);
+  }, [searchParams]);
 
   useEffect(() => {
     let cancelled = false;
@@ -233,6 +252,22 @@ export default function Gallery() {
                 </Select>
               </div>
             </div>
+
+            {vertical !== "all" && (
+              <Link
+                to={`/solutions/${vertical}`}
+                className="mb-6 flex items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 hover:bg-primary/10 transition-colors group"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <Sparkles className="w-4 h-4 text-primary flex-shrink-0" />
+                  <span className="text-sm">
+                    Showing <span className="font-semibold">{VERTICAL_LABEL[vertical] ?? vertical}</span> projects ·
+                    <span className="text-muted-foreground"> see the full {VERTICAL_LABEL[vertical] ?? vertical} solution</span>
+                  </span>
+                </div>
+                <ArrowRight className="w-4 h-4 text-primary group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
+              </Link>
+            )}
 
             {filtered.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-border bg-card/50 px-6 py-16 text-center">
