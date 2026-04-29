@@ -182,9 +182,9 @@ export default function PublicPortfolio({ mode }: Props) {
               <EyeOff className="w-4 h-4" />
               Preview mode — your portfolio is unpublished. Only you can see this page.
             </span>
-            <Link to="/portfolio">
-              <Button size="sm" variant="outline" className="h-7 gap-1.5 border-amber-400/40 text-amber-100 hover:bg-amber-500/20">
-                <Eye className="w-3.5 h-3.5" /> Publish in Studio
+            <Link to="/portfolio?publish=1#publish-toggle">
+              <Button size="sm" className="h-7 gap-1.5 bg-amber-500 hover:bg-amber-400 text-amber-950">
+                <Eye className="w-3.5 h-3.5" /> Publish now
               </Button>
             </Link>
           </div>
