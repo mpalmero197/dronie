@@ -866,6 +866,7 @@ export type Database = {
       profiles: {
         Row: {
           account_type: Database["public"]["Enums"]["account_type"]
+          available_for_hire: boolean
           avatar_url: string | null
           banner_url: string | null
           bio: string | null
@@ -873,23 +874,28 @@ export type Database = {
           created_at: string
           full_name: string | null
           headline: string | null
+          hourly_rate_cents: number | null
           id: string
           instagram: string | null
           linkedin: string | null
           location: string | null
+          phone: string | null
           portfolio_published: boolean
           resume_url: string | null
+          services: string[]
           theme: Json
           tiktok: string | null
           twitter: string | null
           updated_at: string
           username: string | null
           vimeo: string | null
+          visibility_prefs: Json
           website: string | null
           youtube: string | null
         }
         Insert: {
           account_type?: Database["public"]["Enums"]["account_type"]
+          available_for_hire?: boolean
           avatar_url?: string | null
           banner_url?: string | null
           bio?: string | null
@@ -897,23 +903,28 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           headline?: string | null
+          hourly_rate_cents?: number | null
           id: string
           instagram?: string | null
           linkedin?: string | null
           location?: string | null
+          phone?: string | null
           portfolio_published?: boolean
           resume_url?: string | null
+          services?: string[]
           theme?: Json
           tiktok?: string | null
           twitter?: string | null
           updated_at?: string
           username?: string | null
           vimeo?: string | null
+          visibility_prefs?: Json
           website?: string | null
           youtube?: string | null
         }
         Update: {
           account_type?: Database["public"]["Enums"]["account_type"]
+          available_for_hire?: boolean
           avatar_url?: string | null
           banner_url?: string | null
           bio?: string | null
@@ -921,18 +932,22 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           headline?: string | null
+          hourly_rate_cents?: number | null
           id?: string
           instagram?: string | null
           linkedin?: string | null
           location?: string | null
+          phone?: string | null
           portfolio_published?: boolean
           resume_url?: string | null
+          services?: string[]
           theme?: Json
           tiktok?: string | null
           twitter?: string | null
           updated_at?: string
           username?: string | null
           vimeo?: string | null
+          visibility_prefs?: Json
           website?: string | null
           youtube?: string | null
         }
