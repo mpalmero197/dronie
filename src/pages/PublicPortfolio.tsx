@@ -13,11 +13,79 @@ import {
 } from "@/lib/portfolio";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
 
 type Mode = "home" | "photos" | "videos" | "album";
 
 interface Props { mode: Mode }
+
+function PortfolioSkeleton({ mode }: { mode: Mode }) {
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      {/* Header */}
+      <header className="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <Skeleton className="w-4 h-4 rounded" />
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-3 w-20 hidden sm:block" />
+          </div>
+          <Skeleton className="h-8 w-24 rounded-md" />
+        </div>
+      </header>
+
+      {/* Hero */}
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 pt-8 sm:pt-12 pb-6 sm:pb-10">
+        <div className="flex flex-col sm:flex-row sm:items-end gap-5 sm:gap-6">
+          <Skeleton className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl flex-shrink-0" />
+          <div className="flex-1 min-w-0 space-y-3">
+            <Skeleton className="h-8 sm:h-10 w-2/3 max-w-xs" />
+            <Skeleton className="h-4 w-1/2 max-w-[200px]" />
+            <div className="flex flex-wrap gap-2 pt-1">
+              <Skeleton className="h-5 w-24 rounded-full" />
+              <Skeleton className="h-5 w-20 rounded-full" />
+              <Skeleton className="h-5 w-28 rounded-full" />
+            </div>
+          </div>
+        </div>
+        <div className="mt-5 space-y-2 max-w-2xl">
+          <Skeleton className="h-3 w-full" />
+          <Skeleton className="h-3 w-11/12" />
+          <Skeleton className="h-3 w-3/4" />
+        </div>
+      </section>
+
+      {/* Albums grid (only on home) */}
+      {mode === "home" && (
+        <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-8">
+          <Skeleton className="h-5 w-24 mb-4" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="rounded-xl border border-border overflow-hidden">
+                <Skeleton className="aspect-[4/3] w-full rounded-none" />
+                <div className="p-3 space-y-2">
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-1/3" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Media grid */}
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-12">
+        <Skeleton className="h-5 w-28 mb-4" />
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <Skeleton key={i} className="aspect-square w-full rounded-lg" />
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
 
 export default function PublicPortfolio({ mode }: Props) {
   const { username, slug } = useParams<{ username: string; slug?: string }>();
@@ -90,11 +158,7 @@ export default function PublicPortfolio({ mode }: Props) {
   }, [profile, album, mode]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center text-muted-foreground gap-2">
-        <Loader2 className="w-4 h-4 animate-spin" /> Loading portfolio…
-      </div>
-    );
+    return <PortfolioSkeleton mode={mode} />;
   }
 
   if (loadError) {
