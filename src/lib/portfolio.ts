@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { PortfolioTheme } from "./portfolioTheme";
 
 export type PortfolioVisibility = "public" | "unlisted" | "private";
 
@@ -20,6 +21,8 @@ export interface PortfolioProfile {
   contact_email: string | null;
   resume_url: string | null;
   portfolio_published: boolean;
+  banner_url: string | null;
+  theme: PortfolioTheme | null;
 }
 
 export interface PortfolioAlbum {
@@ -85,11 +88,11 @@ export function slugify(s: string): string {
 export async function fetchPortfolioByUsername(username: string) {
   const { data, error } = await supabase
     .from("profiles")
-    .select("id,username,full_name,avatar_url,headline,bio,location,website,instagram,portfolio_published")
+    .select("id,username,full_name,avatar_url,headline,bio,location,website,instagram,linkedin,twitter,youtube,vimeo,tiktok,contact_email,resume_url,portfolio_published,banner_url,theme")
     .ilike("username", username)
     .maybeSingle();
   if (error) throw error;
-  return data as PortfolioProfile | null;
+  return data as unknown as PortfolioProfile | null;
 }
 
 export async function fetchPublicAlbumsByUser(userId: string, includePrivate = false) {
