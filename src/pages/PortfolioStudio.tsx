@@ -3,7 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Camera, Save, Upload, Loader2, Plus, Trash2, Pencil, Eye,
   Globe, Lock, Link as LinkIcon, Check, X, ImageIcon, Film, Sparkles,
-  ExternalLink, Copy, Image as ImageLucide, Wand2,
+  ExternalLink, Copy, Image as ImageLucide, Wand2, Linkedin, Twitter,
+  Youtube, Music2, FileText, Mail, User as UserIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -89,6 +90,14 @@ export default function PortfolioStudio() {
         location: profile.location ?? null,
         website: profile.website ?? null,
         instagram: profile.instagram ?? null,
+        linkedin: profile.linkedin ?? null,
+        twitter: profile.twitter ?? null,
+        youtube: profile.youtube ?? null,
+        vimeo: profile.vimeo ?? null,
+        tiktok: profile.tiktok ?? null,
+        contact_email: profile.contact_email ?? null,
+        avatar_url: profile.avatar_url ?? null,
+        resume_url: profile.resume_url ?? null,
         portfolio_published: !!profile.portfolio_published,
       })
       .eq("id", user.id);
@@ -109,6 +118,43 @@ export default function PortfolioStudio() {
     if (error) throw error;
     const { data } = supabase.storage.from(PORTFOLIO_BUCKET).getPublicUrl(path);
     return { path, url: data.publicUrl };
+  }
+
+  async function handleAvatarUpload(file: File | null) {
+    if (!file || !user) return;
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Pick an image file", variant: "destructive" }); return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "Image is too large", description: "Max 5 MB", variant: "destructive" }); return;
+    }
+    try {
+      const ext = (file.name.match(/\.[a-zA-Z0-9]+$/)?.[0] ?? ".jpg").toLowerCase();
+      const { url } = await uploadBlobToBucket(file, `avatar${ext}`, file.type);
+      const { error } = await supabase.from("profiles").update({ avatar_url: url }).eq("id", user.id);
+      if (error) throw error;
+      setProfile((p: any) => ({ ...p, avatar_url: url }));
+      toast({ title: "Avatar updated" });
+    } catch (e: any) {
+      toast({ title: "Upload failed", description: e?.message ?? String(e), variant: "destructive" });
+    }
+  }
+
+  async function handleResumeUpload(file: File | null) {
+    if (!file || !user) return;
+    if (file.size > 15 * 1024 * 1024) {
+      toast({ title: "File too large", description: "Max 15 MB", variant: "destructive" }); return;
+    }
+    try {
+      const ext = (file.name.match(/\.[a-zA-Z0-9]+$/)?.[0] ?? ".pdf").toLowerCase();
+      const { url } = await uploadBlobToBucket(file, `resume${ext}`, file.type || "application/pdf");
+      const { error } = await supabase.from("profiles").update({ resume_url: url }).eq("id", user.id);
+      if (error) throw error;
+      setProfile((p: any) => ({ ...p, resume_url: url }));
+      toast({ title: "Résumé uploaded" });
+    } catch (e: any) {
+      toast({ title: "Upload failed", description: e?.message ?? String(e), variant: "destructive" });
+    }
   }
 
   async function handleUpload(files: FileList | null) {
@@ -298,6 +344,44 @@ export default function PortfolioStudio() {
             </div>
           </div>
 
+          {/* Avatar */}
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <div className="w-20 h-20 rounded-full overflow-hidden bg-secondary border border-border flex items-center justify-center">
+                {profile.avatar_url ? (
+                  <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <UserIcon className="w-8 h-8 text-muted-foreground" />
+                )}
+              </div>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium">Profile photo</p>
+              <p className="text-[11px] text-muted-foreground mb-2">Square JPG/PNG works best. Max 5 MB.</p>
+              <div className="flex flex-wrap gap-2">
+                <label className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md border border-border bg-secondary hover:bg-secondary/70 cursor-pointer">
+                  <Upload className="w-3.5 h-3.5" />
+                  {profile.avatar_url ? "Change photo" : "Upload photo"}
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => handleAvatarUpload(e.target.files?.[0] ?? null)} />
+                </label>
+                {profile.avatar_url && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 gap-1.5 text-xs"
+                    onClick={async () => {
+                      if (!user) return;
+                      await supabase.from("profiles").update({ avatar_url: null }).eq("id", user.id);
+                      setProfile((p: any) => ({ ...p, avatar_url: null }));
+                    }}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> Remove
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <Label className="text-xs">Username (your URL)</Label>
@@ -339,6 +423,60 @@ export default function PortfolioStudio() {
             <div>
               <Label className="text-xs">Instagram handle</Label>
               <Input className="mt-1" placeholder="dronepilot" value={profile.instagram ?? ""} onChange={(e) => setProfile((p: any) => ({ ...p, instagram: e.target.value }))} />
+            </div>
+            <div>
+              <Label className="text-xs flex items-center gap-1.5"><Mail className="w-3 h-3" /> Public contact email</Label>
+              <Input className="mt-1" placeholder="hello@yourstudio.com" value={profile.contact_email ?? ""} onChange={(e) => setProfile((p: any) => ({ ...p, contact_email: e.target.value }))} />
+            </div>
+            <div>
+              <Label className="text-xs flex items-center gap-1.5"><Linkedin className="w-3 h-3" /> LinkedIn</Label>
+              <Input className="mt-1" placeholder="https://linkedin.com/in/you" value={profile.linkedin ?? ""} onChange={(e) => setProfile((p: any) => ({ ...p, linkedin: e.target.value }))} />
+            </div>
+            <div>
+              <Label className="text-xs flex items-center gap-1.5"><Twitter className="w-3 h-3" /> X / Twitter handle</Label>
+              <Input className="mt-1" placeholder="dronepilot" value={profile.twitter ?? ""} onChange={(e) => setProfile((p: any) => ({ ...p, twitter: e.target.value }))} />
+            </div>
+            <div>
+              <Label className="text-xs flex items-center gap-1.5"><Youtube className="w-3 h-3" /> YouTube</Label>
+              <Input className="mt-1" placeholder="https://youtube.com/@you" value={profile.youtube ?? ""} onChange={(e) => setProfile((p: any) => ({ ...p, youtube: e.target.value }))} />
+            </div>
+            <div>
+              <Label className="text-xs flex items-center gap-1.5"><Film className="w-3 h-3" /> Vimeo</Label>
+              <Input className="mt-1" placeholder="https://vimeo.com/you" value={profile.vimeo ?? ""} onChange={(e) => setProfile((p: any) => ({ ...p, vimeo: e.target.value }))} />
+            </div>
+            <div>
+              <Label className="text-xs flex items-center gap-1.5"><Music2 className="w-3 h-3" /> TikTok handle</Label>
+              <Input className="mt-1" placeholder="dronepilot" value={profile.tiktok ?? ""} onChange={(e) => setProfile((p: any) => ({ ...p, tiktok: e.target.value }))} />
+            </div>
+            <div className="sm:col-span-2">
+              <Label className="text-xs flex items-center gap-1.5"><FileText className="w-3 h-3" /> Résumé / CV</Label>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <label className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md border border-border bg-secondary hover:bg-secondary/70 cursor-pointer">
+                  <Upload className="w-3.5 h-3.5" />
+                  {profile.resume_url ? "Replace résumé" : "Upload PDF"}
+                  <input type="file" accept="application/pdf,.pdf,.doc,.docx" className="hidden" onChange={(e) => handleResumeUpload(e.target.files?.[0] ?? null)} />
+                </label>
+                {profile.resume_url && (
+                  <>
+                    <a href={profile.resume_url} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline inline-flex items-center gap-1">
+                      <ExternalLink className="w-3 h-3" /> View current
+                    </a>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 gap-1.5 text-xs"
+                      onClick={async () => {
+                        if (!user) return;
+                        await supabase.from("profiles").update({ resume_url: null }).eq("id", user.id);
+                        setProfile((p: any) => ({ ...p, resume_url: null }));
+                      }}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" /> Remove
+                    </Button>
+                  </>
+                )}
+                <span className="text-[11px] text-muted-foreground">PDF or DOCX, up to 15 MB. Visitors can download it from your profile.</span>
+              </div>
             </div>
           </div>
 

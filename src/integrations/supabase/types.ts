@@ -868,46 +868,67 @@ export type Database = {
           account_type: Database["public"]["Enums"]["account_type"]
           avatar_url: string | null
           bio: string | null
+          contact_email: string | null
           created_at: string
           full_name: string | null
           headline: string | null
           id: string
           instagram: string | null
+          linkedin: string | null
           location: string | null
           portfolio_published: boolean
+          resume_url: string | null
+          tiktok: string | null
+          twitter: string | null
           updated_at: string
           username: string | null
+          vimeo: string | null
           website: string | null
+          youtube: string | null
         }
         Insert: {
           account_type?: Database["public"]["Enums"]["account_type"]
           avatar_url?: string | null
           bio?: string | null
+          contact_email?: string | null
           created_at?: string
           full_name?: string | null
           headline?: string | null
           id: string
           instagram?: string | null
+          linkedin?: string | null
           location?: string | null
           portfolio_published?: boolean
+          resume_url?: string | null
+          tiktok?: string | null
+          twitter?: string | null
           updated_at?: string
           username?: string | null
+          vimeo?: string | null
           website?: string | null
+          youtube?: string | null
         }
         Update: {
           account_type?: Database["public"]["Enums"]["account_type"]
           avatar_url?: string | null
           bio?: string | null
+          contact_email?: string | null
           created_at?: string
           full_name?: string | null
           headline?: string | null
           id?: string
           instagram?: string | null
+          linkedin?: string | null
           location?: string | null
           portfolio_published?: boolean
+          resume_url?: string | null
+          tiktok?: string | null
+          twitter?: string | null
           updated_at?: string
           username?: string | null
+          vimeo?: string | null
           website?: string | null
+          youtube?: string | null
         }
         Relationships: []
       }

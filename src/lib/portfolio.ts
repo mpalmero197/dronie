@@ -12,6 +12,13 @@ export interface PortfolioProfile {
   location: string | null;
   website: string | null;
   instagram: string | null;
+  linkedin: string | null;
+  twitter: string | null;
+  youtube: string | null;
+  vimeo: string | null;
+  tiktok: string | null;
+  contact_email: string | null;
+  resume_url: string | null;
   portfolio_published: boolean;
 }
 
