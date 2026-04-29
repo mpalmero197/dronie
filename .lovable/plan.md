@@ -1,47 +1,119 @@
-## Goal
 
-On each `/solutions/:vertical` page (Construction, Real Estate, Agriculture, Energy, Mining, Insurance, Government), show a section listing pilots who have that vertical selected in their pilot profile. This makes the solutions pages immediately useful: visitors can see real pilots who serve that industry and click through to their portfolio or message them.
+## Best Gaussian Splatting Software for Drones (2026)
 
-## How it works
+Based on the leading 2026 industry comparison, the tools that matter for **drone** workflows are:
 
-- Pilots already pick their verticals when they sign up (`pilot_profiles.verticals` array).
-- The existing `get_public_pilots()` RPC already returns each pilot's verticals, display name, service area, hourly rate, years of experience, Part 107 / insured flags, portfolio URL, and avatar — and only returns pilots who are `available = true` and `show_on_map = true`. No DB changes needed.
-- We filter that list client-side by the current vertical slug.
+1. **DJI Terra V5.0+** — the gold standard for *aerial* GS. Georeferenced, batch, RTK-aware.
+2. **PostShot** (Jawset) — best offline desktop trainer, full parameter control.
+3. **Nerfstudio / gsplat** — open-source research trainer, latest methods (Mip-Splatting, 3DGS-MCMC).
+4. **Luma AI** — fastest cloud trainer from any video.
+5. **Polycam** — strong mobile/LiDAR companion to drone capture.
+6. **SuperSplat** — browser-based GS *editor* (crop/clean/optimize).
+7. **SplatForge** — Blender addon for animation/VFX compositing.
 
-## Changes
+### Feature gaps in Dronie today
 
-1. **New component** `src/components/solutions/VerticalPilotsSection.tsx`
-   - Takes `vertical: IndustryVertical` and `verticalName: string` as props.
-   - On mount, calls `supabase.rpc("get_public_pilots")` and filters where `verticals.includes(vertical)`.
-   - Renders a responsive card grid (3 cols desktop, 1 col mobile) showing up to 8 pilots, with:
-     - Avatar, display name, service area label
-     - Years experience, hourly rate (if set)
-     - Part 107 / Insured badges
-     - "View portfolio" link (to `/u/:username` if available, else `portfolio_url`)
-     - "Hire" button → `/marketplace/new?vertical={slug}`
-   - Empty state: "No pilots have listed {vertical} yet — be the first." with a CTA link to `/pilot/signup`.
-   - Loading skeletons while fetching.
-   - "See all pilots" link → `/pilots` (existing PilotsMap page).
+`src/pages/GaussianSplats.tsx` already supports: project picker, .ply/.splat/.ksplat upload, three.js viewer (mkkellogg), splat scale, alpha cutoff, spherical harmonics toggle, auto-orbit, download, delete.
 
-2. **Edit** `src/pages/solutions/VerticalLanding.tsx`
-   - Insert `<VerticalPilotsSection vertical={config.slug} verticalName={config.name} />` between the "Deliverables" section and the final CTA.
+Missing vs. the leaders:
 
-3. **Tiny helper** in the new component: a `formatRate(cents)` util (mirrors existing `formatBudget` style) and a Lucide-icon header ("Pilots who fly {name}").
+| Capability | Source of inspiration | Have it? |
+|---|---|---|
+| Train GS directly from project images (cloud) | Luma, DJI Terra | No |
+| Training preset & quality control (iterations, density) | PostShot, Nerfstudio | No |
+| Georeferenced / RTK metadata on scene | DJI Terra | No |
+| Crop / clean / cull splats (box select, region delete) | SuperSplat | No |
+| Export to multiple formats (.splat, .ksplat, .glb, .ply) | Polycam, Luma | Partial (re-download only) |
+| Cinematic camera path & MP4 flythrough render | Luma, SplatForge | Partial (orbit only) |
+| Measurement tool (distance between two points) | DJI Terra, Polycam | No |
+| Compare GS vs. point cloud / mesh side by side | DJI Terra | No |
+| Public share link / embed iframe | Luma, SuperSplat | No |
+| Scene metadata: training time, image count, PSNR | Nerfstudio | No |
 
-## Privacy & security
+---
 
-- Uses the existing `get_public_pilots()` SECURITY DEFINER function, which already enforces:
-  - Only `available = true` pilots
-  - Only `show_on_map = true` pilots
-  - Returns the privacy-safe `display_lat/lng` (jittered), never the precise `service_lat/lng`
-- No new RLS or DB migration required.
+## Plan: features to add
 
-## Out of scope
+### A. Training pipeline (Cloud)
 
-- No changes to pilot signup, fleet, or marketplace.
-- No server-side filtering RPC; the public pilot list is small and already cached client-side. If it grows large later we can add a `_vertical` arg to the RPC.
+- New edge function `train-splat` that:
+  - Lists images in `project-inputs/{projectId}/`
+  - Submits a job to a GPU trainer (initially a stubbed/queued status row in a new `splat_jobs` table; integrates with existing WebODM/processing pipeline already in the project for structure-from-motion priors).
+  - Writes resulting `.ply` to `project-outputs/{projectId}/splats/`.
+- New table `splat_jobs (id, project_id, user_id, status, preset, iterations, image_count, psnr, training_seconds, created_at)` with RLS (owner-only).
+- UI: "Train new scene" button on `/splats` opens a dialog with:
+  - Quality preset: **Draft / Balanced / Cinematic** (maps to iterations 7k / 30k / 50k).
+  - Toggle: spherical harmonics degree (0/1/2/3).
+  - Toggle: densification interval.
+  - Toggle: use RTK/EXIF georef priors when present.
+- Live job list with status chips (queued → training → ready → failed) and PSNR/training-time badges once done.
 
-## Files
+### B. SuperSplat-style editing
 
-- **Create**: `src/components/solutions/VerticalPilotsSection.tsx`
-- **Edit**: `src/pages/solutions/VerticalLanding.tsx`
+Add a second tab on `/splats` called **Edit** with:
+- Box-select crop (drag a 3D box, delete splats outside).
+- Region delete (lasso projected to camera).
+- Color/alpha threshold filter with live preview.
+- "Save as new scene" (writes a cleaned `.ply` back to storage, never destroys the original).
+
+### C. Cinematic flythrough renderer
+
+Replace the simple auto-orbit with a keyframed camera-path tool:
+- Click **Add keyframe** to capture the current camera pose.
+- Reorder keyframes, set per-segment duration & easing.
+- **Preview** in-viewer; **Export MP4** via a server function that renders frames headlessly (ffmpeg in edge function or queued job — falls back to WebCodecs MP4 muxer client-side for short clips).
+
+### D. Measurement & geo overlay
+
+- Two-click **Measure** tool — projects clicks onto nearest splat depth, shows distance in meters.
+- If the project has RTK/EXIF georef, show a small lat/lon/alt readout in the corner and a north arrow gizmo.
+
+### E. Multi-format export
+
+After viewing a scene, **Export as** menu:
+- `.ply` (raw), `.splat` (compact), `.ksplat` (web-optimized; convert via mkkellogg's KSplatLoader writer), `.glb` (mesh proxy via gsplat-to-mesh), share link.
+
+### F. Public share / embed
+
+- "Share" button generates a tokenized public URL `/embed/splats/:token` that mounts a read-only viewer.
+- New table `splat_shares (token, asset_path, project_id, expires_at)` with public select policy keyed on token.
+- Iframe snippet shown in a copy box.
+
+### G. Comparison view
+
+- Toggle **Compare** to split the viewport: GS on left, WebODM mesh/point cloud on right (loaded from existing `project-outputs/.../odm_*` paths). Cameras are linked.
+
+### H. Landing-page section
+
+Add a **"Photoreal Gaussian Splatting"** feature block on `/` (Index) summarizing: train from drone images, edit in browser, cinematic export, georeferenced, share with one link. CTA to `/splats`.
+
+---
+
+## Technical details
+
+- Frontend: extend `src/pages/GaussianSplats.tsx` (split into tabs: **View / Train / Edit / Share**). New components under `src/components/splats/`:
+  - `TrainDialog.tsx`, `JobList.tsx`, `KeyframeBar.tsx`, `MeasureOverlay.tsx`, `EditTools.tsx`, `ShareDialog.tsx`, `CompareViewport.tsx`.
+- DB migrations:
+  - `splat_jobs` table + RLS (`user_id = auth.uid()`).
+  - `splat_shares` table + tokenized public-read RLS.
+  - Index on `splat_jobs(project_id, created_at desc)`.
+- Edge functions:
+  - `train-splat` (POST: { projectId, preset, sphDegree }) → enqueues row, returns id.
+  - `splat-job-status` (GET: { id }) — polled by client.
+  - `render-flythrough` (POST: { assetPath, keyframes, fps, seconds }) — returns signed URL to MP4. Uses ffmpeg via headless render queue; if unavailable, returns 501 and the client falls back to WebCodecs.
+  - `convert-splat-format` (POST: { src, target }) — converts .ply ↔ .splat ↔ .ksplat in Deno.
+- Reuse existing `project-outputs` storage bucket; add `splats/edits/` and `splats/renders/` subfolders.
+- Keep current `@mkkellogg/gaussian-splats-3d` viewer; add `three`'s `BoxHelper` and a custom raycaster against splat positions for measurement and crop.
+- Analytics: emit `splats_train_started`, `splats_export`, `splats_share_created`, `splats_flythrough_rendered` via the existing `track()` helper.
+
+## Out of scope (for this round)
+
+- Actually standing up a GPU training cluster — the `train-splat` function will queue the job and mark it `simulated` until a real GPU backend is wired (mirrors the existing WebODM fallback pattern already used in the processing pipeline).
+- Native mobile capture (Polycam-style) and Blender plugin (SplatForge-style).
+
+## Deliverables
+
+- New tabbed `/splats` experience with Train, Edit, Cinematic, Share, Compare.
+- Two new DB tables + RLS, four edge functions.
+- Landing-page feature block linking to `/splats`.
+- Memory updated: `mem://features/gaussian-splatting` documenting presets, formats, and share-token flow.
