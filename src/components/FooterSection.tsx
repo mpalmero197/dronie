@@ -1,5 +1,5 @@
 import { Map } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { track } from "@/lib/analytics";
 
 type FooterLink = { label: string; href: string; external?: boolean };
@@ -76,6 +76,32 @@ const cols: { title: string; links: FooterLink[] }[] = [
 ];
 
 export default function FooterSection() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  /**
+   * Handle hash links robustly. If we're already on the target pathname,
+   * <Link to="/#section"> is a no-op for React Router, so we manually scroll.
+   * Otherwise, navigate — ScrollToTop will handle the smooth scroll on mount.
+   */
+  function handleInternalClick(href: string, e: React.MouseEvent) {
+    const [path, hash] = href.split("#");
+    const samePage = (path === "" ? "/" : path) === location.pathname;
+    if (hash && samePage) {
+      e.preventDefault();
+      const el = document.getElementById(hash);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        // Reflect the section in the URL without triggering a route change.
+        window.history.replaceState(null, "", `#${hash}`);
+      }
+    } else if (hash) {
+      // Cross-page hash navigation — let React Router handle it; ScrollToTop scrolls.
+      e.preventDefault();
+      navigate(href);
+    }
+  }
+
   return (
     <footer className="bg-foreground text-primary-foreground/80">
       <div className="container mx-auto px-6 py-16">
@@ -123,14 +149,15 @@ export default function FooterSection() {
                       <Link
                         to={l.href}
                         className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors"
-                        onClick={() =>
+                        onClick={(e) => {
                           track("landing_footer_cta_click", {
                             section: col.title,
                             label: l.label,
                             href: l.href,
                             external: false,
-                          })
-                        }
+                          });
+                          handleInternalClick(l.href, e);
+                        }}
                       >
                         {l.label}
                       </Link>
