@@ -15,6 +15,9 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
+import {
+  DEFAULT_THEME, ensureFontLoaded, normalizeTheme, themeStyle,
+} from "@/lib/portfolioTheme";
 
 type Mode = "home" | "photos" | "videos" | "album";
 
@@ -102,6 +105,9 @@ export default function PublicPortfolio({ mode }: Props) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [lightbox, setLightbox] = useState<PortfolioItem | null>(null);
+
+  const theme = useMemo(() => normalizeTheme(profile?.theme ?? null), [profile?.theme]);
+  useEffect(() => { ensureFontLoaded(theme.font); }, [theme.font]);
 
   useEffect(() => {
     let cancelled = false;
@@ -236,9 +242,14 @@ export default function PublicPortfolio({ mode }: Props) {
   const displayName = profile.full_name || profile.username || "Pilot";
   const isOwner = !!user && user.id === profile.id;
   const isUnpublished = !profile.portfolio_published;
+  const banner = profile.banner_url ?? null;
+  const layout = theme.layout;
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div
+      className="min-h-screen bg-background text-foreground"
+      style={themeStyle(theme)}
+    >
       {isOwner && isUnpublished && (
         <div className="bg-amber-500/10 border-b border-amber-500/30 text-amber-200">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 py-2.5 text-xs sm:text-sm flex flex-wrap items-center justify-between gap-2">
