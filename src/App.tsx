@@ -10,7 +10,6 @@ import AuthPage from "./pages/AuthPage.tsx";
 import MapViewer from "./pages/MapViewer.tsx";
 import AdminPanel from "./pages/AdminPanel.tsx";
 import ProjectDetail from "./pages/ProjectDetail.tsx";
-import Gallery from "./pages/Gallery.tsx";
 import FleetManagement from "./pages/FleetManagement.tsx";
 import ActiveJobs from "./pages/ActiveJobs.tsx";
 import PilotCompanion from "./pages/PilotCompanion.tsx";
@@ -63,7 +62,6 @@ const App = () => (
             <Route path="/viewer/:projectId" element={<MapViewer />} />
             <Route path="/admin" element={<AdminPanel />} />
             <Route path="/project/:projectId" element={<ProjectDetail />} />
-            <Route path="/gallery" element={<Gallery />} />
             <Route path="/fleet" element={<FleetManagement />} />
             <Route path="/jobs" element={<ActiveJobs />} />
             <Route path="/jobs/:jobId/fly" element={<PilotCompanion />} />

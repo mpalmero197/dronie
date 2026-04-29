@@ -135,10 +135,10 @@ export default function MapViewer() {
 
   const prevOverlayRef = useRef<string | null>(null);
 
-  // Old /viewer/demo links now point at the curated gallery.
+  // Old /viewer/demo links now route back to the dashboard.
   useEffect(() => {
     if (projectId === "demo") {
-      navigate("/gallery", { replace: true });
+      navigate("/dashboard", { replace: true });
     }
   }, [projectId, navigate]);
 
