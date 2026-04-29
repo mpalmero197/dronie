@@ -24,6 +24,7 @@ export default function PublicPortfolio({ mode }: Props) {
   const [profile, setProfile] = useState<PortfolioProfile | null>(null);
   const [albums, setAlbums] = useState<PortfolioAlbum[]>([]);
   const [items, setItems] = useState<PortfolioItem[]>([]);
+  const [allItems, setAllItems] = useState<PortfolioItem[]>([]);
   const [album, setAlbum] = useState<PortfolioAlbum | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -46,7 +47,7 @@ export default function PublicPortfolio({ mode }: Props) {
             fetchPublicAlbumsByUser(p.id, isOwner),
             fetchPublicItemsByUser(p.id, undefined, isOwner),
           ]);
-          if (!cancelled) { setAlbums(a); setItems(i.slice(0, 12)); }
+          if (!cancelled) { setAlbums(a); setAllItems(i); setItems(i.slice(0, 12)); }
         } else if (mode === "photos") {
           const i = await fetchPublicItemsByUser(p.id, "photo", isOwner);
           if (!cancelled) setItems(i);
