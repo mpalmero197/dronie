@@ -572,6 +572,21 @@ export default function PortfolioStudio() {
           </div>
         </section>
 
+        {/* Appearance */}
+        <AppearanceSection
+          theme={normalizeTheme(profile.theme)}
+          bannerUrl={profile.banner_url ?? null}
+          onPatchTheme={patchTheme}
+          onUploadBanner={handleBannerUpload}
+          onRemoveBanner={async () => {
+            if (!user) return;
+            await supabase.from("profiles").update({ banner_url: null }).eq("id", user.id);
+            setProfile((p: any) => ({ ...p, banner_url: null }));
+          }}
+          onSave={saveProfile}
+          saving={savingProfile}
+        />
+
         {/* Albums */}
         <section className="rounded-2xl border border-border bg-card p-5 space-y-4">
           <div className="flex items-center justify-between gap-2">
