@@ -191,7 +191,8 @@ export default function AdminPanel() {
           </div>
         ) : (
           <div className="bg-card rounded-xl border border-border overflow-hidden">
-            <div className="grid grid-cols-[1fr_auto_auto_auto] gap-4 px-5 py-3 bg-muted/50 border-b border-border text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            {/* Header — desktop only */}
+            <div className="hidden sm:grid grid-cols-[1fr_auto_auto_auto] gap-4 px-5 py-3 bg-muted/50 border-b border-border text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               <span>User</span>
               <span className="text-center w-20">Projects</span>
               <span className="text-center w-24">Role</span>
@@ -205,47 +206,58 @@ export default function AdminPanel() {
               return (
                 <div
                   key={u.id}
-                  className="grid grid-cols-[1fr_auto_auto_auto] gap-4 px-5 py-4 border-b border-border last:border-0 items-center hover:bg-muted/30 transition-colors"
+                  className="flex flex-col gap-3 sm:grid sm:grid-cols-[1fr_auto_auto_auto] sm:gap-4 sm:items-center px-4 sm:px-5 py-4 border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
                 >
                   {/* User info */}
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-semibold text-foreground truncate">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-semibold text-foreground break-all sm:truncate">
                         {u.full_name || "Unnamed User"}
                       </p>
                       {isSelf && (
                         <span className="text-xs px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium flex-shrink-0">You</span>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground truncate">{u.email}</p>
+                    <p className="text-xs text-muted-foreground break-all sm:truncate">{u.email}</p>
                     <p className="text-xs text-muted-foreground/60 mt-0.5">
                       Joined {new Date(u.created_at).toLocaleDateString()}
                       {u.last_sign_in_at && ` · Last seen ${new Date(u.last_sign_in_at).toLocaleDateString()}`}
                     </p>
                   </div>
 
-                  {/* Projects */}
-                  <div className="text-center w-20">
+                  {/* Mobile meta row: role + projects inline */}
+                  <div className="flex items-center justify-between gap-2 sm:hidden">
+                    <div className="flex items-center gap-2">
+                      <RoleBadge role={primaryRole} />
+                      <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                        <FolderOpen className="w-3 h-3" />
+                        {u.project_count} {u.project_count === 1 ? "project" : "projects"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Desktop: Projects */}
+                  <div className="hidden sm:block text-center w-20">
                     <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                       <FolderOpen className="w-3 h-3" />
                       {u.project_count}
                     </span>
                   </div>
 
-                  {/* Current role */}
-                  <div className="text-center w-24">
+                  {/* Desktop: Current role */}
+                  <div className="hidden sm:block text-center w-24">
                     <RoleBadge role={primaryRole} />
                   </div>
 
                   {/* Actions */}
-                  <div className="text-center w-32">
+                  <div className="sm:text-center sm:w-32">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
                           variant="outline"
                           size="sm"
                           disabled={updatingId === u.id || isSelf}
-                          className="gap-1.5 text-xs"
+                          className="gap-1.5 text-xs w-full sm:w-auto"
                         >
                           {updatingId === u.id ? (
                             <Loader2 className="w-3 h-3 animate-spin" />
