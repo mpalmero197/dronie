@@ -432,6 +432,9 @@ export default function MarketplaceDetail() {
                             Insured
                           </span>
                         )}
+                        {m.part_107 && (
+                          <FaaLookupButton displayName={m.display_name} size="compact" />
+                        )}
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
                         {m.service_area_label ?? "—"}
