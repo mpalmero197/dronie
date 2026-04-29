@@ -599,6 +599,22 @@ export default function PortfolioStudio() {
           saving={savingProfile}
         />
 
+        {/* Hire-me details */}
+        <HireMeSection
+          profile={profile}
+          setProfile={setProfile}
+          onSave={saveProfile}
+          saving={savingProfile}
+        />
+
+        {/* Visibility toggles */}
+        <VisibilitySection
+          prefs={normalizePrefs(profile.visibility_prefs)}
+          onPatch={(patch) => setProfile((p: any) => ({ ...p, visibility_prefs: { ...normalizePrefs(p?.visibility_prefs), ...patch } }))}
+          onSave={saveProfile}
+          saving={savingProfile}
+        />
+
         {/* Albums */}
         <section className="rounded-2xl border border-border bg-card p-5 space-y-4">
           <div className="flex items-center justify-between gap-2">
