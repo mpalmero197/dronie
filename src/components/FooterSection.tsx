@@ -19,15 +19,13 @@ const cols: { title: string; links: FooterLink[] }[] = [
   {
     title: "Solutions",
     links: [
-      // Each Solutions link drops the visitor straight into the Gallery
-      // pre-filtered to the vertical, so they immediately see relevant work.
-      { label: "Construction", href: "/gallery?vertical=construction" },
-      { label: "Real Estate", href: "/gallery?vertical=real_estate" },
-      { label: "Agriculture", href: "/gallery?vertical=agriculture" },
-      { label: "Energy & Utilities", href: "/gallery?vertical=energy" },
-      { label: "Mining & Aggregates", href: "/gallery?vertical=mining" },
-      { label: "Insurance", href: "/gallery?vertical=insurance" },
-      { label: "Public Safety", href: "/gallery?vertical=government" },
+      { label: "Construction", href: "/solutions/construction" },
+      { label: "Real Estate", href: "/solutions/real_estate" },
+      { label: "Agriculture", href: "/solutions/agriculture" },
+      { label: "Energy & Utilities", href: "/solutions/energy" },
+      { label: "Mining & Aggregates", href: "/solutions/mining" },
+      { label: "Insurance", href: "/solutions/insurance" },
+      { label: "Public Safety", href: "/solutions/government" },
     ],
   },
   {
@@ -43,7 +41,6 @@ const cols: { title: string; links: FooterLink[] }[] = [
   {
     title: "Resources",
     links: [
-      { label: "Sample Gallery", href: "/gallery" },
       { label: "Mission Planner", href: "/plan" },
       { label: "Saved Missions", href: "/missions" },
       { label: "Install Apps", href: "/install" },
