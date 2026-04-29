@@ -25,7 +25,7 @@ const features = [
   {
     icon: Camera,
     title: "Public Portfolio",
-    desc: "Every pilot gets a shareable site at dronie.app/u/your-name with curated albums, photos, videos, and links to your finished 3D projects.",
+    desc: "Every pilot gets a shareable site at dronieapp.com/u/your-name with curated albums, photos, videos, and links to your finished 3D projects.",
     color: "text-accent",
     bg: "bg-accent/10",
   },

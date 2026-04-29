@@ -214,7 +214,11 @@ export default function PortfolioStudio() {
     return items.filter((i) => i.album_id === filterAlbumId);
   }, [items, filterAlbumId]);
 
-  const portfolioUrl = profile?.username ? `${window.location.origin}/u/${profile.username}` : null;
+  // Public portfolios always live on the canonical custom domain, regardless
+  // of whether the studio is opened from the preview URL or *.lovable.app.
+  const PORTFOLIO_HOST = "dronieapp.com";
+  const PORTFOLIO_ORIGIN = `https://${PORTFOLIO_HOST}`;
+  const portfolioUrl = profile?.username ? `${PORTFOLIO_ORIGIN}/u/${profile.username}` : null;
 
   if (authLoading || loading || !profile) {
     return <div className="min-h-screen flex items-center justify-center text-muted-foreground gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Loading…</div>;
@@ -259,7 +263,7 @@ export default function PortfolioStudio() {
             <div>
               <Label className="text-xs">Username (your URL)</Label>
               <div className="flex items-center mt-1 rounded-md border border-input overflow-hidden">
-                <span className="px-2 text-xs text-muted-foreground bg-secondary py-2 border-r border-input">{window.location.host}/u/</span>
+                <span className="px-2 text-xs text-muted-foreground bg-secondary py-2 border-r border-input">{PORTFOLIO_HOST}/u/</span>
                 <Input
                   value={profile.username ?? ""}
                   onChange={(e) => setProfile((p: any) => ({ ...p, username: e.target.value }))}
@@ -269,7 +273,7 @@ export default function PortfolioStudio() {
               </div>
               {profile.username && (
                 <p className="text-[11px] text-muted-foreground mt-1">
-                  {validateUsername(profile.username) ?? `Available at ${window.location.origin}/u/${profile.username}`}
+                  {validateUsername(profile.username) ?? `Available at ${PORTFOLIO_ORIGIN}/u/${profile.username}`}
                 </p>
               )}
             </div>
