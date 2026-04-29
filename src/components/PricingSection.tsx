@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { SUBSCRIPTION_TIERS } from "@/lib/stripe-config";
 import { useToast } from "@/hooks/use-toast";
+import { track } from "@/lib/analytics";
 
 const plans = [
   {
@@ -131,6 +132,14 @@ export default function PricingSection() {
   }
 
   function handleCTA(plan: typeof plans[number]) {
+    track("landing_pricing_cta_click", {
+      plan: plan.name,
+      tier: plan.tier ?? "free",
+      action: plan.ctaAction,
+      label: getButtonLabel(plan),
+      is_current_plan: isCurrentPlan(plan),
+      authenticated: !!user,
+    });
     if (plan.ctaAction === "auth") {
       navigate("/auth");
     } else if (plan.ctaAction === "checkout" && plan.tier) {
