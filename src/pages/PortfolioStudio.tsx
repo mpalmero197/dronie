@@ -3,7 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Camera, Save, Upload, Loader2, Plus, Trash2, Pencil, Eye,
   Globe, Lock, Link as LinkIcon, Check, X, ImageIcon, Film, Sparkles,
-  ExternalLink, Copy, Image as ImageLucide, Wand2,
+  ExternalLink, Copy, Image as ImageLucide, Wand2, Linkedin, Twitter,
+  Youtube, Music2, FileText, Mail, User as UserIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
