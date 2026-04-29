@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Camera, Save, Upload, Loader2, Plus, Trash2, Pencil, Eye,
   Globe, Lock, Link as LinkIcon, Check, X, ImageIcon, Film, Sparkles,
-  ExternalLink, Copy,
+  ExternalLink, Copy, Image as ImageLucide, Wand2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +24,7 @@ import {
   PORTFOLIO_BUCKET, validateUsername, slugify,
   type PortfolioAlbum, type PortfolioItem, type PortfolioVisibility,
 } from "@/lib/portfolio";
+import { captureVideoFrame } from "@/lib/videoFrame";
 
 interface ProjectOpt { id: string; name: string; }
 
@@ -42,6 +43,8 @@ export default function PortfolioStudio() {
 
   // Album dialog state
   const [albumDialog, setAlbumDialog] = useState<{ open: boolean; album?: PortfolioAlbum }>({ open: false });
+  // Video poster picker
+  const [posterFor, setPosterFor] = useState<PortfolioItem | null>(null);
 
   // Filter
   const [filterAlbumId, setFilterAlbumId] = useState<string>("all");
@@ -97,6 +100,17 @@ export default function PortfolioStudio() {
     toast({ title: "Saved", description: "Portfolio profile updated" });
   }
 
+  async function uploadBlobToBucket(blob: Blob, suffix: string, contentType: string) {
+    if (!user) throw new Error("Not signed in");
+    const path = `${user.id}/${Date.now()}-${suffix}`;
+    const { error } = await supabase.storage
+      .from(PORTFOLIO_BUCKET)
+      .upload(path, blob, { contentType, upsert: false });
+    if (error) throw error;
+    const { data } = supabase.storage.from(PORTFOLIO_BUCKET).getPublicUrl(path);
+    return { path, url: data.publicUrl };
+  }
+
   async function handleUpload(files: FileList | null) {
     if (!files || !user) return;
     setUploading(true);
@@ -115,12 +129,27 @@ export default function PortfolioStudio() {
         .upload(path, file, { contentType: file.type, upsert: false });
       if (upErr) { toast({ title: "Upload failed", description: upErr.message, variant: "destructive" }); continue; }
       const { data: pub } = supabase.storage.from(PORTFOLIO_BUCKET).getPublicUrl(path);
+
+      // For videos, try to capture a poster frame and upload it as the thumb.
+      let thumbUrl: string | null = isImage ? pub.publicUrl : null;
+      if (isVideo) {
+        try {
+          const frame = await captureVideoFrame(file);
+          const safeName = file.name.replace(/\.[^.]+$/, "").replace(/[^a-zA-Z0-9._-]/g, "_");
+          const { url } = await uploadBlobToBucket(frame.blob, `${safeName}-poster.jpg`, "image/jpeg");
+          thumbUrl = url;
+        } catch (e) {
+          // Non-fatal: the public page will still play the video without a poster.
+          console.warn("Could not generate video poster:", e);
+        }
+      }
+
       const insertRow = {
         user_id: user.id,
         kind: isVideo ? "video" : "photo",
         storage_path: path,
         media_url: pub.publicUrl,
-        thumb_url: isImage ? pub.publicUrl : null,
+        thumb_url: thumbUrl,
         title: file.name.replace(/\.[^.]+$/, ""),
         visibility: "public" as PortfolioVisibility,
         album_id: filterAlbumId !== "all" ? filterAlbumId : null,
@@ -139,6 +168,16 @@ export default function PortfolioStudio() {
     const { error } = await supabase.from("portfolio_items").update(patch).eq("id", id);
     if (error) { toast({ title: "Update failed", description: error.message, variant: "destructive" }); return; }
     setItems((prev) => prev.map((it) => it.id === id ? { ...it, ...patch } as PortfolioItem : it));
+  }
+
+  async function setVideoPoster(item: PortfolioItem, blob: Blob) {
+    try {
+      const { url } = await uploadBlobToBucket(blob, `poster-${item.id}.jpg`, "image/jpeg");
+      await updateItem(item.id, { thumb_url: url });
+      toast({ title: "Poster updated" });
+    } catch (e: any) {
+      toast({ title: "Couldn't save poster", description: e?.message ?? String(e), variant: "destructive" });
+    }
   }
 
   async function deleteItem(item: PortfolioItem) {
@@ -334,22 +373,39 @@ export default function PortfolioStudio() {
             <p className="text-sm text-muted-foreground">No albums yet. Group your work into themed collections like “Real estate” or “Wedding aerials”.</p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {albums.map((a) => (
-                <div key={a.id} className="rounded-xl border border-border p-3 flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="font-display font-700 text-sm truncate">{a.title}</p>
-                      <VisibilityBadge v={a.visibility} />
+              {albums.map((a) => {
+                const cover = a.cover_url || autoCoverForAlbum(a.id, items);
+                return (
+                  <div key={a.id} className="rounded-xl border border-border overflow-hidden bg-card flex">
+                    <div className="w-24 h-24 bg-secondary flex-shrink-0 relative">
+                      {cover ? (
+                        <img src={cover} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                          <ImageIcon className="w-5 h-5" />
+                        </div>
+                      )}
+                      {!a.cover_url && cover && (
+                        <span className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[9px] py-0.5 text-center">auto</span>
+                      )}
                     </div>
-                    <p className="text-[11px] font-mono text-muted-foreground truncate">/u/{profile.username || "…"}/album/{a.slug}</p>
-                    {a.description && <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{a.description}</p>}
+                    <div className="flex-1 p-3 flex items-start justify-between gap-2 min-w-0">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-display font-700 text-sm truncate">{a.title}</p>
+                          <VisibilityBadge v={a.visibility} />
+                        </div>
+                        <p className="text-[11px] font-mono text-muted-foreground truncate">/u/{profile.username || "…"}/album/{a.slug}</p>
+                        {a.description && <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{a.description}</p>}
+                      </div>
+                      <div className="flex flex-col gap-1 flex-shrink-0">
+                        <button onClick={() => setAlbumDialog({ open: true, album: a })} className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground"><Pencil className="w-3.5 h-3.5" /></button>
+                        <button onClick={() => deleteAlbum(a)} className="p-1.5 rounded hover:bg-destructive/15 text-destructive"><Trash2 className="w-3.5 h-3.5" /></button>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex flex-col gap-1 flex-shrink-0">
-                    <button onClick={() => setAlbumDialog({ open: true, album: a })} className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground"><Pencil className="w-3.5 h-3.5" /></button>
-                    <button onClick={() => deleteAlbum(a)} className="p-1.5 rounded hover:bg-destructive/15 text-destructive"><Trash2 className="w-3.5 h-3.5" /></button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>
@@ -398,7 +454,8 @@ export default function PortfolioStudio() {
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
               {visibleItems.map((it) => (
                 <ItemCard key={it.id} item={it} albums={albums}
-                  onUpdate={(p) => updateItem(it.id, p)} onDelete={() => deleteItem(it)} />
+                  onUpdate={(p) => updateItem(it.id, p)} onDelete={() => deleteItem(it)}
+                  onChoosePoster={() => setPosterFor(it)} />
               ))}
             </div>
           )}
@@ -408,11 +465,32 @@ export default function PortfolioStudio() {
       <AlbumDialog
         open={albumDialog.open}
         album={albumDialog.album}
+        items={items}
         onClose={() => setAlbumDialog({ open: false })}
         onSave={saveAlbum}
       />
+
+      {posterFor && (
+        <PosterPickerDialog
+          item={posterFor}
+          onClose={() => setPosterFor(null)}
+          onConfirm={async (blob) => {
+            const target = posterFor;
+            setPosterFor(null);
+            if (target) await setVideoPoster(target, blob);
+          }}
+        />
+      )}
     </div>
   );
+}
+
+function autoCoverForAlbum(albumId: string, items: PortfolioItem[]): string | null {
+  const inAlbum = items
+    .filter((i) => i.album_id === albumId && (i.thumb_url || i.media_url))
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+  const first = inAlbum[0];
+  return first ? first.thumb_url || first.media_url : null;
 }
 
 function VisibilityBadge({ v }: { v: PortfolioVisibility }) {
@@ -422,12 +500,13 @@ function VisibilityBadge({ v }: { v: PortfolioVisibility }) {
 }
 
 function ItemCard({
-  item, albums, onUpdate, onDelete,
+  item, albums, onUpdate, onDelete, onChoosePoster,
 }: {
   item: PortfolioItem;
   albums: PortfolioAlbum[];
   onUpdate: (patch: Partial<PortfolioItem>) => void;
   onDelete: () => void;
+  onChoosePoster: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState({ title: item.title ?? "", caption: item.caption ?? "" });
@@ -441,8 +520,19 @@ function ItemCard({
           </div>
         ) : item.kind === "video" ? (
           <>
-            <video src={item.media_url ?? ""} className="w-full h-full object-cover" muted playsInline />
+            {item.thumb_url ? (
+              <img src={item.thumb_url} alt="" className="w-full h-full object-cover" loading="lazy" />
+            ) : (
+              <video src={item.media_url ?? ""} className="w-full h-full object-cover" muted playsInline preload="metadata" />
+            )}
             <div className="absolute top-1 left-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded inline-flex items-center gap-1"><Film className="w-3 h-3" /> Video</div>
+            <button
+              onClick={onChoosePoster}
+              className="absolute bottom-1 left-1 bg-black/65 hover:bg-black/85 text-white text-[10px] px-1.5 py-0.5 rounded inline-flex items-center gap-1"
+              title="Pick a frame from the video as the thumbnail"
+            >
+              <Wand2 className="w-3 h-3" /> Pick frame
+            </button>
           </>
         ) : (
           <img src={item.thumb_url || item.media_url || ""} alt="" className="w-full h-full object-cover" loading="lazy" />
@@ -501,21 +591,33 @@ function ItemCard({
 }
 
 function AlbumDialog({
-  open, album, onClose, onSave,
+  open, album, items, onClose, onSave,
 }: {
   open: boolean;
   album?: PortfolioAlbum;
+  items: PortfolioItem[];
   onClose: () => void;
   onSave: (a: Partial<PortfolioAlbum>) => void;
 }) {
   const [draft, setDraft] = useState<Partial<PortfolioAlbum>>({});
+  const [picker, setPicker] = useState(false);
   useEffect(() => {
     setDraft(album ?? { visibility: "public" });
+    setPicker(false);
   }, [album, open]);
+
+  const candidateItems = useMemo(() => {
+    return items
+      .filter((i) => (i.thumb_url || i.media_url) && i.kind !== "project_link")
+      .filter((i) => !album || i.album_id === album.id || i.album_id === null)
+      .slice(0, 60);
+  }, [items, album]);
+
+  const autoCover = album ? autoCoverForAlbum(album.id, items) : null;
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent>
+      <DialogContent className="max-w-xl">
         <DialogHeader>
           <DialogTitle>{album ? "Edit album" : "New album"}</DialogTitle>
           <DialogDescription>Group related photos, videos, and project links into a curated collection.</DialogDescription>
@@ -533,10 +635,72 @@ function AlbumDialog({
             <Label className="text-xs">Description</Label>
             <Textarea className="mt-1" value={draft.description ?? ""} onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))} />
           </div>
-          <div>
-            <Label className="text-xs">Cover image URL (optional)</Label>
-            <Input className="mt-1" value={draft.cover_url ?? ""} onChange={(e) => setDraft((d) => ({ ...d, cover_url: e.target.value }))} placeholder="https://" />
+
+          <div className="space-y-2">
+            <Label className="text-xs">Cover image</Label>
+            <div className="flex items-center gap-3">
+              <div className="w-20 h-20 rounded-lg border border-border bg-secondary overflow-hidden flex-shrink-0 relative">
+                {(draft.cover_url || autoCover) ? (
+                  <img src={(draft.cover_url || autoCover) as string} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                    <ImageIcon className="w-5 h-5" />
+                  </div>
+                )}
+                {!draft.cover_url && autoCover && (
+                  <span className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[9px] py-0.5 text-center">auto</span>
+                )}
+              </div>
+              <div className="flex-1 space-y-2">
+                <div className="flex flex-wrap gap-2">
+                  <Button size="sm" variant="outline" type="button" className="gap-1.5" onClick={() => setPicker((v) => !v)}>
+                    <ImageLucide className="w-3.5 h-3.5" /> {picker ? "Hide media" : "Pick from media"}
+                  </Button>
+                  {draft.cover_url && (
+                    <Button size="sm" variant="ghost" type="button" className="gap-1.5 text-muted-foreground" onClick={() => setDraft((d) => ({ ...d, cover_url: null }))}>
+                      <X className="w-3.5 h-3.5" /> Use first item
+                    </Button>
+                  )}
+                </div>
+                <Input
+                  className="text-xs"
+                  value={draft.cover_url ?? ""}
+                  onChange={(e) => setDraft((d) => ({ ...d, cover_url: e.target.value || null }))}
+                  placeholder="…or paste an image URL"
+                />
+              </div>
+            </div>
+
+            {picker && (
+              <div className="rounded-lg border border-border bg-secondary/30 p-2 max-h-56 overflow-y-auto">
+                {candidateItems.length === 0 ? (
+                  <p className="text-xs text-muted-foreground p-3 text-center">Upload some media first, then come back to choose a cover.</p>
+                ) : (
+                  <div className="grid grid-cols-4 sm:grid-cols-5 gap-1.5">
+                    {candidateItems.map((it) => {
+                      const src = it.thumb_url || it.media_url || "";
+                      const selected = draft.cover_url === src;
+                      return (
+                        <button
+                          key={it.id}
+                          type="button"
+                          onClick={() => setDraft((d) => ({ ...d, cover_url: src }))}
+                          className={`aspect-square rounded-md overflow-hidden border ${selected ? "border-primary ring-2 ring-primary/40" : "border-border hover:border-primary/40"}`}
+                          title={it.title ?? ""}
+                        >
+                          <img src={src} alt="" className="w-full h-full object-cover" loading="lazy" />
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+            <p className="text-[11px] text-muted-foreground">
+              Leave blank to automatically use the first item in this album as the cover.
+            </p>
           </div>
+
           <div>
             <Label className="text-xs">Visibility</Label>
             <Select value={draft.visibility ?? "public"} onValueChange={(v) => setDraft((d) => ({ ...d, visibility: v as PortfolioVisibility }))}>
@@ -552,6 +716,123 @@ function AlbumDialog({
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
           <Button onClick={() => onSave(draft)}>Save album</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function PosterPickerDialog({
+  item, onClose, onConfirm,
+}: {
+  item: PortfolioItem;
+  onClose: () => void;
+  onConfirm: (blob: Blob) => void | Promise<void>;
+}) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [duration, setDuration] = useState(0);
+  const [time, setTime] = useState(0);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const blobRef = useRef<Blob | null>(null);
+
+  useEffect(() => {
+    return () => { if (previewUrl) URL.revokeObjectURL(previewUrl); };
+  }, [previewUrl]);
+
+  async function captureCurrent() {
+    if (!item.media_url) return;
+    setBusy(true);
+    try {
+      const v = videoRef.current;
+      const t = v ? v.currentTime : time;
+      const frame = await captureVideoFrame(item.media_url, { time: t });
+      blobRef.current = frame.blob;
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(URL.createObjectURL(frame.blob));
+    } catch (e: any) {
+      blobRef.current = null;
+      setPreviewUrl(null);
+      console.error(e);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open={true} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Choose a poster frame</DialogTitle>
+          <DialogDescription>Scrub to the moment you want and save it as the video's thumbnail.</DialogDescription>
+        </DialogHeader>
+
+        <div className="grid sm:grid-cols-[1fr_180px] gap-3">
+          <div className="space-y-2">
+            <div className="rounded-lg overflow-hidden bg-black aspect-video">
+              <video
+                ref={videoRef}
+                src={item.media_url ?? ""}
+                controls
+                crossOrigin="anonymous"
+                className="w-full h-full object-contain"
+                onLoadedMetadata={(e) => {
+                  const v = e.currentTarget;
+                  setDuration(v.duration || 0);
+                  v.currentTime = Math.min(1, (v.duration || 2) * 0.1);
+                }}
+                onTimeUpdate={(e) => setTime(e.currentTarget.currentTime)}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="range"
+                min={0}
+                max={Math.max(duration, 0.01)}
+                step={0.05}
+                value={time}
+                onChange={(e) => {
+                  const t = Number(e.target.value);
+                  setTime(t);
+                  if (videoRef.current) videoRef.current.currentTime = t;
+                }}
+                className="flex-1 accent-primary"
+              />
+              <span className="text-[11px] font-mono text-muted-foreground tabular-nums w-16 text-right">
+                {time.toFixed(1)}s / {duration.toFixed(1)}s
+              </span>
+            </div>
+            <Button size="sm" variant="outline" className="gap-1.5 w-full" onClick={captureCurrent} disabled={busy}>
+              {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
+              Capture this frame
+            </Button>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-xs">Preview</Label>
+            <div className="aspect-square rounded-lg border border-border bg-secondary overflow-hidden flex items-center justify-center">
+              {previewUrl ? (
+                <img src={previewUrl} alt="Selected frame" className="w-full h-full object-cover" />
+              ) : (
+                <div className="text-center text-xs text-muted-foreground p-3">
+                  <Wand2 className="w-5 h-5 mx-auto mb-1 opacity-60" />
+                  Capture a frame to preview it here
+                </div>
+              )}
+            </div>
+            <p className="text-[11px] text-muted-foreground">This becomes the video's thumbnail across your portfolio.</p>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button
+            disabled={!blobRef.current || busy}
+            onClick={() => blobRef.current && onConfirm(blobRef.current)}
+            className="gap-1.5"
+          >
+            <Check className="w-4 h-4" /> Use as thumbnail
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
