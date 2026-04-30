@@ -29,6 +29,7 @@ export default function TermsOfService() {
           <section>
             <h2 className="text-lg font-semibold text-foreground">1. Acceptance of Terms</h2>
             <p>By accessing or using Dronie ("the Service"), you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use the Service.</p>
+            <p className="mt-2">Dronie is a product of <strong className="text-foreground">Halcyon Systems Group</strong> ("the Company", "we", "us", or "our"). All references to Dronie in these Terms include Halcyon Systems Group as the operating entity behind the Service.</p>
           </section>
 
           <section>
