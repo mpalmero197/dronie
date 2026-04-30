@@ -6,9 +6,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { VERTICAL_LIST } from "@/pages/solutions/verticals.config";
 
 const navLinks = [
-{ label: "Features", href: "#features" },
-{ label: "How It Works", href: "#how-it-works" },
-{ label: "Pricing", href: "#pricing" }];
+{ label: "Features", hash: "features" },
+{ label: "How It Works", hash: "how-it-works" },
+{ label: "Pricing", hash: "pricing" }];
 
 
 export default function Navbar() {
@@ -28,6 +28,19 @@ export default function Navbar() {
   async function handleSignOut() {
     await signOut();
     navigate('/');
+  }
+
+  function handleHashLink(e: React.MouseEvent, hash: string) {
+    if (location.pathname === "/") {
+      e.preventDefault();
+      const el = document.getElementById(hash);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        window.history.replaceState(null, "", `/#${hash}`);
+      }
+    }
+    // On other routes, let the Link navigate to "/#hash" — ScrollToTop handles scroll.
+    setOpen(false);
   }
 
   return (
@@ -52,13 +65,14 @@ export default function Navbar() {
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-6">
           {navLinks.map((l) =>
-          <a
+          <Link
             key={l.label}
-            href={l.href}
+            to={`/#${l.hash}`}
+            onClick={(e) => handleHashLink(e, l.hash)}
             className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
             
               {l.label}
-            </a>
+            </Link>
           )}
           {/* Solutions dropdown */}
           <div className="relative group">
@@ -154,14 +168,14 @@ export default function Navbar() {
       {open &&
       <div className="md:hidden bg-card border-b border-border px-6 pb-6 pt-2 space-y-2">
           {navLinks.map((l) =>
-        <a
+        <Link
           key={l.label}
-          href={l.href}
+          to={`/#${l.hash}`}
           className="block py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-          onClick={() => setOpen(false)}>
+          onClick={(e) => handleHashLink(e, l.hash)}>
           
               {l.label}
-            </a>
+            </Link>
         )}
           <Link to="/marketplace" onClick={() => setOpen(false)} className="block py-2 text-sm font-medium text-muted-foreground hover:text-foreground">
             <span className="inline-flex items-center gap-2"><Briefcase className="w-4 h-4" />Marketplace</span>
