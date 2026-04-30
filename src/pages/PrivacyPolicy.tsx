@@ -81,7 +81,7 @@ export default function PrivacyPolicy() {
 
           <section>
             <h2 className="text-lg font-semibold text-foreground">8. Contact Us</h2>
-            <p>If you have questions about this Privacy Policy, please contact Halcyon Systems Group at <span className="text-primary font-medium">privacy@dronie.app</span>.</p>
+            <p>If you have questions about this Privacy Policy, please contact Halcyon Systems Group at <a href="mailto:mpalmero@dronieapp.com" className="text-primary font-medium hover:underline">mpalmero@dronieapp.com</a>.</p>
           </section>
         </div>
       </main>
