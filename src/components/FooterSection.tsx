@@ -1,4 +1,4 @@
-import { Map } from "lucide-react";
+import { Map, ShieldCheck } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { track } from "@/lib/analytics";
 
@@ -169,12 +169,45 @@ export default function FooterSection() {
         </div>
 
         <div className="border-t border-primary-foreground/10 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-primary-foreground/40">
-            © {new Date().getFullYear()} Dronie. All rights reserved.
-          </p>
-          <p className="text-xs text-primary-foreground/40">
-            Open-source standards · GeoTIFF · LAS · SHP
-          </p>
+          <div className="flex flex-col md:flex-row items-center gap-x-6 gap-y-2 text-center md:text-left">
+            <p className="text-xs text-primary-foreground/40">
+              © {new Date().getFullYear()} Dronie. All rights reserved.
+            </p>
+            <p className="text-xs text-primary-foreground/50">
+              Dronie is a product of{" "}
+              <a
+                href="https://halcyonsystemsgroup.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-primary-foreground/80 hover:text-primary-foreground transition-colors"
+              >
+                Halcyon Systems Group
+              </a>
+              .
+            </p>
+          </div>
+          <div className="flex items-center gap-4">
+            <p className="text-xs text-primary-foreground/40 hidden md:block">
+              Open-source standards · GeoTIFF · LAS · SHP
+            </p>
+            <a
+              href="https://halcyonranker.lovable.app/site/dronieapp.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() =>
+                track("landing_footer_cta_click", {
+                  section: "Trust",
+                  label: "Halcyon Ranker Verified",
+                  href: "https://halcyonranker.lovable.app/site/dronieapp.com",
+                  external: true,
+                })
+              }
+              className="inline-flex items-center gap-2 px-3.5 py-2 bg-background text-foreground border border-border rounded-[10px] text-xs font-semibold leading-none shadow-sm hover:shadow-md transition-shadow"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-primary" strokeWidth={2.4} />
+              Verified by Halcyon Ranker · 81/100
+            </a>
+          </div>
         </div>
       </div>
     </footer>

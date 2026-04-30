@@ -28,7 +28,7 @@ export default function PrivacyPolicy() {
         <div className="prose prose-sm dark:prose-invert max-w-none space-y-8 text-muted-foreground">
           <section>
             <h2 className="text-lg font-semibold text-foreground">1. Information We Collect</h2>
-            <p>When you use Dronie, we may collect the following types of information:</p>
+            <p>Dronie is a product of <strong className="text-foreground">Halcyon Systems Group</strong> ("we", "us", or "our"), the data controller responsible for personal information collected through the Service. When you use Dronie, we may collect the following types of information:</p>
             <ul className="list-disc pl-5 space-y-1">
               <li><strong className="text-foreground">Account Information:</strong> Name, email address, and password when you create an account.</li>
               <li><strong className="text-foreground">Project Data:</strong> Drone images, flight plans, map data, and processing outputs you upload or generate.</li>
@@ -81,7 +81,7 @@ export default function PrivacyPolicy() {
 
           <section>
             <h2 className="text-lg font-semibold text-foreground">8. Contact Us</h2>
-            <p>If you have questions about this Privacy Policy, please contact us at <span className="text-primary font-medium">privacy@dronie.app</span>.</p>
+            <p>If you have questions about this Privacy Policy, please contact Halcyon Systems Group at <span className="text-primary font-medium">privacy@dronie.app</span>.</p>
           </section>
         </div>
       </main>
