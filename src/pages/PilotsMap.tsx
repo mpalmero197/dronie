@@ -176,6 +176,23 @@ export default function PilotsMap() {
   );
 }
 
+function PilotMapPin({ p }: { p: PublicPilot }) {
+  return (
+    <>
+      <Circle
+        center={[p.display_lat, p.display_lng]}
+        radius={p.service_radius_km * 1000}
+        pathOptions={{ color: "hsl(var(--primary))", fillOpacity: 0.05, weight: 1 }}
+      />
+      <Marker position={[p.display_lat, p.display_lng]} icon={makePilotIcon(p)}>
+        <Popup>
+          <PilotPopup p={p} />
+        </Popup>
+      </Marker>
+    </>
+  );
+}
+
 function PilotPopup({ p }: { p: PublicPilot }) {
   return (
     <div className="min-w-[200px]">
