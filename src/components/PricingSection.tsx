@@ -311,9 +311,6 @@ export default function PricingSection() {
           <span className="inline-flex items-center gap-1.5">
             <Check className="w-3.5 h-3.5 text-primary" /> Secure payments by Stripe
           </span>
-          <span className="inline-flex items-center gap-1.5">
-            <Check className="w-3.5 h-3.5 text-primary" /> Used by surveyors in 40+ countries
-          </span>
         </div>
 
         <p className="text-center text-sm text-muted-foreground mt-8">

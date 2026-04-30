@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Plus, X } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,6 +39,8 @@ export default function MarketplaceNew() {
   const [budget, setBudget] = useState("");
   const [deadline, setDeadline] = useState("");
   const [deliverables, setDeliverables] = useState<string[]>([]);
+  const [customDeliverable, setCustomDeliverable] = useState("");
+  const [customDeliverables, setCustomDeliverables] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -49,6 +51,23 @@ export default function MarketplaceNew() {
     setDeliverables((prev) =>
       prev.includes(id) ? prev.filter((d) => d !== id) : [...prev, id]
     );
+  }
+
+  function addCustomDeliverable() {
+    const value = customDeliverable.trim();
+    if (!value) return;
+    if (customDeliverables.includes(value) || deliverables.includes(value)) {
+      setCustomDeliverable("");
+      return;
+    }
+    setCustomDeliverables((prev) => [...prev, value]);
+    setDeliverables((prev) => [...prev, value]);
+    setCustomDeliverable("");
+  }
+
+  function removeCustomDeliverable(value: string) {
+    setCustomDeliverables((prev) => prev.filter((d) => d !== value));
+    setDeliverables((prev) => prev.filter((d) => d !== value));
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -173,7 +192,10 @@ export default function MarketplaceNew() {
 
           <div>
             <Label>Deliverables needed</Label>
-            <div className="grid grid-cols-2 gap-2 mt-2">
+            <p className="text-xs text-muted-foreground mt-1">
+              Select all that apply, or add your own below.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
               {DELIVERABLE_OPTIONS.map((d) => (
                 <label
                   key={d.id}
@@ -186,6 +208,51 @@ export default function MarketplaceNew() {
                   <span className="text-foreground">{d.label}</span>
                 </label>
               ))}
+            </div>
+
+            {customDeliverables.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {customDeliverables.map((value) => (
+                  <span
+                    key={value}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/20 text-xs text-foreground"
+                  >
+                    {value}
+                    <button
+                      type="button"
+                      onClick={() => removeCustomDeliverable(value)}
+                      className="hover:text-destructive transition-colors"
+                      aria-label={`Remove ${value}`}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <div className="mt-3 flex gap-2">
+              <Input
+                value={customDeliverable}
+                onChange={(e) => setCustomDeliverable(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addCustomDeliverable();
+                  }
+                }}
+                placeholder="Add custom deliverable (e.g. Site safety walkthrough)"
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={addCustomDeliverable}
+                disabled={!customDeliverable.trim()}
+                className="gap-1.5"
+              >
+                <Plus className="w-4 h-4" /> Add
+              </Button>
             </div>
           </div>
 

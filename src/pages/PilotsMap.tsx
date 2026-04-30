@@ -154,18 +154,7 @@ export default function PilotsMap() {
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
                 {filtered.map((p) => (
-                  <div key={p.pilot_id}>
-                    <Circle
-                      center={[p.display_lat, p.display_lng]}
-                      radius={p.service_radius_km * 1000}
-                      pathOptions={{ color: "hsl(var(--primary))", fillOpacity: 0.05, weight: 1 }}
-                    />
-                    <Marker position={[p.display_lat, p.display_lng]} icon={makePilotIcon(p)}>
-                      <Popup>
-                        <PilotPopup p={p} />
-                      </Popup>
-                    </Marker>
-                  </div>
+                  <PilotMapPin key={p.pilot_id} p={p} />
                 ))}
               </MapContainer>
             )}
@@ -184,6 +173,23 @@ export default function PilotsMap() {
         </div>
       </div>
     </div>
+  );
+}
+
+function PilotMapPin({ p }: { p: PublicPilot }) {
+  return (
+    <>
+      <Circle
+        center={[p.display_lat, p.display_lng]}
+        radius={p.service_radius_km * 1000}
+        pathOptions={{ color: "hsl(var(--primary))", fillOpacity: 0.05, weight: 1 }}
+      />
+      <Marker position={[p.display_lat, p.display_lng]} icon={makePilotIcon(p)}>
+        <Popup>
+          <PilotPopup p={p} />
+        </Popup>
+      </Marker>
+    </>
   );
 }
 

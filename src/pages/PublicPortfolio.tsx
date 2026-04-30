@@ -208,7 +208,7 @@ export default function PublicPortfolio({ mode }: Props) {
               </Button>
             </Link>
           )}
-          <a href="mailto:support@dronieapp.com?subject=Portfolio%20failed%20to%20load">
+          <a href="mailto:mpalmero@dronieapp.com?subject=Portfolio%20failed%20to%20load">
             <Button variant="ghost" className="gap-1.5">
               <LifeBuoy className="w-4 h-4" /> Contact support
             </Button>
@@ -240,7 +240,7 @@ export default function PublicPortfolio({ mode }: Props) {
               </Button>
             </Link>
           )}
-          <a href="mailto:support@dronieapp.com?subject=Portfolio%20not%20found">
+          <a href="mailto:mpalmero@dronieapp.com?subject=Portfolio%20not%20found">
             <Button variant="ghost" className="gap-1.5">
               <LifeBuoy className="w-4 h-4" /> Contact support
             </Button>

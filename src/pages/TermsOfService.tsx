@@ -30,6 +30,8 @@ export default function TermsOfService() {
             <h2 className="text-lg font-semibold text-foreground">1. Acceptance of Terms</h2>
             <p>By accessing or using Dronie ("the Service"), you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use the Service.</p>
             <p className="mt-2">Dronie is a product of <strong className="text-foreground">Halcyon Systems Group</strong> ("the Company", "we", "us", or "our"). All references to Dronie in these Terms include Halcyon Systems Group as the operating entity behind the Service.</p>
+            <p className="mt-2">These Terms constitute a legally binding agreement between you (whether an individual, sole proprietor, business entity, or government agency) and Halcyon Systems Group. If you are accepting these Terms on behalf of a company or other legal entity, you represent and warrant that you have full authority to bind that entity to these Terms, and the words "you" and "your" shall refer to that entity. If you do not have such authority, you must not accept these Terms or use the Service.</p>
+            <p className="mt-2">You must be at least eighteen (18) years of age and legally able to form a binding contract under the laws of your jurisdiction to use the Service. The Service is not directed to children under 13 (or 16 in the EEA/UK), and we do not knowingly collect personal information from such children.</p>
           </section>
 
           <section>
@@ -50,6 +52,9 @@ export default function TermsOfService() {
           <section>
             <h2 className="text-lg font-semibold text-foreground">4. User Content & Data</h2>
             <p>You retain ownership of all drone imagery, flight plans, and other data you upload to the Service. By using the Service, you grant Dronie a limited license to process, store, and display your content solely for the purpose of providing the Service to you.</p>
+            <p className="mt-2">You represent and warrant that (a) you own or have all necessary rights, licenses, consents, releases, and permissions to upload and process the content you submit to the Service; (b) the content does not and will not infringe, misappropriate, or violate any third party's intellectual property, privacy, publicity, contractual, or other rights, nor any applicable law or regulation; (c) you have obtained any required consents from individuals depicted, property owners, and any data subjects whose personal data may be present in your imagery; and (d) the imagery was captured in compliance with all applicable aviation, privacy, trespass, surveillance, export-control, and airspace regulations.</p>
+            <p className="mt-2">You grant Halcyon Systems Group a worldwide, royalty-free, non-exclusive license to host, copy, transmit, transcode, process, cache, back up, and display your content solely as required to operate, secure, and improve the Service, to enforce these Terms, and to comply with legal obligations. We will not sell your content or use it for advertising. Aggregated, de-identified, or statistical data derived from Service usage may be used by us for analytics, benchmarking, and product improvement.</p>
+            <p className="mt-2">You are solely responsible for maintaining your own backups of any content you submit. We may, but are not obligated to, retain backups for our operational purposes.</p>
           </section>
 
           <section>
@@ -61,6 +66,12 @@ export default function TermsOfService() {
               <li>Attempt to gain unauthorized access to other users' accounts or data.</li>
               <li>Use the Service to process imagery obtained in violation of privacy laws or airspace regulations.</li>
               <li>Resell or redistribute the Service without authorization.</li>
+              <li>Reverse engineer, decompile, disassemble, or otherwise attempt to derive source code from the Service, except to the extent such restriction is prohibited by applicable law.</li>
+              <li>Use the Service to develop a competing product, train machine-learning models on our outputs, or scrape, crawl, or systematically extract data from the Service.</li>
+              <li>Interfere with, disrupt, overload, or impair the Service, our infrastructure, or any other user's access.</li>
+              <li>Misrepresent your identity, affiliation, certifications, insurance status, or operating authority.</li>
+              <li>Use the Service to surveil, harass, stalk, or harm any individual, or to capture imagery in violation of any "no-fly" zone, restricted airspace, TFR, or property owner's rights.</li>
+              <li>Export, re-export, or transfer any data, technology, or output from the Service in violation of U.S. or other applicable export-control or sanctions laws.</li>
             </ul>
           </section>
 
@@ -72,6 +83,8 @@ export default function TermsOfService() {
           <section>
             <h2 className="text-lg font-semibold text-foreground">7. Payment & Billing</h2>
             <p>Certain features of the Service require a paid subscription. Fees are billed in advance on a monthly or annual basis. All fees are non-refundable except as required by law. We reserve the right to change pricing with 30 days' notice.</p>
+            <p className="mt-2">All fees are stated exclusive of taxes, duties, and similar government assessments, which are your responsibility. You authorize us and our payment processor (Stripe) to charge your designated payment method for all amounts owed. If a charge fails, we may suspend or terminate your access until payment is received. Disputed charges must be raised in writing within thirty (30) days of the charge date or are deemed accepted.</p>
+            <p className="mt-2">Marketplace transactions between clients and pilots are facilitated by the Service but the underlying contract is solely between the client and the pilot or organization. We are not a party to that contract, do not act as an escrow or fiduciary, and accept no liability for non-performance, refunds, chargebacks, or disputes arising from those transactions, except as required by applicable consumer-protection law.</p>
           </section>
 
           <section>
@@ -79,6 +92,8 @@ export default function TermsOfService() {
             <p>To the maximum extent permitted by law, Dronie, its operators, employees, contractors, affiliates, and partners shall not be liable for any direct, indirect, incidental, special, consequential, or punitive damages, including loss of data, profits, equipment, or business opportunities arising from your use of the Service.</p>
             <p className="mt-2">Dronie operates as a listing and introduction platform between independent drone pilots, organizations, and clients. We do not employ pilots, do not operate aircraft, and do not independently verify every credential listed on the Service. The Service is provided "as is" and "as available" without warranties of any kind.</p>
             <p className="mt-2">You acknowledge that Dronie is <strong>not responsible</strong> for: (a) any pilot's or organization's conduct, performance, deliverables, equipment failure, accidents, injuries, property damage, regulatory violations, or insurance coverage; (b) any disputes between clients and pilots or organizations, including payment disputes, contract disputes, or quality disputes; (c) any losses, damages, or claims arising from work arranged through the Service; or (d) the accuracy of credentials, certifications, insurance status, or other information provided by users.</p>
+            <p className="mt-2"><strong className="text-foreground">No warranty.</strong> To the maximum extent permitted by law, the Service and all outputs (including orthomosaics, point clouds, DSMs, contour lines, volumetric calculations, Gaussian splats, AI-generated insights, flight plans, and weather/airspace data) are provided "AS IS" and "AS AVAILABLE" without warranties of any kind, whether express, implied, statutory, or otherwise, including any warranty of merchantability, fitness for a particular purpose, title, non-infringement, accuracy, completeness, uninterrupted operation, error-free performance, or quiet enjoyment. Photogrammetric outputs are estimates and must be independently verified by a licensed professional before being relied upon for engineering, surveying, construction, legal, regulatory, safety-of-life, or financial decisions.</p>
+            <p className="mt-2"><strong className="text-foreground">Cap on damages.</strong> To the maximum extent permitted by law, the aggregate liability of Halcyon Systems Group and its affiliates, officers, directors, employees, agents, and licensors arising out of or relating to the Service or these Terms, whether in contract, tort (including negligence), strict liability, or any other theory, shall not exceed the greater of (a) the total fees you paid to us for the Service in the twelve (12) months immediately preceding the event giving rise to the claim, or (b) one hundred U.S. dollars ($100). The limitations in this section apply even if any remedy fails of its essential purpose. Some jurisdictions do not allow the exclusion or limitation of certain damages; in such jurisdictions our liability is limited to the maximum extent permitted by law.</p>
           </section>
 
           <section>
@@ -99,6 +114,39 @@ export default function TermsOfService() {
           </section>
 
           <section>
+            <h2 className="text-lg font-semibold text-foreground">8d. Intellectual Property</h2>
+            <p>The Service, including all software, designs, trademarks, logos, text, graphics, user interfaces, and all underlying technology, is owned by Halcyon Systems Group or its licensors and is protected by U.S. and international intellectual-property laws. Except for the limited rights expressly granted in these Terms, no rights are granted to you by implication, estoppel, or otherwise. You may not remove or alter any proprietary notices on any portion of the Service. "Dronie" and "Halcyon Systems Group" are trademarks of Halcyon Systems Group; you may not use them without our prior written consent.</p>
+            <p className="mt-2"><strong className="text-foreground">Feedback.</strong> If you submit suggestions, feedback, or feature requests, you grant us a perpetual, irrevocable, royalty-free, worldwide license to use, modify, and exploit such feedback for any purpose without obligation or compensation.</p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-foreground">8e. Third-Party Services</h2>
+            <p>The Service integrates with or links to third-party services (including, without limitation, Supabase, Stripe, mapping providers, weather APIs, FAA LAANC providers, and AI-model providers). Your use of those services is governed by their own terms and privacy policies. We do not control and are not responsible for the availability, accuracy, content, or practices of any third-party service, and your use of them is at your own risk.</p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-foreground">8f. DMCA &amp; Copyright Complaints</h2>
+            <p>We respect intellectual-property rights and respond to valid notices under the U.S. Digital Millennium Copyright Act (DMCA). If you believe content on the Service infringes your copyright, send a written notice to our designated agent at <a href="mailto:mpalmero@dronieapp.com" className="text-primary font-medium hover:underline">mpalmero@dronieapp.com</a> containing the information required by 17 U.S.C. § 512(c)(3). We may remove or disable access to allegedly infringing content and terminate the accounts of repeat infringers in appropriate circumstances.</p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-foreground">8g. Governing Law, Venue &amp; Dispute Resolution</h2>
+            <p>These Terms are governed by and construed in accordance with the laws of the State of California, United States, without regard to its conflict-of-laws principles. Subject to the arbitration clause below, the state and federal courts located in San Francisco County, California shall have exclusive jurisdiction over any dispute, and you consent to personal jurisdiction in such courts and waive any objection based on inconvenient forum.</p>
+            <p className="mt-2"><strong className="text-foreground">Binding arbitration; class-action waiver.</strong> Any dispute, claim, or controversy arising out of or relating to the Service or these Terms (each, a "Dispute") shall be resolved by final and binding individual arbitration administered by JAMS under its Streamlined Arbitration Rules then in effect, conducted in English in San Francisco, California (or remotely if the arbitrator agrees). The arbitrator, and not any federal, state, or local court, shall have exclusive authority to resolve any Dispute, including the scope or enforceability of this arbitration agreement. <strong>You and Halcyon Systems Group each waive the right to a trial by jury and the right to participate in any class, collective, consolidated, or representative action.</strong> Notwithstanding the foregoing, either party may bring an individual claim in small-claims court, and either party may seek injunctive relief in court to protect intellectual-property rights. If any portion of this section is found unenforceable, the remainder shall remain in effect, and the unenforceable portion shall be severed.</p>
+            <p className="mt-2"><strong className="text-foreground">30-day opt-out.</strong> You may opt out of this arbitration agreement by sending written notice to <a href="mailto:mpalmero@dronieapp.com" className="text-primary font-medium hover:underline">mpalmero@dronieapp.com</a> within 30 days of first accepting these Terms, including your name, account email, and a clear statement that you opt out of arbitration.</p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-foreground">8h. Force Majeure</h2>
+            <p>Neither party shall be liable for any delay or failure to perform resulting from causes beyond its reasonable control, including acts of God, natural disasters, war, terrorism, civil unrest, government action, labor disputes, internet or utility failures, cyberattacks, pandemics, or third-party service outages.</p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-foreground">8i. Severability, Waiver &amp; Assignment</h2>
+            <p>If any provision of these Terms is held to be invalid or unenforceable, the remaining provisions shall continue in full force and effect, and the invalid provision shall be modified to the minimum extent necessary to make it enforceable. No waiver of any term shall be deemed a further or continuing waiver of such term or any other term. You may not assign or transfer these Terms or any rights hereunder without our prior written consent; any attempted assignment in violation of this section is void. We may assign these Terms freely, including in connection with a merger, acquisition, reorganization, or sale of assets.</p>
+          </section>
+
+          <section>
             <h2 className="text-lg font-semibold text-foreground">9. Termination</h2>
             <p>We may suspend or terminate your account if you violate these Terms. You may delete your account at any time. Upon termination, your project data will be retained for 30 days before permanent deletion, unless otherwise required by law.</p>
           </section>
@@ -110,7 +158,7 @@ export default function TermsOfService() {
 
           <section>
             <h2 className="text-lg font-semibold text-foreground">11. Contact</h2>
-            <p>For questions about these Terms, contact us at <span className="text-primary font-medium">legal@dronie.app</span>.</p>
+            <p>For questions about these Terms, legal notices, DMCA complaints, or any other matter relating to the Service, contact Halcyon Systems Group at <a href="mailto:mpalmero@dronieapp.com" className="text-primary font-medium hover:underline">mpalmero@dronieapp.com</a>. This address is the sole official contact for the website and Service in all client-facing matters.</p>
           </section>
         </div>
       </main>
