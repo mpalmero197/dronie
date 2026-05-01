@@ -103,7 +103,7 @@ export default function HowItWorksSection() {
             {steps.map((s, i) => {
               const Icon = s.icon;
               return (
-                <div
+                <article
                   key={s.step}
                   className="step-item relative"
                   style={{
@@ -126,7 +126,7 @@ export default function HowItWorksSection() {
                   <h3 className="font-display font-700 text-xl text-foreground mb-2">{s.title}</h3>
                   <p className="text-sm text-muted-foreground leading-relaxed mb-3">{s.desc}</p>
                   <p className="text-xs font-medium text-primary border-t border-border pt-3">{s.detail}</p>
-                </div>
+                </article>
               );
             })}
           </div>

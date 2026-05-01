@@ -55,7 +55,7 @@ export default function HeroSection() {
       <div className="absolute inset-0">
         <img
           src={heroMap}
-          alt="Aerial orthomosaic map"
+          alt="Aerial orthomosaic map generated from DJI drone survey imagery"
           className="w-full h-full object-cover opacity-20"
         />
         <div className="absolute inset-0 bg-gradient-to-br from-foreground/90 via-foreground/70 to-primary/80" />
@@ -173,7 +173,7 @@ export default function HeroSection() {
             <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-primary-foreground/10">
               <img
                 src={droneHero}
-                alt="Drone in flight over landscape"
+                alt="DJI drone in flight capturing aerial survey imagery for photogrammetry processing"
                 className="w-full h-[420px] object-cover"
               />
               {/* Processing overlay card */}

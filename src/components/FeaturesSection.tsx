@@ -152,7 +152,7 @@ export default function FeaturesSection() {
           {features.map((f) => {
             const Icon = f.icon;
             return (
-              <div
+              <article
                 key={f.title}
                 className="feature-card group p-6 bg-card rounded-2xl border border-border hover:border-primary/30 hover:shadow-lg transition-all duration-300 cursor-default"
                 style={{
@@ -168,7 +168,7 @@ export default function FeaturesSection() {
                 </div>
                 <h3 className="font-display font-600 text-foreground mb-2">{f.title}</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
-              </div>
+              </article>
             );
           })}
         </div>

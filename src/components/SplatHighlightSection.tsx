@@ -62,7 +62,7 @@ export default function SplatHighlightSection() {
 
         <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {FEATURES.map((f) => (
-            <div
+            <article
               key={f.title}
               className="group rounded-2xl border border-border bg-card/60 p-5 hover:border-primary/40 hover:bg-card transition-colors"
             >
@@ -74,7 +74,7 @@ export default function SplatHighlightSection() {
               <p className="mt-3 text-[10px] uppercase tracking-wider text-muted-foreground/70 font-mono">
                 {f.inspired}
               </p>
-            </div>
+            </article>
           ))}
         </div>
 
