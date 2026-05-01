@@ -22,6 +22,7 @@ import {
   VERTICAL_LABELS,
   DELIVERABLE_OPTIONS,
 } from "@/lib/marketplace";
+import { useMemo } from "react";
 import LiabilityNotice from "@/components/LiabilityNotice";
 
 export default function MarketplaceNew() {
@@ -42,6 +43,16 @@ export default function MarketplaceNew() {
   const [customDeliverable, setCustomDeliverable] = useState("");
   const [customDeliverables, setCustomDeliverables] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
+
+  const deliverablesByCategory = useMemo(() => {
+    const map = new Map<string, typeof DELIVERABLE_OPTIONS>();
+    for (const d of DELIVERABLE_OPTIONS) {
+      const cat = (d as any).category ?? "Other";
+      if (!map.has(cat)) map.set(cat, []);
+      map.get(cat)!.push(d);
+    }
+    return map;
+  }, []);
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/auth");
@@ -195,18 +206,25 @@ export default function MarketplaceNew() {
             <p className="text-xs text-muted-foreground mt-1">
               Select all that apply, or add your own below.
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
-              {DELIVERABLE_OPTIONS.map((d) => (
-                <label
-                  key={d.id}
-                  className="flex items-center gap-2 p-2 rounded-lg border border-border hover:border-primary/30 cursor-pointer text-sm"
-                >
-                  <Checkbox
-                    checked={deliverables.includes(d.label)}
-                    onCheckedChange={() => toggleDeliverable(d.label)}
-                  />
-                  <span className="text-foreground">{d.label}</span>
-                </label>
+            <div className="mt-3 space-y-4">
+              {Array.from(deliverablesByCategory.entries()).map(([category, items]) => (
+                <div key={category}>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">{category}</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {items.map((d) => (
+                      <label
+                        key={d.id}
+                        className="flex items-center gap-2 p-2 rounded-lg border border-border hover:border-primary/30 cursor-pointer text-sm"
+                      >
+                        <Checkbox
+                          checked={deliverables.includes(d.label)}
+                          onCheckedChange={() => toggleDeliverable(d.label)}
+                        />
+                        <span className="text-foreground">{d.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
 
