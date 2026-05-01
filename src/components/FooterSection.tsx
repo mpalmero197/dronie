@@ -102,7 +102,7 @@ export default function FooterSection() {
   }
 
   return (
-    <footer className="bg-foreground text-primary-foreground/80">
+    <footer className="bg-foreground text-primary-foreground/80" role="contentinfo">
       <div className="container mx-auto px-6 py-16">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-10 mb-12">
           {/* Brand */}
@@ -118,9 +118,8 @@ export default function FooterSection() {
             </p>
           </div>
 
-          {/* Link columns */}
           {cols.map((col) => (
-            <div key={col.title}>
+            <nav key={col.title} aria-label={`${col.title} links`}>
               <h4 className="text-xs font-semibold uppercase tracking-widest text-primary-foreground/40 mb-4">
                 {col.title}
               </h4>
@@ -164,7 +163,7 @@ export default function FooterSection() {
                   </li>
                 ))}
               </ul>
-            </div>
+            </nav>
           ))}
         </div>
 

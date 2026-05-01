@@ -63,7 +63,7 @@ export default function Navbar() {
         </Link>
 
         {/* Desktop nav */}
-        <nav className="hidden md:flex items-center gap-6">
+        <nav className="hidden md:flex items-center gap-6" aria-label="Main navigation">
           {navLinks.map((l) =>
           <Link
             key={l.label}
@@ -156,7 +156,7 @@ export default function Navbar() {
 
         {/* Mobile toggle */}
         <button
-          className="md:hidden p-2 rounded-lg text-muted-foreground hover:text-foreground transition-colors"
+          className="md:hidden p-2 rounded-lg text-muted-foreground hover:text-foreground transition-colors"  
           onClick={() => setOpen(!open)}
           aria-label="Toggle menu">
           
@@ -166,7 +166,7 @@ export default function Navbar() {
 
       {/* Mobile menu */}
       {open &&
-      <div className="md:hidden bg-card border-b border-border px-6 pb-6 pt-2 space-y-2">
+      <nav className="md:hidden bg-card border-b border-border px-6 pb-6 pt-2 space-y-2" aria-label="Mobile navigation">
           {navLinks.map((l) =>
         <Link
           key={l.label}
@@ -220,8 +220,8 @@ export default function Navbar() {
               </>
           }
           </div>
-        </div>
-      }
+        </nav>
+      }  
     </header>);
 
 }
