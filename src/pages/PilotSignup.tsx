@@ -175,6 +175,21 @@ export default function PilotSignup() {
     );
   }
 
+  async function geocodeArea() {
+    if (lat || lng || !serviceArea.trim()) return;
+    try {
+      const q = encodeURIComponent(serviceArea.trim());
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`, {
+        headers: { "Accept-Language": "en" },
+      });
+      const results = await res.json();
+      if (results?.[0]) {
+        setLat(parseFloat(results[0].lat).toFixed(6));
+        setLng(parseFloat(results[0].lon).toFixed(6));
+      }
+    } catch { /* silent */ }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!user) return;
@@ -368,7 +383,8 @@ export default function PilotSignup() {
             </p>
             <div>
               <Label htmlFor="area">City / region</Label>
-              <Input id="area" value={serviceArea} onChange={(e) => setServiceArea(e.target.value)} placeholder="e.g. Austin, TX" maxLength={120} className="mt-1.5" />
+              <Input id="area" value={serviceArea} onChange={(e) => setServiceArea(e.target.value)} onBlur={geocodeArea} placeholder="e.g. Austin, TX" maxLength={120} className="mt-1.5" />
+              <p className="text-xs text-muted-foreground mt-1">Coordinates will auto-fill when you enter a city name.</p>
             </div>
             <div className="grid md:grid-cols-3 gap-4">
               <div>
