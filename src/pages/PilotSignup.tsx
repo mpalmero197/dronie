@@ -215,9 +215,29 @@ export default function PilotSignup() {
 
     setSubmitting(true);
     try {
+      // Auto-geocode from service area label if no coords provided
+      let sLat = parsed.data.service_lat;
+      let sLng = parsed.data.service_lng;
+      if (sLat == null && sLng == null && parsed.data.service_area_label) {
+        try {
+          const q = encodeURIComponent(parsed.data.service_area_label);
+          const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`, {
+            headers: { "Accept-Language": "en" },
+          });
+          const results = await res.json();
+          if (results?.[0]) {
+            sLat = parseFloat(results[0].lat);
+            sLng = parseFloat(results[0].lon);
+            // Update form fields so user sees what was resolved
+            setLat(sLat.toFixed(6));
+            setLng(sLng.toFixed(6));
+          }
+        } catch {
+          // Geocoding failed — continue without coords
+        }
+      }
+
       // Compute display coords (jittered or exact based on privacy preference)
-      const sLat = parsed.data.service_lat;
-      const sLng = parsed.data.service_lng;
       let displayLat: number | null = null;
       let displayLng: number | null = null;
       if (sLat != null && sLng != null) {
@@ -232,6 +252,8 @@ export default function PilotSignup() {
       }
       const payload = {
         ...parsed.data,
+        service_lat: sLat,
+        service_lng: sLng,
         user_id: user.id,
         contact_email: parsed.data.contact_email || null,
         phone: parsed.data.phone || null,
