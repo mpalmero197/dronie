@@ -113,6 +113,33 @@ export default function MarketplaceDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
+  // Verify Stripe checkout return
+  useEffect(() => {
+    const sessionId = searchParams.get("session_id");
+    const paid = searchParams.get("paid");
+    if (paid === "1" && sessionId) {
+      (async () => {
+        try {
+          const { data, error } = await supabase.functions.invoke("verify-marketplace-payment", {
+            body: { session_id: sessionId },
+          });
+          if (error) throw error;
+          if (data?.paid) {
+            toast({ title: "Payment received", description: "Pilot has been assigned to your job." });
+            await refresh();
+          }
+        } catch (err: any) {
+          toast({ title: "Could not verify payment", description: err.message, variant: "destructive" });
+        } finally {
+          searchParams.delete("session_id");
+          searchParams.delete("paid");
+          setSearchParams(searchParams, { replace: true });
+        }
+      })();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
