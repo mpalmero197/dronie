@@ -119,6 +119,7 @@ export function formatBudget(cents: number | null): string {
 
 export async function listOpenRequests(filters?: {
   vertical?: IndustryVertical;
+  isTopTier?: boolean;
 }) {
   let q = supabase
     .from("service_requests")
@@ -127,6 +128,10 @@ export async function listOpenRequests(filters?: {
     .order("created_at", { ascending: false })
     .limit(100);
   if (filters?.vertical) q = q.eq("vertical", filters.vertical);
+  // Non-top-tier viewers only see requests after the 24h delay
+  if (!filters?.isTopTier) {
+    q = q.lte("released_to_free_at", new Date().toISOString());
+  }
   const { data, error } = await q;
   if (error) throw error;
   return (data ?? []) as ServiceRequest[];

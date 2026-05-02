@@ -25,7 +25,8 @@ const VERTICAL_FILTERS: (IndustryVertical | "all")[] = [
 ];
 
 export default function Marketplace() {
-  const { user } = useAuth();
+  const { user, subscriptionTier } = useAuth();
+  const isTopTier = subscriptionTier === "enterprise";
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<IndustryVertical | "all">("all");
@@ -33,7 +34,10 @@ export default function Marketplace() {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    listOpenRequests(filter === "all" ? undefined : { vertical: filter })
+    listOpenRequests({
+      vertical: filter === "all" ? undefined : filter,
+      isTopTier,
+    })
       .then((data) => {
         if (!cancelled) setRequests(data);
       })
@@ -44,7 +48,7 @@ export default function Marketplace() {
     return () => {
       cancelled = true;
     };
-  }, [filter]);
+  }, [filter, isTopTier]);
 
   return (
     <div className="min-h-screen bg-background">

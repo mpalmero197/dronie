@@ -353,6 +353,57 @@ export type Database = {
         }
         Relationships: []
       }
+      marketplace_payments: {
+        Row: {
+          amount_pilot_cents: number
+          amount_total_cents: number
+          client_id: string
+          created_at: string
+          currency: string
+          fee_cents: number
+          id: string
+          pilot_id: string
+          quote_id: string
+          request_id: string
+          status: string
+          stripe_payment_intent_id: string | null
+          stripe_session_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount_pilot_cents: number
+          amount_total_cents: number
+          client_id: string
+          created_at?: string
+          currency?: string
+          fee_cents: number
+          id?: string
+          pilot_id: string
+          quote_id: string
+          request_id: string
+          status?: string
+          stripe_payment_intent_id?: string | null
+          stripe_session_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount_pilot_cents?: number
+          amount_total_cents?: number
+          client_id?: string
+          created_at?: string
+          currency?: string
+          fee_cents?: number
+          id?: string
+          pilot_id?: string
+          quote_id?: string
+          request_id?: string
+          status?: string
+          stripe_payment_intent_id?: string | null
+          stripe_session_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       mission_logs: {
         Row: {
           altitude: number | null
@@ -642,6 +693,39 @@ export type Database = {
           verified_at?: string | null
           verticals?: Database["public"]["Enums"]["industry_vertical"][]
           years_experience?: number
+        }
+        Relationships: []
+      }
+      pilot_stripe_accounts: {
+        Row: {
+          charges_enabled: boolean
+          created_at: string
+          details_submitted: boolean
+          id: string
+          payouts_enabled: boolean
+          stripe_account_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          charges_enabled?: boolean
+          created_at?: string
+          details_submitted?: boolean
+          id?: string
+          payouts_enabled?: boolean
+          stripe_account_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          charges_enabled?: boolean
+          created_at?: string
+          details_submitted?: boolean
+          id?: string
+          payouts_enabled?: boolean
+          stripe_account_id?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -1227,6 +1311,7 @@ export type Database = {
           eta_days: number | null
           id: string
           message: string | null
+          payment_status: string
           pilot_id: string
           price_cents: number
           request_id: string
@@ -1238,6 +1323,7 @@ export type Database = {
           eta_days?: number | null
           id?: string
           message?: string | null
+          payment_status?: string
           pilot_id: string
           price_cents: number
           request_id: string
@@ -1249,6 +1335,7 @@ export type Database = {
           eta_days?: number | null
           id?: string
           message?: string | null
+          payment_status?: string
           pilot_id?: string
           price_cents?: number
           request_id?: string
@@ -1279,6 +1366,7 @@ export type Database = {
           location_label: string | null
           longitude: number | null
           project_id: string | null
+          released_to_free_at: string
           status: Database["public"]["Enums"]["request_status"]
           title: string
           updated_at: string
@@ -1297,6 +1385,7 @@ export type Database = {
           location_label?: string | null
           longitude?: number | null
           project_id?: string | null
+          released_to_free_at?: string
           status?: Database["public"]["Enums"]["request_status"]
           title: string
           updated_at?: string
@@ -1315,6 +1404,7 @@ export type Database = {
           location_label?: string | null
           longitude?: number | null
           project_id?: string | null
+          released_to_free_at?: string
           status?: Database["public"]["Enums"]["request_status"]
           title?: string
           updated_at?: string
@@ -1454,6 +1544,34 @@ export type Database = {
           years_experience: number
         }[]
       }
+      get_marketplace_requests: {
+        Args: { _is_top_tier?: boolean }
+        Returns: {
+          assigned_pilot_id: string | null
+          budget_cents: number | null
+          client_id: string
+          created_at: string
+          deadline: string | null
+          deliverables: string[]
+          description: string | null
+          id: string
+          latitude: number | null
+          location_label: string | null
+          longitude: number | null
+          project_id: string | null
+          released_to_free_at: string
+          status: Database["public"]["Enums"]["request_status"]
+          title: string
+          updated_at: string
+          vertical: Database["public"]["Enums"]["industry_vertical"]
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "service_requests"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       get_public_pilots: {
         Args: never
         Returns: {
@@ -1465,6 +1583,28 @@ export type Database = {
           equipment: string[]
           hourly_rate_cents: number
           insured: boolean
+          part_107: boolean
+          pilot_id: string
+          portfolio_url: string
+          service_area_label: string
+          service_radius_km: number
+          skills: string[]
+          verticals: Database["public"]["Enums"]["industry_vertical"][]
+          years_experience: number
+        }[]
+      }
+      get_public_pilots_v2: {
+        Args: { _is_paid?: boolean }
+        Returns: {
+          avatar_url: string
+          bio: string
+          display_lat: number
+          display_lng: number
+          display_name: string
+          equipment: string[]
+          hourly_rate_cents: number
+          insured: boolean
+          is_redacted: boolean
           part_107: boolean
           pilot_id: string
           portfolio_url: string

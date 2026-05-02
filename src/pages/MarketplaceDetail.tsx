@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, MapPin, Calendar, Briefcase, Loader2, Check, X, Sparkles, ShieldCheck, Plane, MessageSquare, Pencil, Trash2 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,7 @@ export default function MarketplaceDetail() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [request, setRequest] = useState<ServiceRequest | null>(null);
   const [quotes, setQuotes] = useState<ServiceQuote[]>([]);
@@ -112,6 +113,33 @@ export default function MarketplaceDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
+  // Verify Stripe checkout return
+  useEffect(() => {
+    const sessionId = searchParams.get("session_id");
+    const paid = searchParams.get("paid");
+    if (paid === "1" && sessionId) {
+      (async () => {
+        try {
+          const { data, error } = await supabase.functions.invoke("verify-marketplace-payment", {
+            body: { session_id: sessionId },
+          });
+          if (error) throw error;
+          if (data?.paid) {
+            toast({ title: "Payment received", description: "Pilot has been assigned to your job." });
+            await refresh();
+          }
+        } catch (err: any) {
+          toast({ title: "Could not verify payment", description: err.message, variant: "destructive" });
+        } finally {
+          searchParams.delete("session_id");
+          searchParams.delete("paid");
+          setSearchParams(searchParams, { replace: true });
+        }
+      })();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -169,23 +197,18 @@ export default function MarketplaceDetail() {
   async function acceptQuote(quote: ServiceQuote) {
     if (!request) return;
     try {
-      const { error: qErr } = await supabase
-        .from("service_quotes")
-        .update({ status: "accepted" })
-        .eq("id", quote.id);
-      if (qErr) throw qErr;
-      const { error: rErr } = await supabase
-        .from("service_requests")
-        .update({
-          status: "assigned",
-          assigned_pilot_id: quote.pilot_id,
-        })
-        .eq("id", request.id);
-      if (rErr) throw rErr;
-      toast({ title: "Pilot assigned" });
-      await refresh();
+      toast({ title: "Redirecting to secure checkout…" });
+      const { data, error } = await supabase.functions.invoke("create-marketplace-checkout", {
+        body: { quote_id: quote.id },
+      });
+      if (error) throw error;
+      if (data?.url) {
+        window.location.href = data.url;
+      } else if (data?.error) {
+        throw new Error(data.error);
+      }
     } catch (err: any) {
-      toast({ title: "Could not accept", description: err.message, variant: "destructive" });
+      toast({ title: "Could not start checkout", description: err.message, variant: "destructive" });
     }
   }
 
