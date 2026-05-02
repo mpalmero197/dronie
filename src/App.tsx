@@ -41,6 +41,7 @@ import PilotSignup from "./pages/PilotSignup.tsx";
 import PilotVerification from "./pages/PilotVerification.tsx";
 import PilotDashboard from "./pages/PilotDashboard.tsx";
 import PilotsMap from "./pages/PilotsMap.tsx";
+import PilotPayouts from "./pages/PilotPayouts.tsx";
 import Organizations from "./pages/Organizations.tsx";
 import OrgDetail from "./pages/OrgDetail.tsx";
 import AcceptOrgInvite from "./pages/AcceptOrgInvite.tsx";
