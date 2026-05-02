@@ -3,13 +3,14 @@ import { Link } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, Popup, Circle } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { Plane, ShieldCheck, Award, MapPin, Loader2, Briefcase } from "lucide-react";
+import { Plane, ShieldCheck, Award, MapPin, Loader2, Briefcase, Lock } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { VERTICAL_LABELS, type IndustryVertical } from "@/lib/marketplace";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface PublicPilot {
   pilot_id: string;
@@ -28,6 +29,7 @@ interface PublicPilot {
   insured: boolean;
   portfolio_url: string | null;
   avatar_url: string | null;
+  is_redacted?: boolean;
 }
 
 function escapeHtml(s: string) {
@@ -60,15 +62,17 @@ export default function PilotsMap() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [vertical, setVertical] = useState<IndustryVertical | "all">("all");
+  const { isSubscribed } = useAuth();
+  const isPaid = !!isSubscribed;
 
   useEffect(() => {
     (async () => {
-      const { data, error } = await supabase.rpc("get_public_pilots");
+      const { data, error } = await supabase.rpc("get_public_pilots_v2", { _is_paid: isPaid });
       if (error) console.error(error);
       setPilots((data ?? []) as unknown as PublicPilot[]);
       setLoading(false);
     })();
-  }, []);
+  }, [isPaid]);
 
   const filtered = useMemo(() => {
     return pilots.filter((p) => {
@@ -101,6 +105,12 @@ export default function PilotsMap() {
                 Browse Dronie pilots near you. Pin locations are intentionally shifted by a few miles for privacy — contact a
                 pilot to coordinate the exact site.
               </p>
+              {!isPaid && (
+                <p className="mt-3 text-xs text-amber-600 flex items-center gap-1.5">
+                  <Lock className="w-3.5 h-3.5" />
+                  Pilot names &amp; contact info are hidden. <Link to="/#pricing" className="underline font-semibold">Upgrade</Link> to unlock.
+                </p>
+              )}
             </div>
             <div className="flex gap-2">
               <Link to="/marketplace/new">
