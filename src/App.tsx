@@ -73,6 +73,7 @@ const App = () => (
             <Route path="/terms" element={<TermsOfService />} />
             <Route path="/plan" element={<PlanWizard />} />
             <Route path="/missions" element={<SavedMissions />} />
+            <Route path="/pilot/payouts" element={<PilotPayouts />} />
             <Route path="/workflow" element={<Workflow />} />
             <Route path="/swarm" element={<SwarmOrchestration />} />
             <Route path="/reality" element={<RealityCapture />} />
