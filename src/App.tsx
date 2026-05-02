@@ -90,6 +90,7 @@ const App = () => (
             <Route path="/marketplace" element={<Marketplace />} />
             <Route path="/marketplace/new" element={<MarketplaceNew />} />
             <Route path="/marketplace/inbox" element={<MarketplaceInbox />} />
+            <Route path="/marketplace/:id/edit" element={<MarketplaceNew />} />
             <Route path="/marketplace/:id" element={<MarketplaceDetail />} />
             <Route path="/solutions/:vertical" element={<VerticalLanding />} />
             <Route path="/pilots/join" element={<PilotSignup />} />

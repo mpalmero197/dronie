@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams, Link } from "react-router-dom";
+import { useNavigate, useSearchParams, useParams, Link } from "react-router-dom";
 import { ArrowLeft, Loader2, Plus, X } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,8 @@ export default function MarketplaceNew() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [params] = useSearchParams();
+  const { id: editId } = useParams<{ id: string }>();
+  const isEditing = !!editId;
   const { toast } = useToast();
 
   const [title, setTitle] = useState("");
@@ -43,6 +45,7 @@ export default function MarketplaceNew() {
   const [customDeliverable, setCustomDeliverable] = useState("");
   const [customDeliverables, setCustomDeliverables] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [loadingExisting, setLoadingExisting] = useState(isEditing);
 
   const deliverablesByCategory = useMemo(() => {
     const map = new Map<string, typeof DELIVERABLE_OPTIONS>();
@@ -57,6 +60,41 @@ export default function MarketplaceNew() {
   useEffect(() => {
     if (!authLoading && !user) navigate("/auth");
   }, [user, authLoading, navigate]);
+
+  useEffect(() => {
+    if (!isEditing || !user || !editId) return;
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from("service_requests")
+        .select("*")
+        .eq("id", editId)
+        .maybeSingle();
+      if (cancelled) return;
+      if (error || !data) {
+        toast({ title: "Could not load request", variant: "destructive" });
+        navigate("/marketplace");
+        return;
+      }
+      if (data.client_id !== user.id) {
+        toast({ title: "You can only edit your own requests", variant: "destructive" });
+        navigate(`/marketplace/${editId}`);
+        return;
+      }
+      setTitle(data.title ?? "");
+      setDescription(data.description ?? "");
+      setVertical((data.vertical as IndustryVertical) ?? "other");
+      setLocation(data.location_label ?? "");
+      setBudget(data.budget_cents != null ? String(data.budget_cents / 100) : "");
+      setDeadline(data.deadline ?? "");
+      const allLabels = new Set(DELIVERABLE_OPTIONS.map((d) => d.label));
+      const incoming = (data.deliverables ?? []) as string[];
+      setDeliverables(incoming);
+      setCustomDeliverables(incoming.filter((v) => !allLabels.has(v)));
+      setLoadingExisting(false);
+    })();
+    return () => { cancelled = true; };
+  }, [isEditing, user, editId, navigate, toast]);
 
   function toggleDeliverable(id: string) {
     setDeliverables((prev) =>
@@ -90,17 +128,30 @@ export default function MarketplaceNew() {
     }
     setSubmitting(true);
     try {
+      const payload = {
+        title: title.trim(),
+        description: description.trim() || null,
+        vertical,
+        location_label: location.trim() || null,
+        budget_cents: budget ? Math.round(parseFloat(budget) * 100) : null,
+        deadline: deadline || null,
+        deliverables,
+      };
+      if (isEditing && editId) {
+        const { error } = await supabase
+          .from("service_requests")
+          .update(payload)
+          .eq("id", editId);
+        if (error) throw error;
+        toast({ title: "Request updated" });
+        navigate(`/marketplace/${editId}`);
+        return;
+      }
       const { data, error } = await supabase
         .from("service_requests")
         .insert({
           client_id: user.id,
-          title: title.trim(),
-          description: description.trim() || null,
-          vertical,
-          location_label: location.trim() || null,
-          budget_cents: budget ? Math.round(parseFloat(budget) * 100) : null,
-          deadline: deadline || null,
-          deliverables,
+          ...payload,
         })
         .select("id")
         .single();
@@ -108,7 +159,7 @@ export default function MarketplaceNew() {
       toast({ title: "Request posted", description: "Pilots can now submit quotes." });
       navigate(`/marketplace/${data.id}`);
     } catch (err: any) {
-      toast({ title: "Could not post", description: err.message, variant: "destructive" });
+      toast({ title: isEditing ? "Could not update" : "Could not post", description: err.message, variant: "destructive" });
     } finally {
       setSubmitting(false);
     }
@@ -122,11 +173,16 @@ export default function MarketplaceNew() {
           <ArrowLeft className="w-4 h-4" /> Back to marketplace
         </Link>
 
-        <h1 className="text-3xl font-display font-700 text-foreground mb-2">Post a request</h1>
+        <h1 className="text-3xl font-display font-700 text-foreground mb-2">{isEditing ? "Edit request" : "Post a request"}</h1>
         <p className="text-muted-foreground mb-8">
-          Tell pilots what you need. You'll receive quotes within hours.
+          {isEditing ? "Update the details of your request below." : "Tell pilots what you need. You'll receive quotes within hours."}
         </p>
 
+        {loadingExisting ? (
+          <div className="flex items-center justify-center py-20 text-muted-foreground">
+            <Loader2 className="w-5 h-5 animate-spin mr-2" /> Loading…
+          </div>
+        ) : (
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
             <Label htmlFor="title">Title</Label>
@@ -276,11 +332,12 @@ export default function MarketplaceNew() {
 
           <Button type="submit" disabled={submitting} size="lg" className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-semibold">
             {submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-            Post request
+            {isEditing ? "Save changes" : "Post request"}
           </Button>
 
           <LiabilityNotice context="client" />
         </form>
+        )}
       </div>
     </div>
   );
