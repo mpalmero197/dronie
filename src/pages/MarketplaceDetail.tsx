@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, MapPin, Calendar, Briefcase, Loader2, Check, X, Sparkles, ShieldCheck, Plane, MessageSquare } from "lucide-react";
+import { ArrowLeft, MapPin, Calendar, Briefcase, Loader2, Check, X, Sparkles, ShieldCheck, Plane, MessageSquare, Pencil, Trash2 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,6 +48,7 @@ export default function MarketplaceDetail() {
   const [eta, setEta] = useState("");
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   async function refresh() {
     if (!id) return;
@@ -201,6 +202,24 @@ export default function MarketplaceDetail() {
     }
   }
 
+  async function deleteRequest() {
+    if (!request) return;
+    if (!confirm("Delete this request? This cannot be undone.")) return;
+    setDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("service_requests")
+        .delete()
+        .eq("id", request.id);
+      if (error) throw error;
+      toast({ title: "Request deleted" });
+      navigate("/marketplace");
+    } catch (err: any) {
+      toast({ title: "Could not delete", description: err.message, variant: "destructive" });
+      setDeleting(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -247,6 +266,25 @@ export default function MarketplaceDetail() {
                   {d}
                 </span>
               ))}
+            </div>
+          )}
+          {isOwner && (
+            <div className="flex flex-wrap gap-2 mt-5 pt-5 border-t border-border">
+              <Link to={`/marketplace/${request.id}/edit`}>
+                <Button size="sm" variant="outline" className="gap-1.5">
+                  <Pencil className="w-3.5 h-3.5" /> Edit request
+                </Button>
+              </Link>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={deleteRequest}
+                disabled={deleting}
+                className="gap-1.5 hover:border-destructive hover:text-destructive"
+              >
+                {deleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                Delete
+              </Button>
             </div>
           )}
         </div>
