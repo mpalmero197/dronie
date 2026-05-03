@@ -62,8 +62,8 @@ export default function PilotsMap() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [vertical, setVertical] = useState<IndustryVertical | "all">("all");
-  const { isSubscribed } = useAuth();
-  const isPaid = !!isSubscribed;
+  const { isSubscribed, isAdmin } = useAuth();
+  const isPaid = !!isSubscribed || !!isAdmin;
 
   useEffect(() => {
     (async () => {
