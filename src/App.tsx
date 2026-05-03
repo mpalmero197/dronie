@@ -42,6 +42,7 @@ import PilotVerification from "./pages/PilotVerification.tsx";
 import PilotDashboard from "./pages/PilotDashboard.tsx";
 import PilotsMap from "./pages/PilotsMap.tsx";
 import PilotPayouts from "./pages/PilotPayouts.tsx";
+import PilotPublicProfile from "./pages/PilotPublicProfile.tsx";
 import Organizations from "./pages/Organizations.tsx";
 import OrgDetail from "./pages/OrgDetail.tsx";
 import AcceptOrgInvite from "./pages/AcceptOrgInvite.tsx";
@@ -99,6 +100,7 @@ const App = () => (
             <Route path="/pilots/verify" element={<PilotVerification />} />
             <Route path="/pilots/dashboard" element={<PilotDashboard />} />
             <Route path="/pilots" element={<PilotsMap />} />
+            <Route path="/pilots/:pilotId" element={<PilotPublicProfile />} />
             <Route path="/orgs" element={<Organizations />} />
             <Route path="/orgs/accept" element={<AcceptOrgInvite />} />
             <Route path="/orgs/:id" element={<OrgDetail />} />
