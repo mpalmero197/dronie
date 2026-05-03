@@ -18,6 +18,8 @@ import {
   getMyPilotProfile,
   SKILL_OPTIONS,
   EQUIPMENT_OPTIONS,
+  SOFTWARE_OPTIONS,
+  LANGUAGE_OPTIONS,
   type PilotProfile,
 } from "@/lib/pilots";
 import { jitterCoord } from "@/lib/jitter";
@@ -115,6 +117,8 @@ export default function PilotSignup() {
   const [verticals, setVerticals] = useState<IndustryVertical[]>([]);
   const [skills, setSkills] = useState<string[]>([]);
   const [equipment, setEquipment] = useState<string[]>([]);
+  const [software, setSoftware] = useState<string[]>([]);
+  const [languages, setLanguages] = useState<string[]>([]);
   const [part107, setPart107] = useState(false);
   const [insured, setInsured] = useState(false);
   const [available, setAvailable] = useState(true);
@@ -147,6 +151,8 @@ export default function PilotSignup() {
           setVerticals(p.verticals);
           setSkills(p.skills);
           setEquipment(p.equipment);
+          setSoftware(p.software ?? []);
+          setLanguages(p.languages ?? []);
           setPart107(p.part_107);
           setInsured(p.insured);
           setAvailable(p.available);
@@ -208,6 +214,8 @@ export default function PilotSignup() {
       verticals,
       skills,
       equipment,
+      software,
+      languages,
       part_107: part107,
       insured,
       available,
@@ -448,6 +456,55 @@ export default function PilotSignup() {
               Pick every drone you fly by manufacturer and model — set the quantity if you operate multiple of the same model. Clients see your full fleet on your profile.
             </p>
             <FleetCatalogPicker value={equipment} onChange={setEquipment} />
+          </section>
+
+          {/* Software */}
+          <section className="bg-card rounded-2xl border border-border p-6 space-y-4">
+            <div>
+              <h2 className="font-display font-700 text-foreground">Software you use</h2>
+              <p className="text-xs text-muted-foreground mt-1">
+                Photogrammetry, GIS, mission planning, editing — anything you fly or process with.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {SOFTWARE_OPTIONS.map((s) => (
+                <button
+                  type="button"
+                  key={s}
+                  onClick={() => setSoftware((p) => toggle(p, s))}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                    software.includes(s) ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground hover:bg-secondary/70"
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+            <p className="text-[11px] text-muted-foreground">{software.length}/20 selected</p>
+          </section>
+
+          {/* Languages */}
+          <section className="bg-card rounded-2xl border border-border p-6 space-y-4">
+            <div>
+              <h2 className="font-display font-700 text-foreground">Languages</h2>
+              <p className="text-xs text-muted-foreground mt-1">
+                Help international clients find a pilot they can communicate with.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {LANGUAGE_OPTIONS.map((l) => (
+                <button
+                  type="button"
+                  key={l}
+                  onClick={() => setLanguages((p) => toggle(p, l))}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                    languages.includes(l) ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground hover:bg-secondary/70"
+                  }`}
+                >
+                  {l}
+                </button>
+              ))}
+            </div>
           </section>
 
           {/* Compliance + Availability */}

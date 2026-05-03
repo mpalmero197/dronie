@@ -18,6 +18,8 @@ export interface PilotProfile {
   verticals: IndustryVertical[];
   skills: string[];
   equipment: string[];
+  software: string[];
+  languages: string[];
   part_107: boolean;
   insured: boolean;
   available: boolean;
@@ -105,6 +107,64 @@ export const EQUIPMENT_OPTIONS = [
   "Custom / FPV rig",
 ];
 
+export const SOFTWARE_OPTIONS = [
+  // Photogrammetry / mapping
+  "Pix4Dmapper",
+  "Pix4Dmatic",
+  "Agisoft Metashape",
+  "DroneDeploy",
+  "DJI Terra",
+  "RealityCapture",
+  "WebODM / OpenDroneMap",
+  "Bentley ContextCapture",
+  "Esri Site Scan",
+  "Propeller",
+  // GIS / CAD
+  "ArcGIS",
+  "QGIS",
+  "AutoCAD / Civil 3D",
+  "Global Mapper",
+  "CloudCompare",
+  // Mission planning
+  "DJI Pilot 2",
+  "DJI Fly",
+  "Litchi",
+  "UgCS",
+  "Dronelink",
+  // Photo / video editing
+  "Adobe Lightroom",
+  "Adobe Photoshop",
+  "Adobe Premiere Pro",
+  "DaVinci Resolve",
+  "Final Cut Pro",
+  "Capture One",
+  // Splats / 3D
+  "Postshot",
+  "Polycam",
+  "Luma AI",
+];
+
+export const LANGUAGE_OPTIONS = [
+  "English",
+  "Spanish",
+  "Portuguese",
+  "French",
+  "German",
+  "Italian",
+  "Dutch",
+  "Mandarin",
+  "Cantonese",
+  "Japanese",
+  "Korean",
+  "Hindi",
+  "Arabic",
+  "Russian",
+  "Polish",
+  "Turkish",
+  "Vietnamese",
+  "Tagalog",
+];
+
 export const pilotProfileSchema = z.object({
   display_name: z.string().trim().min(2, "Name must be at least 2 characters").max(80),
   contact_email: z
@@ -125,6 +185,8 @@ export const pilotProfileSchema = z.object({
   verticals: z.array(z.string()).max(8),
   skills: z.array(z.string().max(60)).max(20),
   equipment: z.array(z.string().max(60)).max(20),
+  software: z.array(z.string().max(60)).max(20),
+  languages: z.array(z.string().max(40)).max(15),
   part_107: z.boolean(),
   insured: z.boolean(),
   available: z.boolean(),
@@ -152,4 +214,39 @@ export async function findMatchingPilots(requestId: string) {
   });
   if (error) throw error;
   return (data ?? []) as MatchedPilot[];
+}
+
+export interface PublicPilotProfile {
+  pilot_id: string;
+  display_name: string;
+  bio: string | null;
+  service_area_label: string | null;
+  service_radius_km: number;
+  verticals: IndustryVertical[];
+  skills: string[];
+  equipment: string[];
+  software: string[];
+  languages: string[];
+  hourly_rate_cents: number | null;
+  years_experience: number;
+  part_107: boolean;
+  insured: boolean;
+  portfolio_url: string | null;
+  avatar_url: string | null;
+  username: string | null;
+  portfolio_published: boolean;
+  contact_email: string | null;
+  phone: string | null;
+  verification_status: string;
+  is_redacted: boolean;
+}
+
+export async function getPublicPilot(pilotId: string, isPaid: boolean) {
+  const { data, error } = await supabase.rpc("get_public_pilot", {
+    _pilot_id: pilotId,
+    _is_paid: isPaid,
+  });
+  if (error) throw error;
+  const row = (data as unknown as PublicPilotProfile[])?.[0];
+  return row ?? null;
 }

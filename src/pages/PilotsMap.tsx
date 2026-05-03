@@ -222,8 +222,8 @@ function PilotPopup({ p }: { p: PublicPilot }) {
           From <span className="font-semibold">${(p.hourly_rate_cents / 100).toFixed(0)}/hr</span>
         </p>
       )}
-      <Link to={`/marketplace/new`} className="block mt-2 text-xs text-primary font-semibold">
-        Hire this pilot →
+      <Link to={`/pilots/${p.pilot_id}`} className="block mt-2 text-xs text-primary font-semibold">
+        View profile →
       </Link>
     </div>
   );
@@ -231,7 +231,7 @@ function PilotPopup({ p }: { p: PublicPilot }) {
 
 function PilotCard({ p }: { p: PublicPilot }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-4">
+    <Link to={`/pilots/${p.pilot_id}`} className="block rounded-xl border border-border bg-card p-4 hover:border-primary/50 hover:shadow-md transition-all">
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-start gap-3 min-w-0">
           <Avatar src={p.avatar_url} name={p.display_name} size={40} />
@@ -256,7 +256,7 @@ function PilotCard({ p }: { p: PublicPilot }) {
           {p.verticals.slice(0, 3).map((v) => VERTICAL_LABELS[v]).join(" · ")}
         </p>
       )}
-    </div>
+    </Link>
   );
 }
 

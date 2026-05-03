@@ -614,6 +614,7 @@ export type Database = {
           hourly_rate_cents: number | null
           id: string
           insured: boolean
+          languages: string[]
           location_privacy: boolean
           part_107: boolean
           phone: string | null
@@ -624,6 +625,7 @@ export type Database = {
           service_radius_km: number
           show_on_map: boolean
           skills: string[]
+          software: string[]
           updated_at: string
           user_id: string
           verification_rejection_reason: string | null
@@ -645,6 +647,7 @@ export type Database = {
           hourly_rate_cents?: number | null
           id?: string
           insured?: boolean
+          languages?: string[]
           location_privacy?: boolean
           part_107?: boolean
           phone?: string | null
@@ -655,6 +658,7 @@ export type Database = {
           service_radius_km?: number
           show_on_map?: boolean
           skills?: string[]
+          software?: string[]
           updated_at?: string
           user_id: string
           verification_rejection_reason?: string | null
@@ -676,6 +680,7 @@ export type Database = {
           hourly_rate_cents?: number | null
           id?: string
           insured?: boolean
+          languages?: string[]
           location_privacy?: boolean
           part_107?: boolean
           phone?: string | null
@@ -686,6 +691,7 @@ export type Database = {
           service_radius_km?: number
           show_on_map?: boolean
           skills?: string[]
+          software?: string[]
           updated_at?: string
           user_id?: string
           verification_rejection_reason?: string | null
@@ -1572,6 +1578,33 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_public_pilot: {
+        Args: { _is_paid?: boolean; _pilot_id: string }
+        Returns: {
+          avatar_url: string
+          bio: string
+          contact_email: string
+          display_name: string
+          equipment: string[]
+          hourly_rate_cents: number
+          insured: boolean
+          is_redacted: boolean
+          languages: string[]
+          part_107: boolean
+          phone: string
+          pilot_id: string
+          portfolio_published: boolean
+          portfolio_url: string
+          service_area_label: string
+          service_radius_km: number
+          skills: string[]
+          software: string[]
+          username: string
+          verification_status: Database["public"]["Enums"]["pilot_verification_status"]
+          verticals: Database["public"]["Enums"]["industry_vertical"][]
+          years_experience: number
+        }[]
+      }
       get_public_pilots: {
         Args: never
         Returns: {
@@ -1605,12 +1638,14 @@ export type Database = {
           hourly_rate_cents: number
           insured: boolean
           is_redacted: boolean
+          languages: string[]
           part_107: boolean
           pilot_id: string
           portfolio_url: string
           service_area_label: string
           service_radius_km: number
           skills: string[]
+          software: string[]
           verticals: Database["public"]["Enums"]["industry_vertical"][]
           years_experience: number
         }[]
