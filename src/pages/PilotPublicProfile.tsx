@@ -89,8 +89,8 @@ function Section({
 export default function PilotPublicProfile() {
   const { pilotId } = useParams<{ pilotId: string }>();
   const navigate = useNavigate();
-  const { isSubscribed, user } = useAuth();
-  const isPaid = !!isSubscribed;
+  const { isSubscribed, isAdmin, user } = useAuth();
+  const isPaid = !!isSubscribed || !!isAdmin;
 
   const [pilot, setPilot] = useState<PublicPilotProfile | null>(null);
   const [loading, setLoading] = useState(true);
