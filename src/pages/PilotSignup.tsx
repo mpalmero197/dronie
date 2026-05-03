@@ -458,6 +458,55 @@ export default function PilotSignup() {
             <FleetCatalogPicker value={equipment} onChange={setEquipment} />
           </section>
 
+          {/* Software */}
+          <section className="bg-card rounded-2xl border border-border p-6 space-y-4">
+            <div>
+              <h2 className="font-display font-700 text-foreground">Software you use</h2>
+              <p className="text-xs text-muted-foreground mt-1">
+                Photogrammetry, GIS, mission planning, editing — anything you fly or process with.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {SOFTWARE_OPTIONS.map((s) => (
+                <button
+                  type="button"
+                  key={s}
+                  onClick={() => setSoftware((p) => toggle(p, s))}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                    software.includes(s) ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground hover:bg-secondary/70"
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+            <p className="text-[11px] text-muted-foreground">{software.length}/20 selected</p>
+          </section>
+
+          {/* Languages */}
+          <section className="bg-card rounded-2xl border border-border p-6 space-y-4">
+            <div>
+              <h2 className="font-display font-700 text-foreground">Languages</h2>
+              <p className="text-xs text-muted-foreground mt-1">
+                Help international clients find a pilot they can communicate with.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {LANGUAGE_OPTIONS.map((l) => (
+                <button
+                  type="button"
+                  key={l}
+                  onClick={() => setLanguages((p) => toggle(p, l))}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                    languages.includes(l) ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground hover:bg-secondary/70"
+                  }`}
+                >
+                  {l}
+                </button>
+              ))}
+            </div>
+          </section>
+
           {/* Compliance + Availability */}
           <section className="bg-card rounded-2xl border border-border p-6 space-y-4">
             <h2 className="font-display font-700 text-foreground">Credentials & availability</h2>
