@@ -18,6 +18,8 @@ import {
   getMyPilotProfile,
   SKILL_OPTIONS,
   EQUIPMENT_OPTIONS,
+  SOFTWARE_OPTIONS,
+  LANGUAGE_OPTIONS,
   type PilotProfile,
 } from "@/lib/pilots";
 import { jitterCoord } from "@/lib/jitter";
@@ -115,6 +117,8 @@ export default function PilotSignup() {
   const [verticals, setVerticals] = useState<IndustryVertical[]>([]);
   const [skills, setSkills] = useState<string[]>([]);
   const [equipment, setEquipment] = useState<string[]>([]);
+  const [software, setSoftware] = useState<string[]>([]);
+  const [languages, setLanguages] = useState<string[]>([]);
   const [part107, setPart107] = useState(false);
   const [insured, setInsured] = useState(false);
   const [available, setAvailable] = useState(true);
@@ -147,6 +151,8 @@ export default function PilotSignup() {
           setVerticals(p.verticals);
           setSkills(p.skills);
           setEquipment(p.equipment);
+          setSoftware(p.software ?? []);
+          setLanguages(p.languages ?? []);
           setPart107(p.part_107);
           setInsured(p.insured);
           setAvailable(p.available);
@@ -208,6 +214,8 @@ export default function PilotSignup() {
       verticals,
       skills,
       equipment,
+      software,
+      languages,
       part_107: part107,
       insured,
       available,
