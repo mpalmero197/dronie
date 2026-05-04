@@ -132,15 +132,23 @@
         "name": "What is Dronie?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Dronie is a drone photogrammetry platform that turns aerial imagery into georeferenced orthomosaics, 3D point clouds, DSMs, contour maps, and Gaussian splats — fully processed in the cloud. It also includes flight planning, fleet management, a pilot marketplace, and portfolio tools for professional drone operators."
+          "text": "Dronie is a cloud-based drone photogrammetry platform that turns aerial imagery into georeferenced orthomosaics, 3D point clouds, digital surface models (DSM), digital terrain models (DTM), contour maps, and Gaussian splats. It also includes terrain-aware flight planning, fleet management with live telemetry, a pilot marketplace with Stripe Connect payouts, and a public portfolio site for every operator at dronieapp.com/u/your-name."
         }
       },
       {
         "@type": "Question",
-        "name": "How does Dronie work?",
+        "name": "How does drone photogrammetry work on Dronie?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Plan a mission on the map with terrain-aware flight paths, fly with your drone, then upload the imagery to Dronie. Our processing pipeline (powered by WebODM and Gaussian splatting) generates orthomosaics, point clouds, DSMs, contours, and 3D models that you can review, share, and embed."
+          "text": "You plan a survey on the in-app map with terrain-following waypoints, fly the mission with any DJI, Autel, Parrot, or senseFly drone, then drag-and-drop the JPEGs or TIFFs into a project. Our pipeline runs Structure-from-Motion (SfM) and Multi-View Stereo (MVS) on the imagery to align cameras, build a dense point cloud, and stitch a georeferenced orthomosaic. Outputs are exported as GeoTIFF, LAS/LAZ, SHP, DXF, and KMZ — compatible with ArcGIS, QGIS, AutoCAD, and CloudCompare."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How is Dronie different from DroneDeploy or Maps Made Easy?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Dronie is faster and significantly cheaper than DroneDeploy and Maps Made Easy for the same outputs. There is no desktop install, no per-image surcharge on the free tier, and Gaussian splat training is included on paid plans — most competitors charge separately or do not support splats at all. Dronie also bundles a public pilot marketplace, portfolio sites, and fleet telemetry that traditional photogrammetry tools do not offer."
         }
       },
       {
@@ -148,7 +156,31 @@
         "name": "How much does Dronie cost?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Dronie offers a free tier to try the platform plus paid plans for professional pilots and teams that unlock larger projects, faster processing, fleet features, and Gaussian splat training. See the pricing page on dronieapp.com for current tiers."
+          "text": "The Free plan includes 3 projects per month with up to 500 images per project — no credit card required. The Professional plan is $49/month and unlocks unlimited projects, priority processing, 50 GB of storage, and Gaussian splat training. The Enterprise plan is $149/month and adds unlimited images per project, API access, a white-label embeddable viewer, and an SLA guarantee. Marketplace clients pay a flat 1% platform fee on top of the pilot's quoted price."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What file formats and drones are supported?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Dronie accepts JPEG, TIFF, and DNG imagery from any consumer or enterprise UAV, including the full DJI lineup (Mavic, Air, Mini, Phantom, Matrice), Autel EVO series, Parrot Anafi, and senseFly eBee. Outputs include GeoTIFF orthomosaics, LAS/LAZ point clouds, GeoTIFF DSM and DTM rasters, SHP/DXF/KMZ contour lines, .ply / .splat / .ksplat Gaussian splats, and a one-page flight report PDF."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Is Dronie compliant with FAA Part 107 and LAANC?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. Dronie's compliance dashboard tracks Part 107 certifications, biennial recurrent training dates, drone registration numbers, and maintenance cycles. Flight planning includes built-in LAANC airspace classification overlays so you can confirm controlled-airspace authorization before launch. Pilot data is stored encrypted and is GDPR-friendly."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Can I hire a drone pilot through Dronie?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. The Dronie Marketplace connects clients with verified Part 107 pilots worldwide. Browse the live pilot map, view public portfolios, request a quote, and pay securely through Stripe Connect — pilots receive their full asking price and the client pays a 1% connection fee. Higher subscription tiers get first access to new client requests."
         }
       }
     ]
