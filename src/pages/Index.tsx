@@ -5,6 +5,8 @@ import VerticalsSection from "@/components/VerticalsSection";
 import HowItWorksSection from "@/components/HowItWorksSection";
 import PricingSection from "@/components/PricingSection";
 import SplatHighlightSection from "@/components/SplatHighlightSection";
+import AboutContentSection from "@/components/AboutContentSection";
+import FaqSection from "@/components/FaqSection";
 import FooterSection from "@/components/FooterSection";
 import { useEffect } from "react";
 
@@ -20,11 +22,13 @@ export default function Index() {
       <Navbar />
       <main>
         <HeroSection />
+        <AboutContentSection />
         <FeaturesSection />
         <VerticalsSection />
         <HowItWorksSection />
         <SplatHighlightSection />
         <PricingSection />
+        <FaqSection />
       </main>
       <FooterSection />
     </div>
