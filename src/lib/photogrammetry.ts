@@ -6,6 +6,21 @@
 export type Quality = "low" | "medium" | "high" | "ultra";
 export type MeshType = "3d" | "2.5d" | "none";
 
+/** What each Quality tier actually maps to in the SfM/MVS pipeline.
+ *  Surfaced in the UI so users can stop guessing. */
+export const QUALITY_PROFILE: Record<Quality, {
+  imageScale: number;        // 1 = full res, 0.5 = half
+  depthmapResolution: number;// MVS depthmap pixels
+  meshOctreeDepth: number;
+  meshSize: number;
+  description: string;
+}> = {
+  low:    { imageScale: 0.25, depthmapResolution: 320,  meshOctreeDepth: 9,  meshSize: 100_000, description: "Quarter resolution. Good for previews & flight checks." },
+  medium: { imageScale: 0.5,  depthmapResolution: 640,  meshOctreeDepth: 10, meshSize: 200_000, description: "Half resolution. Balanced for agriculture & corridor work." },
+  high:   { imageScale: 1.0,  depthmapResolution: 1280, meshOctreeDepth: 11, meshSize: 400_000, description: "Full resolution. Production-grade orthos & DSMs." },
+  ultra:  { imageScale: 1.0,  depthmapResolution: 2560, meshOctreeDepth: 12, meshSize: 800_000, description: "Full res + dense MVS. For inspection meshes & 3D models." },
+};
+
 export interface ProcessingSettings {
   quality: Quality;
   meshType: MeshType;
@@ -13,9 +28,13 @@ export interface ProcessingSettings {
   dtmEnabled: boolean;
   contoursEnabled: boolean;
   contourInterval: number;
-  outputFormat: "geotiff" | "ecw" | "jpg2000";
+  outputFormat: "geotiff" | "ecw" | "jpg2000" | "cog";
   pointDensity: number[];
   crs: string;
+  /** Vertical datum, separate from horizontal CRS. */
+  verticalDatum?: VerticalDatum;
+  /** Extra deliverables operators ask for. */
+  extraOutputs?: ExtraOutputId[];
   /** Optional advanced fields */
   targetGsdCm?: number;
   imageScale?: number;
@@ -30,7 +49,43 @@ export type PresetId =
   | "model3d"
   | "agriculture"
   | "volumetrics"
+  | "facade"
+  | "corridor"
+  | "heritage"
+  | "rtk_survey"
   | "custom";
+
+export type VerticalDatum =
+  | "ellipsoid"
+  | "egm96"
+  | "egm2008"
+  | "navd88";
+
+export const VERTICAL_DATUMS: { id: VerticalDatum; label: string; desc: string }[] = [
+  { id: "ellipsoid", label: "Ellipsoidal (WGS-84)", desc: "Raw GPS height. Use only if your downstream tool reprojects." },
+  { id: "egm96",     label: "EGM96 geoid",          desc: "Default for most global GIS workflows outside the US." },
+  { id: "egm2008",   label: "EGM2008 geoid",        desc: "Higher-resolution global geoid. Survey-grade." },
+  { id: "navd88",    label: "NAVD88 (US)",          desc: "North American Vertical Datum. Required for US site plans." },
+];
+
+export type ExtraOutputId =
+  | "obj"
+  | "fbx"
+  | "ply"
+  | "potree"
+  | "cesium3dtiles"
+  | "landxml"
+  | "citygml";
+
+export const EXTRA_OUTPUTS: { id: ExtraOutputId; label: string; desc: string }[] = [
+  { id: "obj",            label: "OBJ + MTL textured mesh", desc: "Blender, 3ds Max, Unreal." },
+  { id: "fbx",            label: "FBX textured mesh",       desc: "Game engines & VFX." },
+  { id: "ply",            label: "PLY point cloud",         desc: "CloudCompare, MeshLab." },
+  { id: "potree",         label: "Potree (web LAZ tiles)",  desc: "Stream point clouds in any browser." },
+  { id: "cesium3dtiles",  label: "Cesium 3D Tiles",         desc: "CesiumJS / NASA WorldWind globes." },
+  { id: "landxml",        label: "LandXML surface",         desc: "Civil 3D, Carlson, Trimble Business Center." },
+  { id: "citygml",        label: "CityGML LOD2",            desc: "Urban-planning & smart-city pipelines." },
+];
 
 export interface Preset {
   id: PresetId;
@@ -49,6 +104,8 @@ const base: Omit<ProcessingSettings, "preset"> = {
   outputFormat: "geotiff",
   pointDensity: [75],
   crs: "EPSG:4326",
+  verticalDatum: "egm96",
+  extraOutputs: [],
   targetGsdCm: 3,
   imageScale: 1,
   minFeatures: 10000,
@@ -75,6 +132,7 @@ export const PRESETS: Preset[] = [
       dtmEnabled: false,
       contoursEnabled: false,
       minFeatures: 20000,
+      extraOutputs: ["obj", "ply"],
     },
   },
   {
@@ -89,6 +147,7 @@ export const PRESETS: Preset[] = [
       dsmEnabled: false,
       dtmEnabled: false,
       contoursEnabled: false,
+      extraOutputs: ["obj", "fbx"],
     },
   },
   {
@@ -115,6 +174,68 @@ export const PRESETS: Preset[] = [
       pointDensity: [70],
       contourInterval: 0.5,
       contoursEnabled: true,
+      extraOutputs: ["landxml"],
+    },
+  },
+  {
+    id: "facade",
+    label: "Façade / Vertical",
+    description: "Building elevations and tall structures. Orbit + nadir mix.",
+    settings: {
+      ...base,
+      quality: "ultra",
+      meshType: "3d",
+      pointDensity: [90],
+      dsmEnabled: false,
+      dtmEnabled: false,
+      contoursEnabled: false,
+      minFeatures: 25000,
+      matcher: "bruteforce",
+      extraOutputs: ["obj", "fbx"],
+    },
+  },
+  {
+    id: "corridor",
+    label: "Linear corridor",
+    description: "Roads, railways, powerlines. Optimised for narrow strips.",
+    settings: {
+      ...base,
+      quality: "high",
+      meshType: "2.5d",
+      pointDensity: [60],
+      contourInterval: 0.5,
+      minFeatures: 15000,
+      extraOutputs: ["landxml"],
+    },
+  },
+  {
+    id: "heritage",
+    label: "Cultural heritage",
+    description: "Statues, archaeology, museum pieces. Color-faithful mesh.",
+    settings: {
+      ...base,
+      quality: "ultra",
+      meshType: "3d",
+      pointDensity: [100],
+      dsmEnabled: false,
+      dtmEnabled: false,
+      contoursEnabled: false,
+      matcher: "bruteforce",
+      extraOutputs: ["obj", "ply"],
+    },
+  },
+  {
+    id: "rtk_survey",
+    label: "RTK / PPK survey",
+    description: "RTK-tagged imagery. Skips heavy GCP optimisation.",
+    settings: {
+      ...base,
+      quality: "high",
+      meshType: "2.5d",
+      pointDensity: [70],
+      contourInterval: 0.25,
+      verticalDatum: "egm2008",
+      extraOutputs: ["landxml"],
     },
   },
   {

@@ -27,11 +27,20 @@ import { EstimatePanel } from "@/components/project/EstimatePanel";
 import { ImageQAReport } from "@/components/project/ImageQAReport";
 import { DeliverableCard } from "@/components/project/DeliverableCard";
 import { AccuracyReport, type AccuracyData } from "@/components/project/AccuracyReport";
+import { DroneCameraPicker } from "@/components/project/DroneCameraPicker";
+import { MissionCalculator } from "@/components/project/MissionCalculator";
+import { GcpAdvisor } from "@/components/project/GcpAdvisor";
+import { CrsPicker } from "@/components/project/CrsPicker";
+import { ExtraOutputsPicker } from "@/components/project/ExtraOutputsPicker";
+import { GENERIC_SPEC, type SensorSpec } from "@/lib/sensor-specs";
 import {
    PRESETS,
    DEFAULT_SETTINGS as PG_DEFAULT_SETTINGS,
    estimateProcessing,
    runImageQa,
+   QUALITY_PROFILE,
+   type VerticalDatum,
+   type ExtraOutputId,
    type PresetId,
    type ProcessingSettings as PgSettings,
    type GpsPoint,
@@ -201,6 +210,7 @@ export default function ProjectDetail() {
   const [presetId, setPresetId] = useState<PresetId>(
     (DEFAULT_SETTINGS.preset as PresetId) || "mapping"
   );
+  const [sensor, setSensor] = useState<SensorSpec>(GENERIC_SPEC);
 
   const fpInputRef = useRef<HTMLInputElement>(null);
   const imgInputRef = useRef<HTMLInputElement>(null);
@@ -763,6 +773,36 @@ export default function ProjectDetail() {
 
           {/* Right: Settings Panel */}
           <div className="space-y-6">
+            {/* Drone & sensor */}
+            <div className="bg-card rounded-2xl border border-border p-5 space-y-3">
+              <h2 className="font-display font-700 text-foreground flex items-center gap-2">
+                <ImageIcon className="w-4 h-4 text-primary" />
+                Drone &amp; sensor
+              </h2>
+              <p className="text-[11px] text-muted-foreground -mt-1">
+                Used for GSD math, RTK detection, and rolling-shutter warnings.
+              </p>
+              <DroneCameraPicker value={sensor} onChange={setSensor} disabled={isProcessing} />
+            </div>
+
+            {/* Mission calculator — pre-flight planning math */}
+            <MissionCalculator
+              spec={sensor}
+              initialAreaHa={project.area_ha}
+              initialGcps={gcps.length}
+            />
+
+            {/* GCP advisor */}
+            <GcpAdvisor
+              gcps={gcps.map((g) => ({
+                latitude: g.latitude,
+                longitude: g.longitude,
+                elevation: g.elevation,
+              }))}
+              areaHa={project.area_ha}
+              rtkEnabled={sensor.hasRtk}
+            />
+
             {/* Preset Picker */}
             <div className="bg-card rounded-2xl border border-border p-5 space-y-3">
               <h2 className="font-display font-700 text-foreground flex items-center gap-2">
@@ -809,6 +849,16 @@ export default function ProjectDetail() {
                     <SelectItem value="ultra">Ultra — Maximum detail</SelectItem>
                   </SelectContent>
                 </Select>
+                <div className="rounded-lg bg-secondary/40 border border-border p-2.5 text-[11px] text-muted-foreground space-y-1">
+                  <p className="text-foreground">
+                    {QUALITY_PROFILE[settings.quality].description}
+                  </p>
+                  <p className="font-mono">
+                    image_scale={QUALITY_PROFILE[settings.quality].imageScale} ·
+                    depthmap={QUALITY_PROFILE[settings.quality].depthmapResolution}px ·
+                    octree={QUALITY_PROFILE[settings.quality].meshOctreeDepth}
+                  </p>
+                </div>
               </div>
 
               {/* Point Density */}
@@ -845,25 +895,35 @@ export default function ProjectDetail() {
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="geotiff">GeoTIFF (.tif)</SelectItem>
+                    <SelectItem value="cog">Cloud-Optimized GeoTIFF</SelectItem>
                     <SelectItem value="ecw">ECW</SelectItem>
                     <SelectItem value="jpg2000">JPEG 2000</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              {/* CRS */}
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Coordinate System</Label>
-                <Select value={settings.crs} onValueChange={(v) => setSettings({ ...settings, crs: v })} disabled={isProcessing}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="EPSG:4326">WGS 84 (EPSG:4326)</SelectItem>
-                    <SelectItem value="EPSG:32637">UTM Zone 37N</SelectItem>
-                    <SelectItem value="EPSG:32636">UTM Zone 36N</SelectItem>
-                    <SelectItem value="EPSG:3857">Web Mercator</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* CRS + Vertical datum */}
+              <CrsPicker
+                horizontal={settings.crs}
+                vertical={(settings.verticalDatum as VerticalDatum) || "egm96"}
+                onHorizontalChange={(epsg) => setSettings({ ...settings, crs: epsg })}
+                onVerticalChange={(d) => setSettings({ ...settings, verticalDatum: d })}
+                centroid={(() => {
+                  const pts = (project.gps_points as any[]) || [];
+                  if (!Array.isArray(pts) || pts.length === 0) return null;
+                  const lat = pts.reduce((s, p) => s + (p.lat ?? 0), 0) / pts.length;
+                  const lng = pts.reduce((s, p) => s + (p.lng ?? 0), 0) / pts.length;
+                  return { lat, lng };
+                })()}
+                disabled={isProcessing}
+              />
+
+              {/* Extra deliverables */}
+              <ExtraOutputsPicker
+                value={(settings.extraOutputs as ExtraOutputId[]) || []}
+                onChange={(next) => setSettings({ ...settings, extraOutputs: next })}
+                disabled={isProcessing}
+              />
 
               <div className="border-t border-border pt-4 space-y-3">
                 <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Output Layers</Label>
