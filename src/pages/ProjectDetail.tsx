@@ -210,6 +210,7 @@ export default function ProjectDetail() {
   const [presetId, setPresetId] = useState<PresetId>(
     (DEFAULT_SETTINGS.preset as PresetId) || "mapping"
   );
+  const [sensor, setSensor] = useState<SensorSpec>(GENERIC_SPEC);
 
   const fpInputRef = useRef<HTMLInputElement>(null);
   const imgInputRef = useRef<HTMLInputElement>(null);
