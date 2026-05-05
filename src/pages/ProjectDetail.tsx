@@ -27,11 +27,20 @@ import { EstimatePanel } from "@/components/project/EstimatePanel";
 import { ImageQAReport } from "@/components/project/ImageQAReport";
 import { DeliverableCard } from "@/components/project/DeliverableCard";
 import { AccuracyReport, type AccuracyData } from "@/components/project/AccuracyReport";
+import { DroneCameraPicker } from "@/components/project/DroneCameraPicker";
+import { MissionCalculator } from "@/components/project/MissionCalculator";
+import { GcpAdvisor } from "@/components/project/GcpAdvisor";
+import { CrsPicker } from "@/components/project/CrsPicker";
+import { ExtraOutputsPicker } from "@/components/project/ExtraOutputsPicker";
+import { GENERIC_SPEC, type SensorSpec } from "@/lib/sensor-specs";
 import {
    PRESETS,
    DEFAULT_SETTINGS as PG_DEFAULT_SETTINGS,
    estimateProcessing,
    runImageQa,
+   QUALITY_PROFILE,
+   type VerticalDatum,
+   type ExtraOutputId,
    type PresetId,
    type ProcessingSettings as PgSettings,
    type GpsPoint,
