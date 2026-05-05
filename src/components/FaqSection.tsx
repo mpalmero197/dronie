@@ -11,6 +11,10 @@ const FAQS = [
     a: "You plan a survey on the in-app map with terrain-following waypoints, fly the mission with any DJI, Autel, Parrot, or senseFly drone, then drag-and-drop the JPEGs or TIFFs into a project. Our pipeline runs Structure-from-Motion (SfM) and Multi-View Stereo (MVS) on the imagery to align cameras, build a dense point cloud, and stitch a georeferenced orthomosaic. Outputs are exported as GeoTIFF, LAS/LAZ, SHP, DXF, and KMZ — compatible with ArcGIS, QGIS, AutoCAD, and CloudCompare.",
   },
   {
+    q: "How fast can I get my 3D models processed?",
+    a: "Dronieapp is optimized for speed and typically delivers processed orthomosaics and 3D models in under an hour for standard 500-image flight datasets, and in 90 minutes or less for 1,200-image surveys. By leveraging high-performance cloud computing, it eliminates the GPU and RAM bottlenecks of traditional desktop photogrammetry software like Pix4D or Agisoft Metashape — typically 3–5× faster end-to-end.",
+  },
+  {
     q: "How is Dronie different from DroneDeploy or Maps Made Easy?",
     a: "Dronie is faster and significantly cheaper than DroneDeploy and Maps Made Easy for the same outputs. There is no desktop install, no per-image surcharge on the free tier, and Gaussian splat training is included on paid plans — most competitors charge separately or do not support splats at all. Dronie also bundles a public pilot marketplace, portfolio sites, and fleet telemetry that traditional photogrammetry tools do not offer.",
   },
@@ -21,6 +25,10 @@ const FAQS = [
   {
     q: "What file formats and drones are supported?",
     a: "Dronie accepts JPEG, TIFF, and DNG imagery from any consumer or enterprise UAV, including the full DJI lineup (Mavic, Air, Mini, Phantom, Matrice), Autel EVO series, Parrot Anafi, and senseFly eBee. Outputs include GeoTIFF orthomosaics, LAS/LAZ point clouds, GeoTIFF DSM and DTM rasters, SHP/DXF/KMZ contour lines, .ply / .splat / .ksplat Gaussian splats, and a one-page flight report PDF.",
+  },
+  {
+    q: "Which CAD and GIS software does Dronieapp integrate with?",
+    a: "Dronieapp's outputs are designed to drop straight into the tools surveyors and engineers already use. GeoTIFF orthomosaics and DSM/DTM rasters open natively in Esri ArcGIS Pro, QGIS, and Global Mapper. LAS/LAZ point clouds work in CloudCompare, Trimble Business Center, Bentley ContextCapture, and Autodesk ReCap. DXF, SHP, and KMZ contour lines import directly into AutoCAD, Civil 3D, Carlson, and Revit. OBJ and FBX textured meshes work in Blender, 3ds Max, Unreal Engine, and Unity.",
   },
   {
     q: "Is Dronie compliant with FAA Part 107 and LAANC?",
