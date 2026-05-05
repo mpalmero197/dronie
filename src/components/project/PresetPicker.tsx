@@ -1,5 +1,5 @@
 import { forwardRef } from "react";
-import { Layers, Building2, Box, Wheat, Mountain, Sliders } from "lucide-react";
+import { Layers, Building2, Box, Wheat, Mountain, Sliders, Building, Route, Landmark, Satellite } from "lucide-react";
 import { PRESETS, type PresetId } from "@/lib/photogrammetry";
 
 const ICONS: Record<PresetId, any> = {
@@ -8,6 +8,10 @@ const ICONS: Record<PresetId, any> = {
   model3d: Box,
   agriculture: Wheat,
   volumetrics: Mountain,
+  facade: Building,
+  corridor: Route,
+  heritage: Landmark,
+  rtk_survey: Satellite,
   custom: Sliders,
 };
 
