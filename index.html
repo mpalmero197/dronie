@@ -145,6 +145,14 @@
       },
       {
         "@type": "Question",
+        "name": "How fast can I get my 3D models processed?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Dronieapp is optimized for speed and typically delivers processed orthomosaics and 3D models in under an hour for standard 500-image flight datasets, and in 90 minutes or less for 1,200-image surveys. By leveraging high-performance cloud computing, it eliminates the GPU and RAM bottlenecks of traditional desktop photogrammetry software like Pix4D or Agisoft Metashape — typically 3–5× faster end-to-end."
+        }
+      },
+      {
+        "@type": "Question",
         "name": "How is Dronie different from DroneDeploy or Maps Made Easy?",
         "acceptedAnswer": {
           "@type": "Answer",
@@ -169,6 +177,14 @@
       },
       {
         "@type": "Question",
+        "name": "Which CAD and GIS software does Dronieapp integrate with?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Dronieapp's outputs are designed to drop straight into the tools surveyors and engineers already use. GeoTIFF orthomosaics and DSM/DTM rasters open natively in Esri ArcGIS Pro, QGIS, and Global Mapper. LAS/LAZ point clouds work in CloudCompare, Trimble Business Center, Bentley ContextCapture, and Autodesk ReCap. DXF, SHP, and KMZ contour lines import directly into AutoCAD, Civil 3D, Carlson, and Revit. OBJ and FBX textured meshes work in Blender, 3ds Max, Unreal Engine, and Unity."
+        }
+      },
+      {
+        "@type": "Question",
         "name": "Is Dronie compliant with FAA Part 107 and LAANC?",
         "acceptedAnswer": {
           "@type": "Answer",
@@ -182,6 +198,51 @@
           "@type": "Answer",
           "text": "Yes. The Dronie Marketplace connects clients with verified Part 107 pilots worldwide. Browse the live pilot map, view public portfolios, request a quote, and pay securely through Stripe Connect — pilots receive their full asking price and the client pays a 1% connection fee. Higher subscription tiers get first access to new client requests."
         }
+      }
+    ]
+  }
+  </script>
+
+  <!-- Structured data: HowTo -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "HowTo",
+    "name": "How to create 3D maps with Dronieapp",
+    "description": "Plan a drone flight, upload imagery to the cloud, refine the 3D point cloud, and export GIS/CAD-ready deliverables using Dronieapp's drone photogrammetry software.",
+    "totalTime": "PT1H",
+    "tool": [
+      { "@type": "HowToTool", "name": "Any DJI, Autel, Parrot, or senseFly UAV" },
+      { "@type": "HowToTool", "name": "Dronieapp account (free or paid)" }
+    ],
+    "step": [
+      {
+        "@type": "HowToStep",
+        "position": 1,
+        "name": "Plan and execute the drone flight",
+        "text": "Use Dronieapp's terrain-aware flight planner to set 75% front overlap and 65% side overlap at a constant ground sampling distance (GSD). Export to DJI Fly KMZ, Litchi CSV, or UgCS and fly the mission autonomously.",
+        "url": "https://dronieapp.com/#photogrammetry-guide"
+      },
+      {
+        "@type": "HowToStep",
+        "position": 2,
+        "name": "Upload to the cloud and auto-stitch",
+        "text": "Drag JPEG, TIFF, or DNG files into a Dronieapp project. The pipeline auto-detects EXIF GPS, RTK/PPK corrections, and camera calibration, then runs Structure-from-Motion and Multi-View Stereo automatically.",
+        "url": "https://dronieapp.com/#photogrammetry-guide"
+      },
+      {
+        "@type": "HowToStep",
+        "position": 3,
+        "name": "Refine the 3D point cloud and mesh",
+        "text": "Trim noisy edges, classify ground points, drop ground control points (GCPs) for sub-centimeter accuracy, and regenerate the textured mesh server-side in one click.",
+        "url": "https://dronieapp.com/#photogrammetry-guide"
+      },
+      {
+        "@type": "HowToStep",
+        "position": 4,
+        "name": "Export precise GIS and CAD data",
+        "text": "Download GeoTIFF orthomosaics, LAS/LAZ point clouds, DSM/DTM rasters, SHP/DXF/KMZ contour lines, OBJ/FBX textured meshes, and Gaussian splats. Outputs open natively in ArcGIS, QGIS, AutoCAD, Civil 3D, Revit, and CloudCompare.",
+        "url": "https://dronieapp.com/#photogrammetry-guide"
       }
     ]
   }

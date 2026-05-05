@@ -6,6 +6,7 @@ import HowItWorksSection from "@/components/HowItWorksSection";
 import PricingSection from "@/components/PricingSection";
 import SplatHighlightSection from "@/components/SplatHighlightSection";
 import AboutContentSection from "@/components/AboutContentSection";
+import PhotogrammetryGuideSection from "@/components/PhotogrammetryGuideSection";
 import FaqSection from "@/components/FaqSection";
 import FooterSection from "@/components/FooterSection";
 import { useEffect } from "react";
@@ -26,6 +27,7 @@ export default function Index() {
         <FeaturesSection />
         <VerticalsSection />
         <HowItWorksSection />
+        <PhotogrammetryGuideSection />
         <SplatHighlightSection />
         <PricingSection />
         <FaqSection />
