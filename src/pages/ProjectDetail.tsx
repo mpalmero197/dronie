@@ -773,6 +773,36 @@ export default function ProjectDetail() {
 
           {/* Right: Settings Panel */}
           <div className="space-y-6">
+            {/* Drone & sensor */}
+            <div className="bg-card rounded-2xl border border-border p-5 space-y-3">
+              <h2 className="font-display font-700 text-foreground flex items-center gap-2">
+                <ImageIcon className="w-4 h-4 text-primary" />
+                Drone &amp; sensor
+              </h2>
+              <p className="text-[11px] text-muted-foreground -mt-1">
+                Used for GSD math, RTK detection, and rolling-shutter warnings.
+              </p>
+              <DroneCameraPicker value={sensor} onChange={setSensor} disabled={isProcessing} />
+            </div>
+
+            {/* Mission calculator — pre-flight planning math */}
+            <MissionCalculator
+              spec={sensor}
+              initialAreaHa={project.area_ha}
+              initialGcps={gcps.length}
+            />
+
+            {/* GCP advisor */}
+            <GcpAdvisor
+              gcps={gcps.map((g) => ({
+                latitude: g.latitude,
+                longitude: g.longitude,
+                elevation: g.elevation,
+              }))}
+              areaHa={project.area_ha}
+              rtkEnabled={sensor.hasRtk}
+            />
+
             {/* Preset Picker */}
             <div className="bg-card rounded-2xl border border-border p-5 space-y-3">
               <h2 className="font-display font-700 text-foreground flex items-center gap-2">
