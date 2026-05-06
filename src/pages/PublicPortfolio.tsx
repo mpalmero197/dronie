@@ -509,11 +509,10 @@ export default function PublicPortfolio({ mode }: Props) {
             showStickyCta ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-4 pointer-events-none"
           }`}
         >
-          <a href={`mailto:${hireEmail}?subject=${encodeURIComponent(`Hiring inquiry for ${displayName}`)}`}>
-            <Button size="lg" className="gap-2 shadow-2xl shadow-primary/30 rounded-full px-5">
-              <Send className="w-4 h-4" /> Hire {profile.full_name?.split(" ")[0] || displayName}
-            </Button>
-          </a>
+          <MagneticHireButton
+            email={hireEmail}
+            label={profile.full_name?.split(" ")[0] || displayName}
+          />
         </div>
       )}
     </div>
