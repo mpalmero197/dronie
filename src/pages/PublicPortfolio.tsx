@@ -603,7 +603,7 @@ function PortfolioHero({
                 alt=""
                 aria-hidden
                 onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover portfolio-kenburns"
               />
             ) : (
               <div className="w-full h-full bg-gradient-to-br from-primary/30 via-background to-background" />
@@ -611,6 +611,9 @@ function PortfolioHero({
             <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-background/10" />
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_hsl(var(--primary)/0.25),_transparent_60%)]" />
           </div>
+
+          {/* Cinematic HUD overlay */}
+          <FilmHud count={allItemsCount} location={prefs.show_location ? profile.location : null} />
 
           <div className="relative h-full max-w-6xl mx-auto px-4 sm:px-6 flex items-end pb-10 sm:pb-16">
             <div className="max-w-2xl space-y-4">
