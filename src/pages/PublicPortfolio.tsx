@@ -21,6 +21,15 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   DEFAULT_THEME, ensureFontLoaded, normalizeTheme, themeStyle,
 } from "@/lib/portfolioTheme";
+import {
+  ScrollProgressBar,
+  MarqueeTape,
+  FilmHud,
+  MagneticHireButton,
+  SectionDots,
+  ProcessStrip,
+  EditorialHeading,
+} from "@/components/portfolio/PortfolioPolish";
 
 type Mode = "home" | "photos" | "videos" | "album";
 
@@ -267,11 +276,35 @@ export default function PublicPortfolio({ mode }: Props) {
       ? `$${Math.round(profile.hourly_rate_cents / 100).toLocaleString()}/hr`
       : null;
 
+  // Build the kinetic-typography marquee from real profile data so it
+  // never feels like filler. Falls back gracefully when fields are empty.
+  const marqueeItems: string[] = (() => {
+    const out: string[] = [];
+    (profile.services ?? []).filter(Boolean).slice(0, 6).forEach((s) => out.push(s));
+    if (prefs.show_location && profile.location) out.push(profile.location);
+    if (profile.available_for_hire && prefs.show_availability) out.push("Available for hire");
+    out.push("Aerial cinematography");
+    out.push("Drone photogrammetry");
+    return Array.from(new Set(out)).slice(0, 10);
+  })();
+
+  // Sections used by the right-side dot rail. Only included when present.
+  const dotSections: { id: string; label: string }[] = [];
+  if (mode === "home") {
+    dotSections.push({ id: "intro", label: "Intro" });
+    if (allItems.length > 0) dotSections.push({ id: "featured", label: "Featured" });
+    if (allItems.length > 0) dotSections.push({ id: "process", label: "Process" });
+    if (albums.length > 0) dotSections.push({ id: "albums", label: "Albums" });
+    dotSections.push({ id: "work", label: "Work" });
+  }
+
   return (
     <div
       className="min-h-screen bg-background text-foreground"
       style={themeStyle(theme)}
     >
+      <ScrollProgressBar />
+      {mode === "home" && <SectionDots sections={dotSections} />}
       {isOwner && isUnpublished && (
         <div className="bg-amber-500/10 border-b border-amber-500/30 text-amber-200">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 py-2.5 text-xs sm:text-sm flex flex-wrap items-center justify-between gap-2">
@@ -303,19 +336,27 @@ export default function PublicPortfolio({ mode }: Props) {
 
       {/* Hero / about */}
       {mode === "home" && (
-        <PortfolioHero
-          profile={profile}
-          prefs={prefs}
-          layout={layout}
-          theme={theme}
-          banner={banner}
-          items={items}
-          albums={albums}
-          displayName={displayName}
-          formattedRate={formattedRate}
-          hireEmail={hireEmail}
-          hasAnySocial={hasAnySocial}
-        />
+        <div id="intro">
+          <PortfolioHero
+            profile={profile}
+            prefs={prefs}
+            layout={layout}
+            theme={theme}
+            banner={banner}
+            items={items}
+            albums={albums}
+            displayName={displayName}
+            formattedRate={formattedRate}
+            hireEmail={hireEmail}
+            hasAnySocial={hasAnySocial}
+            allItemsCount={allItems.length}
+          />
+        </div>
+      )}
+
+      {/* Kinetic typography ribbon — sits flush against the hero. */}
+      {mode === "home" && marqueeItems.length > 0 && (
+        <MarqueeTape items={marqueeItems} />
       )}
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-10">
@@ -347,12 +388,27 @@ export default function PublicPortfolio({ mode }: Props) {
 
         {/* Featured reel — one large hero piece on top of the grid */}
         {mode === "home" && items.length > 0 && (
-          <FeaturedReel item={items[0]} onOpen={setLightbox} />
+          <div id="featured" className="scroll-mt-24">
+            <FeaturedReel item={items[0]} onOpen={setLightbox} />
+          </div>
+        )}
+
+        {/* Process strip — subtle social proof of professionalism. */}
+        {mode === "home" && allItems.length > 0 && (
+          <section id="process" className="space-y-5 scroll-mt-24">
+            <EditorialHeading
+              index="01"
+              eyebrow="How I work"
+              title="From brief to broadcast-ready"
+              subtitle="A repeatable, FAA-compliant process so every shoot lands on time and on spec."
+            />
+            <ProcessStrip />
+          </section>
         )}
 
         {/* Albums grid (home only) */}
         {mode === "home" && albums.length > 0 && (
-          <section className="space-y-4">
+          <section id="albums" className="space-y-4 scroll-mt-24">
             <SectionHeading
               eyebrow="Collections"
               title="Albums"
@@ -406,6 +462,7 @@ export default function PublicPortfolio({ mode }: Props) {
         )}
 
         {/* Featured / item grid */}
+        <div id="work" className="scroll-mt-24">
         <MediaGrid
           items={mode === "home" ? items.slice(1) : items}
           emptyLabel={
@@ -425,6 +482,7 @@ export default function PublicPortfolio({ mode }: Props) {
           username={profile.username}
           showSeeAll={mode === "home" && allItems.length > items.length}
         />
+        </div>
       </main>
 
       {prefs.show_powered_by && (
@@ -451,11 +509,10 @@ export default function PublicPortfolio({ mode }: Props) {
             showStickyCta ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-4 pointer-events-none"
           }`}
         >
-          <a href={`mailto:${hireEmail}?subject=${encodeURIComponent(`Hiring inquiry for ${displayName}`)}`}>
-            <Button size="lg" className="gap-2 shadow-2xl shadow-primary/30 rounded-full px-5">
-              <Send className="w-4 h-4" /> Hire {profile.full_name?.split(" ")[0] || displayName}
-            </Button>
-          </a>
+          <MagneticHireButton
+            email={hireEmail}
+            label={profile.full_name?.split(" ")[0] || displayName}
+          />
         </div>
       )}
     </div>
@@ -470,7 +527,7 @@ type PrefsT = ReturnType<typeof normalizePrefs>;
 
 function PortfolioHero({
   profile, prefs, layout, theme, banner, items, albums, displayName,
-  formattedRate, hireEmail, hasAnySocial,
+  formattedRate, hireEmail, hasAnySocial, allItemsCount,
 }: {
   profile: PortfolioProfile;
   prefs: PrefsT;
@@ -483,6 +540,7 @@ function PortfolioHero({
   formattedRate: string | null;
   hireEmail: string | null;
   hasAnySocial: boolean;
+  allItemsCount: number;
 }) {
   const firstItem = items.find((i) => i.thumb_url || i.media_url);
   const firstAlbumCover = albums.find((a) => a.cover_url)?.cover_url;
@@ -561,7 +619,7 @@ function PortfolioHero({
                 alt=""
                 aria-hidden
                 onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover portfolio-kenburns"
               />
             ) : (
               <div className="w-full h-full bg-gradient-to-br from-primary/30 via-background to-background" />
@@ -569,6 +627,9 @@ function PortfolioHero({
             <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-background/10" />
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_hsl(var(--primary)/0.25),_transparent_60%)]" />
           </div>
+
+          {/* Cinematic HUD overlay */}
+          <FilmHud count={allItemsCount} location={prefs.show_location ? profile.location : null} />
 
           <div className="relative h-full max-w-6xl mx-auto px-4 sm:px-6 flex items-end pb-10 sm:pb-16">
             <div className="max-w-2xl space-y-4">

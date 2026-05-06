@@ -164,3 +164,41 @@
   transform: translateX(0);
   filter: blur(0px);
 }
+
+/* ─── Portfolio cinematic motion ─────────────────────────────── */
+@keyframes portfolio-marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.portfolio-marquee-track {
+  animation: portfolio-marquee 40s linear infinite;
+  will-change: transform;
+}
+.portfolio-marquee:hover .portfolio-marquee-track {
+  animation-play-state: paused;
+}
+
+@keyframes portfolio-kenburns {
+  0%   { transform: scale(1.08) translate3d(0,0,0); }
+  50%  { transform: scale(1.18) translate3d(-1.5%, -1%, 0); }
+  100% { transform: scale(1.08) translate3d(0,0,0); }
+}
+.portfolio-kenburns {
+  animation: portfolio-kenburns 28s ease-in-out infinite;
+}
+
+@keyframes portfolio-blink {
+  0%, 60%  { opacity: 1; }
+  70%, 100% { opacity: 0.25; }
+}
+.portfolio-blink { animation: portfolio-blink 1.6s steps(2, end) infinite; }
+
+@keyframes portfolio-tape-wipe {
+  from { transform: translateY(101%); }
+  to   { transform: translateY(0); }
+}
+.portfolio-tape-wipe { animation: portfolio-tape-wipe 1.1s cubic-bezier(0.16,1,0.3,1) both; }
+
+/* Hide scrollbar inside the side-rail while keeping scroll capability */
+.portfolio-no-scrollbar::-webkit-scrollbar { display: none; }
+.portfolio-no-scrollbar { scrollbar-width: none; }

@@ -5,7 +5,7 @@
 export type PortfolioLayout = "cinematic" | "editorial" | "grid";
 export type PortfolioFontPair = "modern" | "editorial" | "mono" | "humanist";
 export type PortfolioColorSwatch =
-  | "forest" | "midnight" | "sunset" | "ocean" | "rose" | "mono";
+  | "forest" | "midnight" | "sunset" | "ocean" | "rose" | "mono" | "noir" | "bone";
 
 export interface PortfolioTheme {
   layout: PortfolioLayout;
@@ -64,6 +64,8 @@ export const SWATCHES: {
   { id: "ocean",    label: "Ocean",    accent: "188 90% 48%", bg: "200 50% 6%",  surface: "200 38% 10%", text: "190 30% 96%", muted: "200 16% 66%" },
   { id: "rose",     label: "Rose",     accent: "340 85% 62%", bg: "340 25% 7%",  surface: "340 22% 11%", text: "340 25% 97%", muted: "340 10% 66%" },
   { id: "mono",     label: "Mono",     accent: "0 0% 92%",    bg: "0 0% 6%",     surface: "0 0% 10%",    text: "0 0% 96%",    muted: "0 0% 62%" },
+  { id: "noir",     label: "Noir",     accent: "38 95% 60%",  bg: "0 0% 4%",     surface: "0 0% 8%",     text: "40 12% 95%",  muted: "40 8% 60%" },
+  { id: "bone",     label: "Bone",     accent: "20 25% 18%",  bg: "36 28% 94%",  surface: "36 22% 88%",  text: "20 18% 12%",  muted: "20 8% 38%" },
 ];
 
 export function normalizeTheme(raw: any): PortfolioTheme {
