@@ -21,6 +21,15 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   DEFAULT_THEME, ensureFontLoaded, normalizeTheme, themeStyle,
 } from "@/lib/portfolioTheme";
+import {
+  ScrollProgressBar,
+  MarqueeTape,
+  FilmHud,
+  MagneticHireButton,
+  SectionDots,
+  ProcessStrip,
+  EditorialHeading,
+} from "@/components/portfolio/PortfolioPolish";
 
 type Mode = "home" | "photos" | "videos" | "album";
 
