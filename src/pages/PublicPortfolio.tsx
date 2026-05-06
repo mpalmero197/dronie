@@ -388,12 +388,27 @@ export default function PublicPortfolio({ mode }: Props) {
 
         {/* Featured reel — one large hero piece on top of the grid */}
         {mode === "home" && items.length > 0 && (
-          <FeaturedReel item={items[0]} onOpen={setLightbox} />
+          <div id="featured" className="scroll-mt-24">
+            <FeaturedReel item={items[0]} onOpen={setLightbox} />
+          </div>
+        )}
+
+        {/* Process strip — subtle social proof of professionalism. */}
+        {mode === "home" && allItems.length > 0 && (
+          <section id="process" className="space-y-5 scroll-mt-24">
+            <EditorialHeading
+              index="01"
+              eyebrow="How I work"
+              title="From brief to broadcast-ready"
+              subtitle="A repeatable, FAA-compliant process so every shoot lands on time and on spec."
+            />
+            <ProcessStrip />
+          </section>
         )}
 
         {/* Albums grid (home only) */}
         {mode === "home" && albums.length > 0 && (
-          <section className="space-y-4">
+          <section id="albums" className="space-y-4 scroll-mt-24">
             <SectionHeading
               eyebrow="Collections"
               title="Albums"
@@ -447,6 +462,7 @@ export default function PublicPortfolio({ mode }: Props) {
         )}
 
         {/* Featured / item grid */}
+        <div id="work" className="scroll-mt-24">
         <MediaGrid
           items={mode === "home" ? items.slice(1) : items}
           emptyLabel={
@@ -466,6 +482,7 @@ export default function PublicPortfolio({ mode }: Props) {
           username={profile.username}
           showSeeAll={mode === "home" && allItems.length > items.length}
         />
+        </div>
       </main>
 
       {prefs.show_powered_by && (
