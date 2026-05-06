@@ -276,11 +276,35 @@ export default function PublicPortfolio({ mode }: Props) {
       ? `$${Math.round(profile.hourly_rate_cents / 100).toLocaleString()}/hr`
       : null;
 
+  // Build the kinetic-typography marquee from real profile data so it
+  // never feels like filler. Falls back gracefully when fields are empty.
+  const marqueeItems: string[] = (() => {
+    const out: string[] = [];
+    (profile.services ?? []).filter(Boolean).slice(0, 6).forEach((s) => out.push(s));
+    if (prefs.show_location && profile.location) out.push(profile.location);
+    if (profile.available_for_hire && prefs.show_availability) out.push("Available for hire");
+    out.push("Aerial cinematography");
+    out.push("Drone photogrammetry");
+    return Array.from(new Set(out)).slice(0, 10);
+  })();
+
+  // Sections used by the right-side dot rail. Only included when present.
+  const dotSections: { id: string; label: string }[] = [];
+  if (mode === "home") {
+    dotSections.push({ id: "intro", label: "Intro" });
+    if (allItems.length > 0) dotSections.push({ id: "featured", label: "Featured" });
+    if (allItems.length > 0) dotSections.push({ id: "process", label: "Process" });
+    if (albums.length > 0) dotSections.push({ id: "albums", label: "Albums" });
+    dotSections.push({ id: "work", label: "Work" });
+  }
+
   return (
     <div
       className="min-h-screen bg-background text-foreground"
       style={themeStyle(theme)}
     >
+      <ScrollProgressBar />
+      {mode === "home" && <SectionDots sections={dotSections} />}
       {isOwner && isUnpublished && (
         <div className="bg-amber-500/10 border-b border-amber-500/30 text-amber-200">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 py-2.5 text-xs sm:text-sm flex flex-wrap items-center justify-between gap-2">
