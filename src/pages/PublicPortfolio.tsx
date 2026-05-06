@@ -336,19 +336,27 @@ export default function PublicPortfolio({ mode }: Props) {
 
       {/* Hero / about */}
       {mode === "home" && (
-        <PortfolioHero
-          profile={profile}
-          prefs={prefs}
-          layout={layout}
-          theme={theme}
-          banner={banner}
-          items={items}
-          albums={albums}
-          displayName={displayName}
-          formattedRate={formattedRate}
-          hireEmail={hireEmail}
-          hasAnySocial={hasAnySocial}
-        />
+        <div id="intro">
+          <PortfolioHero
+            profile={profile}
+            prefs={prefs}
+            layout={layout}
+            theme={theme}
+            banner={banner}
+            items={items}
+            albums={albums}
+            displayName={displayName}
+            formattedRate={formattedRate}
+            hireEmail={hireEmail}
+            hasAnySocial={hasAnySocial}
+            allItemsCount={allItems.length}
+          />
+        </div>
+      )}
+
+      {/* Kinetic typography ribbon — sits flush against the hero. */}
+      {mode === "home" && marqueeItems.length > 0 && (
+        <MarqueeTape items={marqueeItems} />
       )}
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-10">
