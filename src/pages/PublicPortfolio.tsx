@@ -511,7 +511,7 @@ type PrefsT = ReturnType<typeof normalizePrefs>;
 
 function PortfolioHero({
   profile, prefs, layout, theme, banner, items, albums, displayName,
-  formattedRate, hireEmail, hasAnySocial,
+  formattedRate, hireEmail, hasAnySocial, allItemsCount,
 }: {
   profile: PortfolioProfile;
   prefs: PrefsT;
@@ -524,6 +524,7 @@ function PortfolioHero({
   formattedRate: string | null;
   hireEmail: string | null;
   hasAnySocial: boolean;
+  allItemsCount: number;
 }) {
   const firstItem = items.find((i) => i.thumb_url || i.media_url);
   const firstAlbumCover = albums.find((a) => a.cover_url)?.cover_url;
