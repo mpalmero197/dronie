@@ -1626,6 +1626,34 @@ export type Database = {
           years_experience: number
         }[]
       }
+      get_public_pilots_lite: {
+        Args: {
+          _is_paid?: boolean
+          _limit?: number
+          _max_lat?: number
+          _max_lng?: number
+          _min_lat?: number
+          _min_lng?: number
+          _offset?: number
+          _vertical?: Database["public"]["Enums"]["industry_vertical"]
+        }
+        Returns: {
+          avatar_url: string
+          display_lat: number
+          display_lng: number
+          display_name: string
+          hourly_rate_cents: number
+          insured: boolean
+          is_redacted: boolean
+          part_107: boolean
+          pilot_id: string
+          service_area_label: string
+          service_radius_km: number
+          total_count: number
+          verticals: Database["public"]["Enums"]["industry_vertical"][]
+          years_experience: number
+        }[]
+      }
       get_public_pilots_v2: {
         Args: { _is_paid?: boolean }
         Returns: {

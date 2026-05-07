@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, Popup, Circle } from "react-leaflet";
 import L from "leaflet";
@@ -15,21 +15,40 @@ import { useAuth } from "@/contexts/AuthContext";
 interface PublicPilot {
   pilot_id: string;
   display_name: string;
-  bio: string | null;
   service_area_label: string | null;
   display_lat: number;
   display_lng: number;
   service_radius_km: number;
   verticals: IndustryVertical[];
-  skills: string[];
-  equipment: string[];
   hourly_rate_cents: number | null;
   years_experience: number;
   part_107: boolean;
   insured: boolean;
-  portfolio_url: string | null;
   avatar_url: string | null;
   is_redacted?: boolean;
+  total_count?: number;
+}
+
+const PAGE_SIZE = 60;
+const CACHE_TTL_MS = 5 * 60 * 1000;
+
+function readCache(key: string): { ts: number; rows: PublicPilot[]; total: number } | null {
+  try {
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (Date.now() - parsed.ts > CACHE_TTL_MS) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+function writeCache(key: string, rows: PublicPilot[], total: number) {
+  try {
+    sessionStorage.setItem(key, JSON.stringify({ ts: Date.now(), rows, total }));
+  } catch {
+    /* quota — ignore */
+  }
 }
 
 function escapeHtml(s: string) {
@@ -60,34 +79,69 @@ function makePilotIcon(p: PublicPilot) {
 export default function PilotsMap() {
   const [pilots, setPilots] = useState<PublicPilot[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [total, setTotal] = useState(0);
   const [search, setSearch] = useState("");
   const [vertical, setVertical] = useState<IndustryVertical | "all">("all");
   const { isSubscribed, isAdmin } = useAuth();
   const isPaid = !!isSubscribed || !!isAdmin;
+  const reqId = useRef(0);
+
+  const cacheKey = useMemo(
+    () => `pilots_lite:v1:${isPaid ? "paid" : "anon"}:${vertical}`,
+    [isPaid, vertical],
+  );
+
+  const fetchPage = useCallback(
+    async (offset: number, append: boolean) => {
+      const myReq = ++reqId.current;
+      if (append) setLoadingMore(true);
+      else setLoading(true);
+      const { data, error } = await supabase.rpc("get_public_pilots_lite", {
+        _is_paid: isPaid,
+        _limit: PAGE_SIZE,
+        _offset: offset,
+        _vertical: vertical === "all" ? null : (vertical as IndustryVertical),
+      });
+      if (myReq !== reqId.current) return;
+      if (error) console.error(error);
+      const rows = (data ?? []) as unknown as PublicPilot[];
+      const t = rows[0]?.total_count ? Number(rows[0].total_count) : rows.length;
+      setTotal(t);
+      setPilots((prev) => {
+        const next = append ? [...prev, ...rows] : rows;
+        if (!append) writeCache(cacheKey, rows, t);
+        return next;
+      });
+      setLoading(false);
+      setLoadingMore(false);
+    },
+    [isPaid, vertical, cacheKey],
+  );
 
   useEffect(() => {
-    (async () => {
-      const { data, error } = await supabase.rpc("get_public_pilots_v2", { _is_paid: isPaid });
-      if (error) console.error(error);
-      setPilots((data ?? []) as unknown as PublicPilot[]);
+    const cached = readCache(cacheKey);
+    if (cached) {
+      setPilots(cached.rows);
+      setTotal(cached.total);
       setLoading(false);
-    })();
-  }, [isPaid]);
+      return;
+    }
+    void fetchPage(0, false);
+  }, [cacheKey, fetchPage]);
 
   const filtered = useMemo(() => {
     return pilots.filter((p) => {
-      if (vertical !== "all" && !p.verticals.includes(vertical)) return false;
       if (search) {
         const q = search.toLowerCase();
         return (
           p.display_name.toLowerCase().includes(q) ||
-          (p.service_area_label ?? "").toLowerCase().includes(q) ||
-          p.skills.some((s) => s.toLowerCase().includes(q))
+          (p.service_area_label ?? "").toLowerCase().includes(q)
         );
       }
       return true;
     });
-  }, [pilots, search, vertical]);
+  }, [pilots, search]);
 
   const center: [number, number] = pilots[0]
     ? [pilots[0].display_lat, pilots[0].display_lng]
@@ -146,7 +200,7 @@ export default function PilotsMap() {
               ))}
             </select>
             <span className="text-sm text-muted-foreground self-center">
-              {filtered.length} pilot{filtered.length === 1 ? "" : "s"}
+              {filtered.length} of {total} pilot{total === 1 ? "" : "s"}
             </span>
           </div>
         </header>
@@ -179,6 +233,20 @@ export default function PilotsMap() {
             {filtered.map((p) => (
               <PilotCard key={p.pilot_id} p={p} />
             ))}
+            {pilots.length < total && (
+              <Button
+                variant="outline"
+                className="w-full"
+                disabled={loadingMore}
+                onClick={() => fetchPage(pilots.length, true)}
+              >
+                {loadingMore ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Loading…</>
+                ) : (
+                  <>Load more pilots ({total - pilots.length} remaining)</>
+                )}
+              </Button>
+            )}
           </aside>
         </div>
       </div>
