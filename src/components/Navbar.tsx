@@ -67,16 +67,23 @@ export default function Navbar() {
 
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-6" aria-label="Main navigation">
-          {navLinks.map((l) =>
-          <Link
-            key={l.label}
-            to={`/#${l.hash}`}
-            onClick={(e) => handleHashLink(e, l.hash)}
-            className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-            
-              {l.label}
-            </Link>
-          )}
+          {navLinks.map((l) => {
+            const Icon =
+              l.hash === "features" ? Layers :
+              l.hash === "how-it-works" ? Settings :
+              l.hash === "pricing" ? Tag : undefined;
+            return (
+              <Link
+                key={l.label}
+                to={`/#${l.hash}`}
+                onClick={(e) => handleHashLink(e, l.hash)}
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {Icon && <Icon className="w-3.5 h-3.5" />}
+                {l.label}
+              </Link>
+            );
+          })}
           {/* Solutions dropdown */}
           <div className="relative group">
             <button className="inline-flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
@@ -100,16 +107,20 @@ export default function Navbar() {
               </div>
             </div>
           </div>
-          <Link to="/marketplace" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+          <Link to="/marketplace" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+            <Briefcase className="w-3.5 h-3.5" />
             Marketplace
           </Link>
-          <Link to="/pilots" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+          <Link to="/pilots" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+            <Plane className="w-3.5 h-3.5" />
             Find Pilots
           </Link>
-          <Link to="/pilots/join" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+          <Link to="/pilots/join" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+            <UserPlus className="w-3.5 h-3.5" />
             For Pilots
           </Link>
-          <Link to="/orgs" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+          <Link to="/orgs" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+            <Building2 className="w-3.5 h-3.5" />
             For Business
           </Link>
         </nav>
