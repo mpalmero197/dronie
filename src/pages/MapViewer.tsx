@@ -181,6 +181,11 @@ export default function MapViewer() {
     fetchProject();
   }, [projectId]);
 
+  // Standalone /map mode (no projectId) — skip loading state.
+  useEffect(() => {
+    if (!projectId) setLoading(false);
+  }, [projectId]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -260,7 +265,7 @@ export default function MapViewer() {
   const center: [number, number] = [37.7749, -122.4194];
   const tile = TILE_URLS[baseLayer];
 
-  if (loading) {
+  if (loading && projectId) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -268,19 +273,28 @@ export default function MapViewer() {
     );
   }
 
-  if (!project) {
+  // Project route was requested but lookup failed — show not found.
+  if (projectId && projectId !== "demo" && !project && !loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-4">
         <Map className="w-12 h-12 text-muted-foreground/40" />
         <h2 className="font-display font-700 text-foreground">Project not found</h2>
-        <Button onClick={() => navigate("/dashboard")} variant="outline" className="gap-2">
-          <ArrowLeft className="w-4 h-4" /> Back to Dashboard
-        </Button>
+        <p className="text-sm text-muted-foreground max-w-md text-center px-6">
+          This project doesn't exist or hasn't been shared with you. You can still open the standalone map viewer to plan a mission.
+        </p>
+        <div className="flex gap-2">
+          <Button onClick={() => navigate("/dashboard")} variant="outline" className="gap-2">
+            <ArrowLeft className="w-4 h-4" /> Dashboard
+          </Button>
+          <Button onClick={() => navigate("/map")} className="gap-2">
+            <Map className="w-4 h-4" /> Open Map Viewer
+          </Button>
+        </div>
       </div>
     );
   }
 
-  if (project.status !== "complete") {
+  if (project && project.status !== "complete") {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-4">
         <Loader2 className="w-12 h-12 text-primary animate-spin" />
@@ -308,12 +322,12 @@ export default function MapViewer() {
             <Map className="w-3.5 h-3.5 text-primary-foreground" />
           </div>
           <div className="min-w-0">
-            <p className="font-display font-700 text-foreground text-sm truncate">{project.name}</p>
+            <p className="font-display font-700 text-foreground text-sm truncate">{project?.name ?? "Map Viewer"}</p>
             <p className="text-xs text-muted-foreground hidden sm:block">
-              Interactive map viewer
+              {project ? "Interactive map viewer" : "Plan missions, measure, and explore airspace"}
             </p>
           </div>
-          {project.status === "complete" && (
+          {project?.status === "complete" && (
             <span className="hidden sm:flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
               <CheckCircle2 className="w-3 h-3" /> Complete
             </span>
@@ -422,7 +436,7 @@ export default function MapViewer() {
         <LayerSwitcher activeLayer={baseLayer} onChange={setBaseLayer} />
 
         {/* Info Panel */}
-        {showInfo && <MapInfoPanel project={project} pinCount={0} measurement={measurement} />}
+        {showInfo && project && <MapInfoPanel project={project} pinCount={0} measurement={measurement} />}
 
         {/* Overlay Legend */}
         {activeOverlay && <OverlayLegend type={activeOverlay as "elevation" | "ndvi" | "airspace"} />}
