@@ -200,7 +200,7 @@ export default function PilotsMap() {
               ))}
             </select>
             <span className="text-sm text-muted-foreground self-center">
-              {filtered.length} pilot{filtered.length === 1 ? "" : "s"}
+              {filtered.length} of {total} pilot{total === 1 ? "" : "s"}
             </span>
           </div>
         </header>
@@ -233,6 +233,20 @@ export default function PilotsMap() {
             {filtered.map((p) => (
               <PilotCard key={p.pilot_id} p={p} />
             ))}
+            {pilots.length < total && (
+              <Button
+                variant="outline"
+                className="w-full"
+                disabled={loadingMore}
+                onClick={() => fetchPage(pilots.length, true)}
+              >
+                {loadingMore ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Loading…</>
+                ) : (
+                  <>Load more pilots ({total - pilots.length} remaining)</>
+                )}
+              </Button>
+            )}
           </aside>
         </div>
       </div>
