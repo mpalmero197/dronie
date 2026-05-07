@@ -63,6 +63,7 @@ const App = () => (
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/viewer/:projectId" element={<MapViewer />} />
+            <Route path="/map" element={<MapViewer />} />
             <Route path="/admin" element={<AdminPanel />} />
             <Route path="/project/:projectId" element={<ProjectDetail />} />
             <Route path="/fleet" element={<FleetManagement />} />
