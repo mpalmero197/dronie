@@ -33,6 +33,7 @@ import { GcpAdvisor } from "@/components/project/GcpAdvisor";
 import { CrsPicker } from "@/components/project/CrsPicker";
 import { ExtraOutputsPicker } from "@/components/project/ExtraOutputsPicker";
 import { GENERIC_SPEC, type SensorSpec } from "@/lib/sensor-specs";
+import { detectSensorFromImage } from "@/lib/exif-detect";
 import {
    PRESETS,
    DEFAULT_SETTINGS as PG_DEFAULT_SETTINGS,
@@ -211,6 +212,7 @@ export default function ProjectDetail() {
     (DEFAULT_SETTINGS.preset as PresetId) || "mapping"
   );
   const [sensor, setSensor] = useState<SensorSpec>(GENERIC_SPEC);
+  const [sensorAutoDetected, setSensorAutoDetected] = useState(false);
 
   const fpInputRef = useRef<HTMLInputElement>(null);
   const imgInputRef = useRef<HTMLInputElement>(null);
@@ -305,6 +307,20 @@ export default function ProjectDetail() {
     const valid = files.filter((f) => validExts.some((e) => f.name.toLowerCase().endsWith(e)));
     if (!valid.length) { toast({ title: "No valid images", variant: "destructive" }); return; }
 
+    // Auto-detect drone/sensor + RTK from first uploaded image's EXIF.
+    if (!sensorAutoDetected) {
+      const probe = valid.find((f) => /\.(jpe?g|tiff?|dng)$/i.test(f.name)) ?? valid[0];
+      detectSensorFromImage(probe).then((res) => {
+        if (!res) return;
+        setSensor(res.spec);
+        setSensorAutoDetected(true);
+        toast({
+          title: res.matched ? `Detected ${res.spec.manufacturer} ${res.spec.model}` : "Sensor inferred from EXIF",
+          description: `${res.spec.imageWidthPx}×${res.spec.imageHeightPx} · ${res.spec.focalLengthMm} mm${res.rtkLikely ? " · RTK fix detected" : ""}`,
+        });
+      });
+    }
+
     const items: UploadItem[] = valid.map((f) => ({ file: f, status: "pending" as const, progress: 0 }));
     setImgUploads((p) => [...p, ...items]);
     let count = 0;
@@ -324,7 +340,7 @@ export default function ProjectDetail() {
       loadDroneImages();
       toast({ title: `${count} image${count > 1 ? "s" : ""} uploaded` });
     }
-  }, [project, user, imgUploads.length, loadDroneImages, toast]);
+  }, [project, user, imgUploads.length, loadDroneImages, toast, sensorAutoDetected]);
 
   async function deleteFlightPlan(fp: FlightPlan) {
     await supabase.storage.from("flight-plans").remove([fp.file_path]);
