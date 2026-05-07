@@ -1,7 +1,10 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Map, LogOut, LayoutDashboard, Loader2, ChevronDown, Briefcase, Building2, Plane } from "lucide-react";
+import {
+  Menu, X, Map, LogOut, LayoutDashboard, Loader2, ChevronDown,
+  Briefcase, Building2, Plane, Layers, Settings, Tag, UserPlus,
+} from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { VERTICAL_LIST } from "@/pages/solutions/verticals.config";
 
@@ -64,16 +67,23 @@ export default function Navbar() {
 
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-6" aria-label="Main navigation">
-          {navLinks.map((l) =>
-          <Link
-            key={l.label}
-            to={`/#${l.hash}`}
-            onClick={(e) => handleHashLink(e, l.hash)}
-            className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-            
-              {l.label}
-            </Link>
-          )}
+          {navLinks.map((l) => {
+            const Icon =
+              l.hash === "features" ? Layers :
+              l.hash === "how-it-works" ? Settings :
+              l.hash === "pricing" ? Tag : undefined;
+            return (
+              <Link
+                key={l.label}
+                to={`/#${l.hash}`}
+                onClick={(e) => handleHashLink(e, l.hash)}
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {Icon && <Icon className="w-3.5 h-3.5" />}
+                {l.label}
+              </Link>
+            );
+          })}
           {/* Solutions dropdown */}
           <div className="relative group">
             <button className="inline-flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
@@ -97,16 +107,20 @@ export default function Navbar() {
               </div>
             </div>
           </div>
-          <Link to="/marketplace" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+          <Link to="/marketplace" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+            <Briefcase className="w-3.5 h-3.5" />
             Marketplace
           </Link>
-          <Link to="/pilots" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+          <Link to="/pilots" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+            <Plane className="w-3.5 h-3.5" />
             Find Pilots
           </Link>
-          <Link to="/pilots/join" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+          <Link to="/pilots/join" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+            <UserPlus className="w-3.5 h-3.5" />
             For Pilots
           </Link>
-          <Link to="/orgs" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+          <Link to="/orgs" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+            <Building2 className="w-3.5 h-3.5" />
             For Business
           </Link>
         </nav>
@@ -167,16 +181,24 @@ export default function Navbar() {
       {/* Mobile menu */}
       {open &&
       <nav className="md:hidden bg-card border-b border-border px-6 pb-6 pt-2 space-y-2" aria-label="Mobile navigation">
-          {navLinks.map((l) =>
-        <Link
-          key={l.label}
-          to={`/#${l.hash}`}
-          className="block py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-          onClick={(e) => handleHashLink(e, l.hash)}>
-          
-              {l.label}
-            </Link>
-        )}
+          {navLinks.map((l) => {
+            const Icon =
+              l.hash === "features" ? Layers :
+              l.hash === "how-it-works" ? Settings :
+              l.hash === "pricing" ? Tag : undefined;
+            return (
+              <Link
+                key={l.label}
+                to={`/#${l.hash}`}
+                className="block py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                onClick={(e) => handleHashLink(e, l.hash)}>
+                <span className="inline-flex items-center gap-2">
+                  {Icon && <Icon className="w-4 h-4" />}
+                  {l.label}
+                </span>
+              </Link>
+            );
+          })}
           <Link to="/marketplace" onClick={() => setOpen(false)} className="block py-2 text-sm font-medium text-muted-foreground hover:text-foreground">
             <span className="inline-flex items-center gap-2"><Briefcase className="w-4 h-4" />Marketplace</span>
           </Link>
@@ -184,18 +206,22 @@ export default function Navbar() {
             <span className="inline-flex items-center gap-2"><Plane className="w-4 h-4" />Find Pilots</span>
           </Link>
           <Link to="/pilots/join" onClick={() => setOpen(false)} className="block py-2 text-sm font-medium text-muted-foreground hover:text-foreground">
-            For Pilots
+            <span className="inline-flex items-center gap-2"><UserPlus className="w-4 h-4" />For Pilots</span>
           </Link>
           <Link to="/orgs" onClick={() => setOpen(false)} className="block py-2 text-sm font-medium text-muted-foreground hover:text-foreground">
             <span className="inline-flex items-center gap-2"><Building2 className="w-4 h-4" />For Business</span>
           </Link>
           <div className="pt-2 border-t border-border">
             <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1">Solutions</p>
-            {VERTICAL_LIST.map((v) => (
-              <Link key={v.slug} to={`/solutions/${v.slug}`} onClick={() => setOpen(false)} className="block py-1.5 text-sm text-foreground">
-                {v.name}
-              </Link>
-            ))}
+            {VERTICAL_LIST.map((v) => {
+              const VIcon = v.icon;
+              return (
+                <Link key={v.slug} to={`/solutions/${v.slug}`} onClick={() => setOpen(false)} className="flex items-center gap-2 py-1.5 text-sm text-foreground">
+                  <VIcon className="w-4 h-4 text-primary" />
+                  {v.name}
+                </Link>
+              );
+            })}
           </div>
           <div className="pt-3 flex flex-col gap-2">
             {user ?
