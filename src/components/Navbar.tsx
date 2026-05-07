@@ -1,7 +1,10 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Map, LogOut, LayoutDashboard, Loader2, ChevronDown, Briefcase, Building2, Plane } from "lucide-react";
+import {
+  Menu, X, Map, LogOut, LayoutDashboard, Loader2, ChevronDown,
+  Briefcase, Building2, Plane, Layers, Settings, Tag, UserPlus,
+} from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { VERTICAL_LIST } from "@/pages/solutions/verticals.config";
 
