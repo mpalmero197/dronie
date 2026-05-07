@@ -798,7 +798,16 @@ export default function ProjectDetail() {
               <p className="text-[11px] text-muted-foreground -mt-1">
                 Used for GSD math, RTK detection, and rolling-shutter warnings.
               </p>
-              <DroneCameraPicker value={sensor} onChange={setSensor} disabled={isProcessing} />
+              <DroneCameraPicker
+                value={sensor}
+                onChange={(s) => { setSensor(s); setSensorAutoDetected(true); }}
+                disabled={isProcessing}
+              />
+              {sensorAutoDetected && (
+                <p className="text-[11px] text-primary flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3 h-3" /> Auto-detected from image EXIF
+                </p>
+              )}
             </div>
 
             {/* Mission calculator — pre-flight planning math */}
