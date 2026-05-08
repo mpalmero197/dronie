@@ -26,9 +26,10 @@
   <url><loc>https://dronieapp.com/compliance</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
   <url><loc>https://dronieapp.com/fleet</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
   <url><loc>https://dronieapp.com/solutions/construction</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://dronieapp.com/solutions/real_estate</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://dronieapp.com/solutions/agriculture</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://dronieapp.com/solutions/real-estate</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://dronieapp.com/solutions/inspection</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://dronieapp.com/solutions/energy</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://dronieapp.com/solutions/mining</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://dronieapp.com/solutions/surveying</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://dronieapp.com/solutions/insurance</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://dronieapp.com/solutions/government</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 </urlset>
