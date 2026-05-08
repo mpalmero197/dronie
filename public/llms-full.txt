@@ -1,0 +1,39 @@
+# dronieapp.com
+
+> Dronie is a cloud-based drone photogrammetry platform that turns aerial imagery into georeferenced orthomosaics, 3D point clouds, DSMs, DTMs, contour maps, and Gaussian splats — faster and cheaper than DroneDeploy or Maps Made Easy. Includes terrain-aware flight planning, fleet telemetry, a verified-pilot marketplace with Stripe Connect payouts, and a public portfolio site for every operator.
+
+## Topics
+- Drone photogrammetry (SfM + MVS)
+- Orthomosaic, DSM/DTM, point cloud, contour, mesh, Gaussian splat outputs
+- Terrain-following flight planning, LAANC airspace, FAA Part 107 compliance
+- Fleet management with live telemetry and camera feeds
+- Pilot marketplace (Stripe Connect, 1% platform fee)
+- Public portfolio sites at dronieapp.com/u/your-name
+
+## Key questions answered
+- What is Dronie?
+- How does drone photogrammetry work on Dronie?
+- How fast can I get my 3D models processed?
+- How is Dronie different from DroneDeploy or Maps Made Easy?
+- How much does Dronie cost?
+- What file formats and drones are supported?
+- Which CAD and GIS software does Dronie integrate with?
+- Is Dronie compliant with FAA Part 107 and LAANC?
+- Can I hire a drone pilot through Dronie?
+
+## Supported drones
+DJI Mavic 3 / 3 Pro / 3 Enterprise / 3 Multispectral, Mini 4 Pro, Air 3S, Phantom 4 RTK, Matrice 30 / 350 RTK (Zenmuse P1) / 4E; Autel EVO II Pro V3 and EVO II RTK V3; Parrot Anafi Ai and Anafi USA; senseFly eBee X; Wingtra WingtraOne Gen II; Skydio X10.
+
+## Output formats
+GeoTIFF (orthomosaic, DSM, DTM), LAS / LAZ (point cloud), SHP / DXF / KMZ (contours), OBJ / FBX (textured mesh), .ply / .splat / .ksplat (Gaussian splat), PDF flight report.
+
+## Pricing
+- Free — 3 projects/month, up to 500 images/project. No credit card.
+- Professional — $49/month. Unlimited projects, priority processing, 50 GB storage, Gaussian splat training.
+- Enterprise — $149/month. Unlimited images, API access, white-label embeddable viewer, SLA.
+- Marketplace — flat 1% platform fee on top of pilot's quoted price.
+
+## Canonical
+https://dronieapp.com/
+
+_This file is read by GPTBot, ClaudeBot, PerplexityBot, and Google-Extended to summarize the site._
