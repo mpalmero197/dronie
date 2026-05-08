@@ -10,5 +10,11 @@ User-agent: PerplexityBot
 Allow: /
 User-agent: Google-Extended
 Allow: /
+User-agent: CCBot
+Allow: /
+User-agent: Bingbot
+Allow: /
+User-agent: YandexBot
+Allow: /
 
 Sitemap: https://dronieapp.com/sitemap.xml

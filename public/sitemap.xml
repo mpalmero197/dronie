@@ -2,7 +2,7 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://dronieapp.com/</loc>
-    <lastmod>2026-04-30</lastmod>
+    <lastmod>2026-05-08</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
@@ -11,4 +11,24 @@
   <url><loc>https://dronieapp.com/install</loc><changefreq>monthly</changefreq></url>
   <url><loc>https://dronieapp.com/privacy</loc><changefreq>yearly</changefreq></url>
   <url><loc>https://dronieapp.com/terms</loc><changefreq>yearly</changefreq></url>
+  <url><loc>https://dronieapp.com/marketplace</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
+  <url><loc>https://dronieapp.com/pilots</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
+  <url><loc>https://dronieapp.com/pilots/join</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://dronieapp.com/plan</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://dronieapp.com/map</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://dronieapp.com/splats</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://dronieapp.com/portfolio</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://dronieapp.com/workflow</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://dronieapp.com/swarm</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://dronieapp.com/reality</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://dronieapp.com/rtk</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://dronieapp.com/insights</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://dronieapp.com/compliance</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://dronieapp.com/fleet</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://dronieapp.com/solutions/construction</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://dronieapp.com/solutions/agriculture</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://dronieapp.com/solutions/real-estate</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://dronieapp.com/solutions/inspection</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://dronieapp.com/solutions/mining</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://dronieapp.com/solutions/surveying</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 </urlset>
