@@ -131,7 +131,7 @@ Deno.serve(async (req) => {
 
   const userId = user.id;
 
-  const { project_id, settings, subscription_tier } = await req.json();
+  const { project_id, settings } = await req.json();
   if (!project_id) {
     return new Response(JSON.stringify({ error: "project_id required" }), {
       status: 400,
@@ -183,10 +183,40 @@ Deno.serve(async (req) => {
     .maybeSingle();
   const isAdmin = !!roleData;
 
+  // Resolve subscription tier server-side from Stripe (never trust client)
+  let resolvedTier: "free" | "professional" | "enterprise" = "free";
+  if (!isAdmin) {
+    try {
+      const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+      if (stripeKey && user.email) {
+        const { default: Stripe } = await import("https://esm.sh/stripe@18.5.0");
+        const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
+        const customers = await stripe.customers.list({ email: user.email, limit: 1 });
+        if (customers.data.length > 0) {
+          const subs = await stripe.subscriptions.list({
+            customer: customers.data[0].id,
+            status: "active",
+            limit: 1,
+          });
+          if (subs.data.length > 0) {
+            const productId = subs.data[0].items.data[0].price.product as string;
+            const enterpriseId = Deno.env.get("STRIPE_ENTERPRISE_PRODUCT_ID");
+            const professionalId = Deno.env.get("STRIPE_PROFESSIONAL_PRODUCT_ID");
+            if (enterpriseId && productId === enterpriseId) resolvedTier = "enterprise";
+            else if (professionalId && productId === professionalId) resolvedTier = "professional";
+            else resolvedTier = "professional"; // any active sub is at least professional
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("[process-project] subscription lookup failed", err);
+    }
+  }
+
   let priority = 0; // free
   if (isAdmin) priority = 99;
-  else if (subscription_tier === "enterprise") priority = 20;
-  else if (subscription_tier === "professional") priority = 10;
+  else if (resolvedTier === "enterprise") priority = 20;
+  else if (resolvedTier === "professional") priority = 10;
 
   // Mark as processing with priority + reset live tracking fields
   await serviceClient
