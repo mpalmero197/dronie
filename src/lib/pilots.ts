@@ -199,13 +199,10 @@ export const pilotProfileSchema = z.object({
 export type PilotProfileInput = z.infer<typeof pilotProfileSchema>;
 
 export async function getMyPilotProfile(userId: string) {
-  const { data, error } = await supabase
-    .from("pilot_profiles")
-    .select("*")
-    .eq("user_id", userId)
-    .maybeSingle();
+  const { data, error } = await supabase.rpc("get_my_pilot_profile");
   if (error) throw error;
-  return data as PilotProfile | null;
+  const row = Array.isArray(data) ? data[0] : data;
+  return (row as PilotProfile | null) ?? null;
 }
 
 export async function findMatchingPilots(requestId: string) {
