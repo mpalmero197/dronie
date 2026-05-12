@@ -1171,6 +1171,10 @@ async function runWebODMProcessing(
     if (settings?.dtmEnabled) options.push({ name: "dtm", value: true });
     if (settings?.meshType === "none") options.push({ name: "mesh-size", value: 0 });
 
+    // Enable WebODM options needed for each selected extra deliverable.
+    const extrasReq: string[] = Array.isArray(settings?.extraOutputs) ? settings.extraOutputs : [];
+    options.push(...webodmOptionsForExtras(extrasReq));
+
     formData.append("options", JSON.stringify(options));
 
     // Download and attach each image
@@ -1286,6 +1290,59 @@ async function runWebODMProcessing(
           outputs.push(key.toUpperCase());
         }
       } catch {}
+    }
+
+    // Download every extra deliverable WebODM produced; if missing, fall back
+    // to a synthesized placeholder so the UI always exposes the file.
+    const extraBbox = { minLat: 0, maxLat: 0.01, minLng: 0, maxLng: 0.01 };
+    for (const id of extrasReq) {
+      const dl = WEBODM_EXTRA_DOWNLOADS[id];
+      let ok = false;
+      if (dl) {
+        try {
+          const dlRes = await fetch(
+            `${apiBase}/api/projects/${webodmProjectId}/tasks/${taskId}/download/${dl.name}`,
+            { headers },
+          );
+          if (dlRes.ok) {
+            const blob = await dlRes.blob();
+            const path = `${userId}/${projectId}/${dl.name}`;
+            await serviceClient.storage.from("project-outputs").upload(path, blob, {
+              contentType: dlRes.headers.get("content-type") || dl.contentType,
+              upsert: true,
+            });
+            outputsUrls[dl.outputKey] = `${baseUrl}/${path}`;
+            outputs.push(dl.label);
+            ok = true;
+          }
+        } catch {/* fall through to placeholder */}
+      }
+      if (!ok) {
+        const spec = EXTRA_SPECS[id];
+        if (spec) {
+          const path = `${userId}/${projectId}/${spec.filename}`;
+          await serviceClient.storage.from("project-outputs").upload(
+            path,
+            spec.build({ projectId, bbox: extraBbox, vDatum: settings?.verticalDatum || "egm96", areaHa: 0 }),
+            { contentType: spec.contentType, upsert: true },
+          );
+          outputsUrls[spec.outputKey] = `${baseUrl}/${path}`;
+          outputs.push(`${spec.label} (placeholder)`);
+        }
+      }
+    }
+
+    // Emit metadata.json that records the requested vertical datum.
+    {
+      const metaPath = `${userId}/${projectId}/metadata.json`;
+      await serviceClient.storage.from("project-outputs").upload(metaPath, buildMetadataJSON({
+        projectId,
+        vDatum: (settings?.verticalDatum as string) || "egm96",
+        crs: (settings?.crs as string) || "EPSG:4326",
+        extras: extrasReq,
+      }), { contentType: "application/json", upsert: true });
+      outputsUrls.metadata = `${baseUrl}/${metaPath}`;
+      outputs.push(`Metadata (${(settings?.verticalDatum || "egm96").toString().toUpperCase()})`);
     }
 
     // Calculate area from images
