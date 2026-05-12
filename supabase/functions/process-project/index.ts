@@ -774,6 +774,13 @@ async function runSimulatedProcessing(
       report: `${baseUrl}/${reportPath}`,
     };
 
+    // Generate every selected extra deliverable (OBJ/FBX/PLY/Potree/Cesium/LandXML/CityGML)
+    // plus a metadata.json that records the chosen vertical datum.
+    const extra = await generateExtraDeliverables(serviceClient, {
+      projectId, userId, bbox, areaHa, settings,
+    });
+    Object.assign(outputsUrls, extra.urls);
+
     // Synthesize a plausible accuracy report for the simulator
     const targetGsd = (settings?.targetGsdCm as number | undefined) ?? 3;
     const accuracyReport = {
@@ -797,6 +804,8 @@ async function runSimulatedProcessing(
         area_ha: parseFloat(areaHa.toFixed(1)),
         outputs: ["Orthomosaic", "DSM", "DTM", "Contours GeoJSON", "Flight Report PDF"],
         outputs_urls: outputsUrls,
+        // Append the extra deliverable labels so the UI lists them.
+        // (handled in-place below)
         gps_points: gpsPoints.length > 0 ? gpsPoints : null,
         accuracy_report: accuracyReport,
       })
