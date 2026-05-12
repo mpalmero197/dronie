@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { computeMission, altitudeForTargetGsd } from "@/lib/missionMath";
 import type { SensorSpec } from "@/lib/sensor-specs";
+import { FootprintCoveragePreview } from "./FootprintCoveragePreview";
 
 export interface MissionCalculatorProps {
   spec: SensorSpec;
@@ -137,6 +138,17 @@ export const MissionCalculator = forwardRef<HTMLDivElement, MissionCalculatorPro
             ))}
           </ul>
         )}
+
+        {/* Live coverage preview — what the chosen settings will tile on a
+            synthetic plot of the requested area, before any images are uploaded. */}
+        <FootprintCoveragePreview
+          footprintWidthM={plan.footprintWidthM}
+          footprintHeightM={plan.footprintHeightM}
+          lineSpacingM={plan.lineSpacingM}
+          frontOverlapPct={front}
+          sideOverlapPct={side}
+          areaHa={areaHa}
+        />
 
         <div className="border-t border-border pt-3 text-[11px] text-muted-foreground leading-relaxed">
           GSD math: <span className="font-mono text-foreground">(sensor × alt × 100) / (focal × image px)</span>.
