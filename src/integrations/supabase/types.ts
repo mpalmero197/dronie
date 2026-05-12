@@ -1578,6 +1578,48 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_my_pilot_profile: {
+        Args: never
+        Returns: {
+          accepted_terms_at: string | null
+          available: boolean
+          bio: string | null
+          contact_email: string | null
+          created_at: string
+          display_lat: number | null
+          display_lng: number | null
+          display_name: string
+          equipment: string[]
+          hourly_rate_cents: number | null
+          id: string
+          insured: boolean
+          languages: string[]
+          location_privacy: boolean
+          part_107: boolean
+          phone: string | null
+          portfolio_url: string | null
+          service_area_label: string | null
+          service_lat: number | null
+          service_lng: number | null
+          service_radius_km: number
+          show_on_map: boolean
+          skills: string[]
+          software: string[]
+          updated_at: string
+          user_id: string
+          verification_rejection_reason: string | null
+          verification_status: Database["public"]["Enums"]["pilot_verification_status"]
+          verified_at: string | null
+          verticals: Database["public"]["Enums"]["industry_vertical"][]
+          years_experience: number
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "pilot_profiles"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       get_public_pilot: {
         Args: { _is_paid?: boolean; _pilot_id: string }
         Returns: {
@@ -1676,6 +1718,15 @@ export type Database = {
           software: string[]
           verticals: Database["public"]["Enums"]["industry_vertical"][]
           years_experience: number
+        }[]
+      }
+      get_splat_share_by_token: {
+        Args: { _token: string }
+        Returns: {
+          asset_name: string
+          asset_path: string
+          expires_at: string
+          project_id: string
         }[]
       }
       has_role: {

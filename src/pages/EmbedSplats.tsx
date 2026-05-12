@@ -26,12 +26,10 @@ export default function EmbedSplats() {
     (async () => {
       try {
         if (!token) throw new Error("Missing share token");
-        const { data: share, error: shareErr } = await supabase
-          .from("splat_shares")
-          .select("asset_path, asset_name, expires_at")
-          .eq("token", token)
-          .maybeSingle();
+        const { data: shares, error: shareErr } = await supabase
+          .rpc("get_splat_share_by_token", { _token: token });
         if (shareErr) throw shareErr;
+        const share = Array.isArray(shares) ? shares[0] : shares;
         if (!share) throw new Error("This link has expired or is invalid.");
 
         const url = supabase.storage.from(BUCKET).getPublicUrl(share.asset_path).data.publicUrl;
