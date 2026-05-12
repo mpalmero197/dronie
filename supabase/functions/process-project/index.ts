@@ -802,10 +802,8 @@ async function runSimulatedProcessing(
         stage_progress: 100,
         eta_seconds: 0,
         area_ha: parseFloat(areaHa.toFixed(1)),
-        outputs: ["Orthomosaic", "DSM", "DTM", "Contours GeoJSON", "Flight Report PDF"],
+        outputs: ["Orthomosaic", "DSM", "DTM", "Contours GeoJSON", "Flight Report PDF", ...extra.labels],
         outputs_urls: outputsUrls,
-        // Append the extra deliverable labels so the UI lists them.
-        // (handled in-place below)
         gps_points: gpsPoints.length > 0 ? gpsPoints : null,
         accuracy_report: accuracyReport,
       })
