@@ -32,4 +32,7 @@
   <url><loc>https://dronieapp.com/solutions/mining</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://dronieapp.com/solutions/insurance</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://dronieapp.com/solutions/government</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://dronieapp.com/dashboard</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://dronieapp.com/jobs</loc><changefreq>weekly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://dronieapp.com/fleet</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
 </urlset>

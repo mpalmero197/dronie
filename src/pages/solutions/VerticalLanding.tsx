@@ -1,4 +1,5 @@
 import { useParams, Link, Navigate } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { ArrowRight, Check, Briefcase } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import FooterSection from "@/components/FooterSection";
@@ -13,9 +14,38 @@ export default function VerticalLanding() {
   if (!config) return <Navigate to="/" replace />;
 
   const Icon = config.icon;
+  const url = `https://dronieapp.com/solutions/${config.slug}`;
+  const title = `Drone services for ${config.name} | Dronieapp`;
+  const description = config.intro.length > 160 ? config.intro.slice(0, 157) + "..." : config.intro;
+  const serviceLd = {
+    "@context": "https://schema.org",
+    "@type": "Service",
+    name: `Dronieapp drone services for ${config.name}`,
+    serviceType: config.name,
+    description: config.intro,
+    provider: { "@type": "Organization", name: "Dronieapp", url: "https://dronieapp.com" },
+    areaServed: "Worldwide",
+    hasOfferCatalog: {
+      "@type": "OfferCatalog",
+      name: `${config.name} deliverables`,
+      itemListElement: config.deliverables.map((d) => ({
+        "@type": "Offer",
+        itemOffered: { "@type": "Service", name: d },
+      })),
+    },
+  };
 
   return (
     <div className="min-h-screen bg-background">
+      <Helmet>
+        <title>{title}</title>
+        <meta name="description" content={description} />
+        <link rel="canonical" href={url} />
+        <meta property="og:url" content={url} />
+        <meta property="og:title" content={title} />
+        <meta property="og:description" content={description} />
+        <script type="application/ld+json">{JSON.stringify(serviceLd)}</script>
+      </Helmet>
       <Navbar />
 
       {/* Hero */}

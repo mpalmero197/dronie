@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import {
   ArrowLeft,
   ShieldCheck,
@@ -164,9 +165,37 @@ export default function PilotPublicProfile() {
     pilot.hourly_rate_cents != null
       ? `$${Math.round(pilot.hourly_rate_cents / 100).toLocaleString()}/hr`
       : null;
+  const profileUrl = `https://dronieapp.com/pilots/${pilot.pilot_id}`;
+  const metaTitle = `${pilot.display_name} · Drone pilot · Dronieapp`;
+  const rawDesc = pilot.bio?.replace(/\s+/g, " ").trim() || `Hire ${pilot.display_name}, a drone pilot on Dronieapp${pilot.service_area_label ? ` serving ${pilot.service_area_label}` : ""}.`;
+  const metaDesc = rawDesc.length > 160 ? rawDesc.slice(0, 157) + "..." : rawDesc;
+  const personLd = {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    name: pilot.display_name,
+    url: profileUrl,
+    description: rawDesc,
+    ...(pilot.avatar_url ? { image: pilot.avatar_url } : {}),
+    jobTitle: "Drone pilot",
+    knowsAbout: pilot.skills,
+    ...(pilot.service_area_label
+      ? { workLocation: { "@type": "Place", name: pilot.service_area_label } }
+      : {}),
+  };
 
   return (
     <div className="min-h-screen bg-background">
+      <Helmet>
+        <title>{metaTitle}</title>
+        <meta name="description" content={metaDesc} />
+        <link rel="canonical" href={profileUrl} />
+        <meta property="og:url" content={profileUrl} />
+        <meta property="og:title" content={metaTitle} />
+        <meta property="og:description" content={metaDesc} />
+        <meta property="og:type" content="profile" />
+        {pilot.avatar_url && <meta property="og:image" content={pilot.avatar_url} />}
+        <script type="application/ld+json">{JSON.stringify(personLd)}</script>
+      </Helmet>
       <Navbar />
       <main className="container mx-auto px-4 sm:px-6 pt-24 pb-16 max-w-4xl">
         <button

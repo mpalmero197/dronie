@@ -57,6 +57,8 @@ export default function HeroSection() {
           src={heroMap}
           alt="Aerial orthomosaic map generated from DJI drone survey imagery"
           className="w-full h-full object-cover opacity-20"
+          fetchPriority="high"
+          decoding="async"
         />
         <div className="absolute inset-0 bg-gradient-to-br from-foreground/90 via-foreground/70 to-primary/80" />
       </div>
@@ -153,7 +155,7 @@ export default function HeroSection() {
               {stats.map((s) => (
                 <div key={s.label}>
                   <div className="text-2xl font-display font-700 text-accent">{s.value}</div>
-                  <div className="text-xs text-primary-foreground/50 mt-0.5">{s.label}</div>
+                  <div className="text-xs text-primary-foreground/75 mt-0.5">{s.label}</div>
                 </div>
               ))}
             </div>
@@ -175,6 +177,10 @@ export default function HeroSection() {
                 src={droneHero}
                 alt="DJI drone in flight capturing aerial survey imagery for photogrammetry processing"
                 className="w-full h-[420px] object-cover"
+                width={640}
+                height={420}
+                fetchPriority="high"
+                decoding="async"
               />
               {/* Processing overlay card */}
               <div className="absolute bottom-4 left-4 right-4 bg-card/95 backdrop-blur-sm rounded-xl p-4 border border-border shadow-lg">
