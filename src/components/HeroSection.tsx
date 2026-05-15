@@ -155,7 +155,7 @@ export default function HeroSection() {
               {stats.map((s) => (
                 <div key={s.label}>
                   <div className="text-2xl font-display font-700 text-accent">{s.value}</div>
-                  <div className="text-xs text-primary-foreground/50 mt-0.5">{s.label}</div>
+                  <div className="text-xs text-primary-foreground/75 mt-0.5">{s.label}</div>
                 </div>
               ))}
             </div>
