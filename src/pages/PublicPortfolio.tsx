@@ -1045,24 +1045,100 @@ function Lightbox({
 }) {
   const idx = Math.max(0, items.findIndex((i) => i.id === current.id));
   const total = items.length;
+  const item = current;
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeBtnRef = useRef<HTMLButtonElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const touchStartX = useRef<number | null>(null);
+
   const go = (delta: number) => {
     if (total <= 1) return;
     const next = (idx + delta + total) % total;
     onNavigate(items[next]);
   };
+
+  // Preload neighbours for snappier nav.
+  const prevItem = total > 1 ? items[(idx - 1 + total) % total] : null;
+  const nextItem = total > 1 ? items[(idx + 1) % total] : null;
+
+  // Lock body scroll + restore focus on close.
+  useEffect(() => {
+    const prevOverflow = document.body.style.overflow;
+    const prevActive = document.activeElement as HTMLElement | null;
+    document.body.style.overflow = "hidden";
+    // Initial focus inside dialog.
+    requestAnimationFrame(() => closeBtnRef.current?.focus());
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      prevActive?.focus?.();
+    };
+  }, []);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-      else if (e.key === "ArrowRight") go(1);
-      else if (e.key === "ArrowLeft") go(-1);
+      if (e.key === "Escape") { e.preventDefault(); onClose(); return; }
+      if (e.key === "ArrowRight") { e.preventDefault(); go(1); return; }
+      if (e.key === "ArrowLeft") { e.preventDefault(); go(-1); return; }
+      if (e.key === "Home" && total > 1) { e.preventDefault(); onNavigate(items[0]); return; }
+      if (e.key === "End" && total > 1) { e.preventDefault(); onNavigate(items[total - 1]); return; }
+      if (item.kind === "video" && videoRef.current) {
+        if (e.key === " " || e.code === "Space") {
+          e.preventDefault();
+          const v = videoRef.current;
+          if (v.paused) v.play(); else v.pause();
+        } else if (e.key.toLowerCase() === "m") {
+          e.preventDefault();
+          videoRef.current.muted = !videoRef.current.muted;
+        }
+      }
+      // Focus trap: keep Tab inside dialog.
+      if (e.key === "Tab" && dialogRef.current) {
+        const focusables = dialogRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], video, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusables.length === 0) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [onClose, idx, total]);
-  const item = current;
+  }, [onClose, idx, total, item.kind, items, onNavigate]);
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0]?.clientX ?? null;
+  };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current == null) return;
+    const dx = (e.changedTouches[0]?.clientX ?? 0) - touchStartX.current;
+    touchStartX.current = null;
+    if (Math.abs(dx) > 50) go(dx < 0 ? 1 : -1);
+  };
+
+  const captionId = `lightbox-caption-${item.id}`;
+  const titleId = `lightbox-title-${item.id}`;
   return (
-    <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
+    <div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={item.title ? titleId : undefined}
+      aria-describedby={item.caption ? captionId : undefined}
+      aria-label={!item.title ? (item.kind === "video" ? "Video viewer" : "Image viewer") : undefined}
+      className="fixed inset-0 z-50 bg-black/95 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
+      onClick={onClose}
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+    >
       <button
+        ref={closeBtnRef}
         onClick={onClose}
         className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors"
         aria-label="Close"
@@ -1070,7 +1146,7 @@ function Lightbox({
         <XIcon className="w-5 h-5" />
       </button>
       {total > 1 && (
-        <span className="absolute top-5 left-1/2 -translate-x-1/2 text-xs text-white/70 font-mono tabular-nums">
+        <span aria-live="polite" className="absolute top-5 left-1/2 -translate-x-1/2 text-xs text-white/70 font-mono tabular-nums">
           {idx + 1} / {total}
         </span>
       )}
@@ -1094,15 +1170,38 @@ function Lightbox({
       )}
       <div className="max-w-6xl w-full max-h-full animate-scale-in" onClick={(e) => e.stopPropagation()}>
         {item.kind === "video" ? (
-          <video src={item.media_url ?? ""} controls autoPlay className="w-full max-h-[80vh] rounded-lg shadow-2xl" />
+          <video
+            key={item.id}
+            ref={videoRef}
+            src={item.media_url ?? ""}
+            poster={item.thumb_url ?? undefined}
+            controls
+            autoPlay
+            playsInline
+            preload="metadata"
+            aria-label={item.title ?? "Portfolio video"}
+            className="w-full max-h-[80vh] rounded-lg shadow-2xl bg-black"
+          />
         ) : (
-          <img src={item.media_url ?? ""} alt={item.title ?? ""} className="w-full max-h-[80vh] object-contain rounded-lg" />
+          <img
+            key={item.id}
+            src={item.media_url ?? ""}
+            alt={item.title ?? item.caption ?? "Portfolio image"}
+            className="w-full max-h-[80vh] object-contain rounded-lg"
+          />
         )}
         {(item.title || item.caption) && (
           <div className="text-center mt-3 text-white/90">
-            {item.title && <p className="font-display font-700">{item.title}</p>}
-            {item.caption && <p className="text-sm text-white/70">{item.caption}</p>}
+            {item.title && <p id={titleId} className="font-display font-700">{item.title}</p>}
+            {item.caption && <p id={captionId} className="text-sm text-white/70">{item.caption}</p>}
           </div>
+        )}
+        {/* Preload neighbours (hidden) */}
+        {prevItem && prevItem.kind === "photo" && prevItem.media_url && (
+          <img src={prevItem.media_url} alt="" aria-hidden className="hidden" />
+        )}
+        {nextItem && nextItem.kind === "photo" && nextItem.media_url && (
+          <img src={nextItem.media_url} alt="" aria-hidden className="hidden" />
         )}
       </div>
     </div>
