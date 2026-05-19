@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Upload, Layers, Download, Briefcase, Plane } from "lucide-react";
+import { ArrowRight, Upload, Layers, Download, Briefcase, Plane, PlayCircle } from "lucide-react";
 import heroMap from "@/assets/hero-map.jpg";
 import droneHero from "@/assets/drone-hero.jpg";
 import { useAuth } from "@/contexts/AuthContext";
@@ -129,6 +129,15 @@ export default function HeroSection() {
               >
                 <Briefcase className="w-4 h-4" />
                 Hire a Pilot
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                onClick={() => navigate("/demo")}
+                className="bg-transparent text-primary-foreground border-accent/60 hover:bg-accent/10 hover:text-accent gap-2 transition-all active:scale-[0.97] font-semibold"
+              >
+                <PlayCircle className="w-4 h-4" />
+                Watch a demo
               </Button>
               <Button
                 size="lg"

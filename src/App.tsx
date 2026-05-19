@@ -47,6 +47,9 @@ import Organizations from "./pages/Organizations.tsx";
 import OrgDetail from "./pages/OrgDetail.tsx";
 import AcceptOrgInvite from "./pages/AcceptOrgInvite.tsx";
 import ScrollToTop from "./components/ScrollToTop.tsx";
+import Demo from "./pages/Demo.tsx";
+import { DemoProvider } from "./demo/DemoContext";
+import DemoOverlay from "./demo/DemoOverlay";
 
 const queryClient = new QueryClient();
 
@@ -57,8 +60,9 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <ScrollToTop />
-          <Routes>
+          <DemoProvider>
+            <ScrollToTop />
+            <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/dashboard" element={<Dashboard />} />
@@ -105,10 +109,13 @@ const App = () => (
             <Route path="/orgs" element={<Organizations />} />
             <Route path="/orgs/accept" element={<AcceptOrgInvite />} />
             <Route path="/orgs/:id" element={<OrgDetail />} />
+            <Route path="/demo" element={<Demo />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
-          </Routes>
-          <CookieConsent />
+            </Routes>
+            <CookieConsent />
+            <DemoOverlay />
+          </DemoProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
