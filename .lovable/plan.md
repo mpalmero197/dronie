@@ -1,119 +1,84 @@
 
-## Best Gaussian Splatting Software for Drones (2026)
+# Watch-a-Mission: end-to-end product demo
 
-Based on the leading 2026 industry comparison, the tools that matter for **drone** workflows are:
+## Goal
+A single "Watch a Mission" experience that drives the **real** Dronie pages (not a video, not a mock route) through every stage of a photogrammetry job, end to end. Triggered from the marketing site and from `/dashboard`. Auto-advances by default, with Next/Prev/Pause and "Take control" to exit into the live app at the current step.
 
-1. **DJI Terra V5.0+** — the gold standard for *aerial* GS. Georeferenced, batch, RTK-aware.
-2. **PostShot** (Jawset) — best offline desktop trainer, full parameter control.
-3. **Nerfstudio / gsplat** — open-source research trainer, latest methods (Mip-Splatting, 3DGS-MCMC).
-4. **Luma AI** — fastest cloud trainer from any video.
-5. **Polycam** — strong mobile/LiDAR companion to drone capture.
-6. **SuperSplat** — browser-based GS *editor* (crop/clean/optimize).
-7. **SplatForge** — Blender addon for animation/VFX compositing.
+## Stages it walks through
 
-### Feature gaps in Dronie today
+```
+1. Plan         /missions/new           Draw AOI, MissionCalculator, footprint/overlap preview
+2. Export       /missions/new           Generate KMZ, "Open in DJI Fly" handoff card
+3. Fly (live)   /fleet/live/:droneId    Telemetry HUD + camera feed playing real DJI Fly clip
+4. Complete     /fleet/live/:droneId    Mission-complete toast → "View in project"
+5. Process      /project/:id            Stage log animates queued → SfM → dense → ortho → mesh
+6. Deliver      /project/:id            Ortho/DSM/pointcloud viewers, download bundle
+```
 
-`src/pages/GaussianSplats.tsx` already supports: project picker, .ply/.splat/.ksplat upload, three.js viewer (mkkellogg), splat scale, alpha cutoff, spherical harmonics toggle, auto-orbit, download, delete.
+Each stage is the **actual page** with a demo overlay (step chip, caption, Next/Prev/Pause/Exit). The demo seeds and drives a real `projects` row and a real `drones` row so RLS, queries, and UI all behave normally.
 
-Missing vs. the leaders:
+## What's real vs. scripted
 
-| Capability | Source of inspiration | Have it? |
-|---|---|---|
-| Train GS directly from project images (cloud) | Luma, DJI Terra | No |
-| Training preset & quality control (iterations, density) | PostShot, Nerfstudio | No |
-| Georeferenced / RTK metadata on scene | DJI Terra | No |
-| Crop / clean / cull splats (box select, region delete) | SuperSplat | No |
-| Export to multiple formats (.splat, .ksplat, .glb, .ply) | Polycam, Luma | Partial (re-download only) |
-| Cinematic camera path & MP4 flythrough render | Luma, SplatForge | Partial (orbit only) |
-| Measurement tool (distance between two points) | DJI Terra, Polycam | No |
-| Compare GS vs. point cloud / mesh side by side | DJI Terra | No |
-| Public share link / embed iframe | Luma, SuperSplat | No |
-| Scene metadata: training time, image count, PSNR | Nerfstudio | No |
+| Piece | Source |
+| --- | --- |
+| AOI polygon, calculator inputs | Scripted (typed into real inputs via a controller hook) |
+| KMZ export | Real `exportKMZ()` call, downloadable |
+| DJI Fly handoff card | Real component, with QR + deep link |
+| Drone telemetry on map | Scripted writes to `drones` (lat/lng/battery/heading) on a timer, real Realtime subscription renders it |
+| Camera feed | Real `<video>` playing a DJI Fly capture from `drone-demos` bucket (need 1 clip from you, or I'll use the existing `stream_demo_path` sample) |
+| Processing stages | Scripted updates to `projects.current_stage` / `stage_progress` / `stage_log`, real ProjectDetails UI renders them |
+| Deliverables | Pre-seeded sample ortho/DSM/pointcloud already in `project-outputs` (reuse existing demo assets if present; otherwise I'll generate placeholder GeoTIFF + LAZ thumbnails) |
 
----
+No new data model. Demo only **writes** to existing tables it owns (a dedicated `demo@dronieapp.com`-style ephemeral session, or the current user's own seeded "Demo project").
 
-## Plan: features to add
+## Implementation
 
-### A. Training pipeline (Cloud)
+### 1. Demo runtime (frontend only)
+- `src/demo/DemoController.tsx` — context with `currentStep`, `play/pause/next/prev/exit`, route-aware.
+- `src/demo/steps.ts` — declarative step list: `{ id, route, caption, durationMs, run: async (ctx) => void }`.
+- `src/demo/DemoOverlay.tsx` — fixed bottom bar (step N/6, caption, progress, controls). Hidden when `exit`ed.
+- `src/demo/useScriptedInput.ts` — utility to programmatically set Zustand store values or dispatch input events on real fields, so MissionCalculator etc. update without forking components.
 
-- New edge function `train-splat` that:
-  - Lists images in `project-inputs/{projectId}/`
-  - Submits a job to a GPU trainer (initially a stubbed/queued status row in a new `splat_jobs` table; integrates with existing WebODM/processing pipeline already in the project for structure-from-motion priors).
-  - Writes resulting `.ply` to `project-outputs/{projectId}/splats/`.
-- New table `splat_jobs (id, project_id, user_id, status, preset, iterations, image_count, psnr, training_seconds, created_at)` with RLS (owner-only).
-- UI: "Train new scene" button on `/splats` opens a dialog with:
-  - Quality preset: **Draft / Balanced / Cinematic** (maps to iterations 7k / 30k / 50k).
-  - Toggle: spherical harmonics degree (0/1/2/3).
-  - Toggle: densification interval.
-  - Toggle: use RTK/EXIF georef priors when present.
-- Live job list with status chips (queued → training → ready → failed) and PSNR/training-time badges once done.
+### 2. Entry points
+- New route `/demo` that mounts `DemoController` then redirects to step 1's route.
+- "Watch 90-second demo" CTA on `HeroSection` and a "Take the tour" button on `/dashboard`.
 
-### B. SuperSplat-style editing
+### 3. Seed + cleanup
+- On demo start: insert a `projects` row (`name: "Demo — Riverside Quarry"`, `user_id: auth.uid()`) and a `drones` row (`assigned_pilot_id: auth.uid()`, `stream_mode: 'demo'`, `stream_demo_path` pointing at the DJI clip).
+- On exit / finish: soft-keep them (user can replay) but mark with `description: '__demo__'` so they're filterable; add a "Reset demo" button.
+- Requires the user to be signed in. If anonymous on `/demo`, show a one-click "Continue as demo user" that signs them in with a pre-provisioned `demo@dronieapp.com` account (I'll add this account via migration + seed; password stored only in the edge function that issues a magic-link).
 
-Add a second tab on `/splats` called **Edit** with:
-- Box-select crop (drag a 3D box, delete splats outside).
-- Region delete (lasso projected to camera).
-- Color/alpha threshold filter with live preview.
-- "Save as new scene" (writes a cleaned `.ply` back to storage, never destroys the original).
+### 4. Live-flight simulation
+- A `useDemoFlightTicker(droneId)` hook updates the drone's lat/lng along the planned path every 500 ms using `supabase.from('drones').update(...)`. The existing `/fleet/live` realtime subscription picks it up — no changes to that page.
+- Camera: existing `stream_mode='demo'` + `stream_demo_path` already renders the video. I just need to confirm one good DJI Fly clip is uploaded to `drone-demos`.
 
-### C. Cinematic flythrough renderer
+### 5. Processing simulation
+- `useDemoProcessingTicker(projectId)` updates `current_stage`, `stage_progress`, `stage_log`, `progress` to mirror real WebODM stages. ProjectDetails already renders these.
+- Final state writes `outputs_urls` pointing to pre-seeded sample deliverables in `project-outputs`.
 
-Replace the simple auto-orbit with a keyframed camera-path tool:
-- Click **Add keyframe** to capture the current camera pose.
-- Reorder keyframes, set per-segment duration & easing.
-- **Preview** in-viewer; **Export MP4** via a server function that renders frames headlessly (ffmpeg in edge function or queued job — falls back to WebCodecs MP4 muxer client-side for short clips).
+### 6. Verification
+- After build, I drive the demo with the browser tool end-to-end (all 6 steps), screenshot each, and confirm: KMZ downloads, drone marker animates, video plays, processing bar fills, deliverables render and download.
 
-### D. Measurement & geo overlay
+## What I need from you (asset-level)
 
-- Two-click **Measure** tool — projects clicks onto nearest splat depth, shows distance in meters.
-- If the project has RTK/EXIF georef, show a small lat/lon/alt readout in the corner and a north arrow gizmo.
+1. **DJI Fly aerial clip** (mp4, ~30–60 s, downward/oblique). If you don't have one handy, I'll fall back to whatever's already in the `drone-demos` bucket and we can swap later.
+2. Confirmation that I can create a `demo@dronieapp.com` user for the anonymous entry point (or you'd rather demo require sign-in).
+3. Whether the demo should write into a **dedicated demo project per user** (replayable, leaves a row behind) or into an **ephemeral in-memory project** (no DB writes, but `/fleet/live` and `/project/:id` won't show it through their normal queries — would require fork). I recommend option A.
 
-### E. Multi-format export
+## Out of scope (call out, do later)
+- Real RTK/PPK processing
+- Actual DJI Fly SDK integration (we're only doing the KMZ handoff + a played-back clip)
+- Multi-language captions
+- Mobile-portrait optimization of the overlay (will work, won't be polished)
 
-After viewing a scene, **Export as** menu:
-- `.ply` (raw), `.splat` (compact), `.ksplat` (web-optimized; convert via mkkellogg's KSplatLoader writer), `.glb` (mesh proxy via gsplat-to-mesh), share link.
+## Files I'll add / edit
+- add: `src/demo/{DemoController.tsx, DemoOverlay.tsx, steps.ts, useScriptedInput.ts, useDemoFlightTicker.ts, useDemoProcessingTicker.ts, seed.ts}`
+- add: `src/pages/Demo.tsx` (mounts controller, routes to step 1)
+- edit: `src/App.tsx` (route + provider)
+- edit: `src/components/HeroSection.tsx` (CTA)
+- edit: `src/pages/Dashboard.tsx` (CTA)
+- edit: `src/components/project/MissionCalculator.tsx` (expose imperative ref for scripted input — minimal)
+- migration: ensure `drones.stream_mode='demo'` path is enabled; seed sample deliverable URLs if missing
+- (optional) edge function: `demo-signin` to issue a magic link for the shared demo account
 
-### F. Public share / embed
-
-- "Share" button generates a tokenized public URL `/embed/splats/:token` that mounts a read-only viewer.
-- New table `splat_shares (token, asset_path, project_id, expires_at)` with public select policy keyed on token.
-- Iframe snippet shown in a copy box.
-
-### G. Comparison view
-
-- Toggle **Compare** to split the viewport: GS on left, WebODM mesh/point cloud on right (loaded from existing `project-outputs/.../odm_*` paths). Cameras are linked.
-
-### H. Landing-page section
-
-Add a **"Photoreal Gaussian Splatting"** feature block on `/` (Index) summarizing: train from drone images, edit in browser, cinematic export, georeferenced, share with one link. CTA to `/splats`.
-
----
-
-## Technical details
-
-- Frontend: extend `src/pages/GaussianSplats.tsx` (split into tabs: **View / Train / Edit / Share**). New components under `src/components/splats/`:
-  - `TrainDialog.tsx`, `JobList.tsx`, `KeyframeBar.tsx`, `MeasureOverlay.tsx`, `EditTools.tsx`, `ShareDialog.tsx`, `CompareViewport.tsx`.
-- DB migrations:
-  - `splat_jobs` table + RLS (`user_id = auth.uid()`).
-  - `splat_shares` table + tokenized public-read RLS.
-  - Index on `splat_jobs(project_id, created_at desc)`.
-- Edge functions:
-  - `train-splat` (POST: { projectId, preset, sphDegree }) → enqueues row, returns id.
-  - `splat-job-status` (GET: { id }) — polled by client.
-  - `render-flythrough` (POST: { assetPath, keyframes, fps, seconds }) — returns signed URL to MP4. Uses ffmpeg via headless render queue; if unavailable, returns 501 and the client falls back to WebCodecs.
-  - `convert-splat-format` (POST: { src, target }) — converts .ply ↔ .splat ↔ .ksplat in Deno.
-- Reuse existing `project-outputs` storage bucket; add `splats/edits/` and `splats/renders/` subfolders.
-- Keep current `@mkkellogg/gaussian-splats-3d` viewer; add `three`'s `BoxHelper` and a custom raycaster against splat positions for measurement and crop.
-- Analytics: emit `splats_train_started`, `splats_export`, `splats_share_created`, `splats_flythrough_rendered` via the existing `track()` helper.
-
-## Out of scope (for this round)
-
-- Actually standing up a GPU training cluster — the `train-splat` function will queue the job and mark it `simulated` until a real GPU backend is wired (mirrors the existing WebODM fallback pattern already used in the processing pipeline).
-- Native mobile capture (Polycam-style) and Blender plugin (SplatForge-style).
-
-## Deliverables
-
-- New tabbed `/splats` experience with Train, Edit, Cinematic, Share, Compare.
-- Two new DB tables + RLS, four edge functions.
-- Landing-page feature block linking to `/splats`.
-- Memory updated: `mem://features/gaussian-splatting` documenting presets, formats, and share-token flow.
+Once you confirm scope + the three asset questions above, I'll build it in one pass and verify each step in the browser.
