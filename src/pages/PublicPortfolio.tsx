@@ -31,6 +31,7 @@ import {
   EditorialHeading,
 } from "@/components/portfolio/PortfolioPolish";
 import HireInquiryDialog from "@/components/portfolio/HireInquiryDialog";
+import PortfolioSeo from "@/components/seo/PortfolioSeo";
 
 type Mode = "home" | "photos" | "videos" | "album";
 
@@ -174,16 +175,8 @@ export default function PublicPortfolio({ mode }: Props) {
     return () => { cancelled = true; };
   }, [username, slug, mode, user?.id, retryCount]);
 
-  // Document title for SEO
-  useEffect(() => {
-    if (!profile) return;
-    const name = profile.full_name || profile.username;
-    let suffix = "Drone photography portfolio";
-    if (mode === "photos") suffix = "Photos";
-    else if (mode === "videos") suffix = "Videos";
-    else if (mode === "album" && album) suffix = album.title;
-    document.title = `${name} · ${suffix} · Dronie`;
-  }, [profile, album, mode]);
+  // Per-route head (title, description, OG, JSON-LD) is rendered below
+  // via <PortfolioSeo /> once the profile has loaded.
 
   if (loading) {
     return <PortfolioSkeleton mode={mode} />;
