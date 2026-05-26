@@ -882,6 +882,51 @@ export type Database = {
         }
         Relationships: []
       }
+      portfolio_inquiries: {
+        Row: {
+          budget_cents: number | null
+          created_at: string
+          id: string
+          message: string
+          owner_id: string
+          project_ref: string | null
+          read_at: string | null
+          sender_email: string
+          sender_name: string
+          source_url: string | null
+          subject: string | null
+          timeline: string | null
+        }
+        Insert: {
+          budget_cents?: number | null
+          created_at?: string
+          id?: string
+          message: string
+          owner_id: string
+          project_ref?: string | null
+          read_at?: string | null
+          sender_email: string
+          sender_name: string
+          source_url?: string | null
+          subject?: string | null
+          timeline?: string | null
+        }
+        Update: {
+          budget_cents?: number | null
+          created_at?: string
+          id?: string
+          message?: string
+          owner_id?: string
+          project_ref?: string | null
+          read_at?: string | null
+          sender_email?: string
+          sender_name?: string
+          source_url?: string | null
+          subject?: string | null
+          timeline?: string | null
+        }
+        Relationships: []
+      }
       portfolio_items: {
         Row: {
           album_id: string | null

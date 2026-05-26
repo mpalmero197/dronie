@@ -30,6 +30,7 @@ import {
   ProcessStrip,
   EditorialHeading,
 } from "@/components/portfolio/PortfolioPolish";
+import HireInquiryDialog from "@/components/portfolio/HireInquiryDialog";
 
 type Mode = "home" | "photos" | "videos" | "album";
 
@@ -118,6 +119,7 @@ export default function PublicPortfolio({ mode }: Props) {
   const [retryCount, setRetryCount] = useState(0);
   const [lightbox, setLightbox] = useState<PortfolioItem | null>(null);
   const [showStickyCta, setShowStickyCta] = useState(false);
+  const [hireOpen, setHireOpen] = useState(false);
 
   const theme = useMemo(() => normalizeTheme(profile?.theme ?? null), [profile?.theme]);
   useEffect(() => { ensureFontLoaded(theme.font); }, [theme.font]);
@@ -350,6 +352,7 @@ export default function PublicPortfolio({ mode }: Props) {
             hireEmail={hireEmail}
             hasAnySocial={hasAnySocial}
             allItemsCount={allItems.length}
+            onHireClick={() => setHireOpen(true)}
           />
         </div>
       )}
@@ -512,8 +515,19 @@ export default function PublicPortfolio({ mode }: Props) {
           <MagneticHireButton
             email={hireEmail}
             label={profile.full_name?.split(" ")[0] || displayName}
+            onClick={() => setHireOpen(true)}
           />
         </div>
+      )}
+
+      {prefs.show_hire_cta && (
+        <HireInquiryDialog
+          open={hireOpen}
+          onOpenChange={setHireOpen}
+          ownerId={profile.id}
+          ownerDisplayName={profile.full_name?.split(" ")[0] || displayName}
+          projectRef={mode === "album" ? album?.title ?? null : null}
+        />
       )}
     </div>
   );
@@ -527,7 +541,7 @@ type PrefsT = ReturnType<typeof normalizePrefs>;
 
 function PortfolioHero({
   profile, prefs, layout, theme, banner, items, albums, displayName,
-  formattedRate, hireEmail, hasAnySocial, allItemsCount,
+  formattedRate, hireEmail, hasAnySocial, allItemsCount, onHireClick,
 }: {
   profile: PortfolioProfile;
   prefs: PrefsT;
@@ -541,6 +555,7 @@ function PortfolioHero({
   hireEmail: string | null;
   hasAnySocial: boolean;
   allItemsCount: number;
+  onHireClick?: () => void;
 }) {
   const firstItem = items.find((i) => i.thumb_url || i.media_url);
   const firstAlbumCover = albums.find((a) => a.cover_url)?.cover_url;
@@ -554,11 +569,13 @@ function PortfolioHero({
   const ctas = (
     <div className="flex flex-wrap gap-2">
       {prefs.show_hire_cta && hireEmail && (
-        <a href={`mailto:${hireEmail}?subject=${encodeURIComponent(`Hiring inquiry for ${displayName}`)}`}>
-          <Button size="lg" className="gap-1.5 shadow-lg shadow-primary/20">
-            <Send className="w-4 h-4" /> Hire {profile.full_name?.split(" ")[0] || "me"}
-          </Button>
-        </a>
+        <Button
+          size="lg"
+          className="gap-1.5 shadow-lg shadow-primary/20"
+          onClick={onHireClick}
+        >
+          <Send className="w-4 h-4" /> Hire {profile.full_name?.split(" ")[0] || "me"}
+        </Button>
       )}
       <Link to={`/u/${profile.username}/photos`}>
         <Button size="lg" variant="outline" className="gap-1.5">
