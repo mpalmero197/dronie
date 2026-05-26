@@ -119,6 +119,7 @@ export default function PublicPortfolio({ mode }: Props) {
   const [retryCount, setRetryCount] = useState(0);
   const [lightbox, setLightbox] = useState<PortfolioItem | null>(null);
   const [showStickyCta, setShowStickyCta] = useState(false);
+  const [hireOpen, setHireOpen] = useState(false);
 
   const theme = useMemo(() => normalizeTheme(profile?.theme ?? null), [profile?.theme]);
   useEffect(() => { ensureFontLoaded(theme.font); }, [theme.font]);
