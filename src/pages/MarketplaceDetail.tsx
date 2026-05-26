@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, MapPin, Calendar, Briefcase, Loader2, Check, X, Sparkles, ShieldCheck, Plane, MessageSquare, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, MapPin, Calendar, Briefcase, Loader2, Check, X, Sparkles, ShieldCheck, Plane, MessageSquare, Pencil, Trash2, Receipt } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -298,6 +298,13 @@ export default function MarketplaceDetail() {
                   <Pencil className="w-3.5 h-3.5" /> Edit request
                 </Button>
               </Link>
+              {request.assigned_pilot_id && (
+                <Link to={`/marketplace/${request.id}/receipt`}>
+                  <Button size="sm" variant="outline" className="gap-1.5">
+                    <Receipt className="w-3.5 h-3.5" /> View receipt
+                  </Button>
+                </Link>
+              )}
               <Button
                 size="sm"
                 variant="outline"
@@ -308,6 +315,15 @@ export default function MarketplaceDetail() {
                 {deleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
                 Delete
               </Button>
+            </div>
+          )}
+          {!isOwner && request.assigned_pilot_id === user?.id && (
+            <div className="flex flex-wrap gap-2 mt-5 pt-5 border-t border-border">
+              <Link to={`/marketplace/${request.id}/receipt`}>
+                <Button size="sm" variant="outline" className="gap-1.5">
+                  <Receipt className="w-3.5 h-3.5" /> View receipt
+                </Button>
+              </Link>
             </div>
           )}
         </div>
