@@ -30,6 +30,7 @@ import {
   ProcessStrip,
   EditorialHeading,
 } from "@/components/portfolio/PortfolioPolish";
+import HireInquiryDialog from "@/components/portfolio/HireInquiryDialog";
 
 type Mode = "home" | "photos" | "videos" | "album";
 
