@@ -36,6 +36,7 @@ import Marketplace from "./pages/Marketplace.tsx";
 import MarketplaceNew from "./pages/MarketplaceNew.tsx";
 import MarketplaceDetail from "./pages/MarketplaceDetail.tsx";
 import MarketplaceInbox from "./pages/MarketplaceInbox.tsx";
+import MarketplaceReceipt from "./pages/MarketplaceReceipt.tsx";
 import VerticalLanding from "./pages/solutions/VerticalLanding.tsx";
 import PilotSignup from "./pages/PilotSignup.tsx";
 import PilotVerification from "./pages/PilotVerification.tsx";
@@ -99,6 +100,7 @@ const App = () => (
             <Route path="/marketplace/new" element={<MarketplaceNew />} />
             <Route path="/marketplace/inbox" element={<MarketplaceInbox />} />
             <Route path="/marketplace/:id/edit" element={<MarketplaceNew />} />
+            <Route path="/marketplace/:id/receipt" element={<MarketplaceReceipt />} />
             <Route path="/marketplace/:id" element={<MarketplaceDetail />} />
             <Route path="/solutions/:vertical" element={<VerticalLanding />} />
             <Route path="/pilots/join" element={<PilotSignup />} />
