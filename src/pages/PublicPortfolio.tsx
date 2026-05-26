@@ -298,6 +298,13 @@ export default function PublicPortfolio({ mode }: Props) {
       className="min-h-screen bg-background text-foreground"
       style={themeStyle(theme)}
     >
+      <PortfolioSeo
+        profile={profile}
+        mode={mode}
+        album={album}
+        items={items}
+        published={!!profile.portfolio_published}
+      />
       <ScrollProgressBar />
       {mode === "home" && <SectionDots sections={dotSections} />}
       {isOwner && isUnpublished && (
