@@ -8,6 +8,7 @@ import {
   Mountain, Grid3X3, Ruler, FileType, MapPin, Upload,
 } from "lucide-react";
 import GpsMapPreview from "@/components/project/GpsMapPreview";
+import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
@@ -491,6 +492,18 @@ export default function ProjectDetail() {
 
   return (
     <div className="min-h-screen bg-background">
+      <Helmet>
+        <title>{`${project.name} · Project · Dronie`}</title>
+        <meta
+          name="description"
+          content={
+            project.description ||
+            `Drone mapping project "${project.name}" — processing pipeline, deliverables and accuracy report on Dronie.`
+          }
+        />
+        <meta name="robots" content="noindex, nofollow" />
+        <link rel="canonical" href={`https://dronieapp.com/project/${project.id}`} />
+      </Helmet>
       {/* Header */}
       <header className="sticky top-0 z-10 bg-card/95 backdrop-blur-md border-b border-border px-6 py-4">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
