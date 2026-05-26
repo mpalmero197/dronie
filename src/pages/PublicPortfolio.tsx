@@ -352,6 +352,7 @@ export default function PublicPortfolio({ mode }: Props) {
             hireEmail={hireEmail}
             hasAnySocial={hasAnySocial}
             allItemsCount={allItems.length}
+            onHireClick={() => setHireOpen(true)}
           />
         </div>
       )}
