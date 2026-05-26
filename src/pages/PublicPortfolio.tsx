@@ -515,8 +515,19 @@ export default function PublicPortfolio({ mode }: Props) {
           <MagneticHireButton
             email={hireEmail}
             label={profile.full_name?.split(" ")[0] || displayName}
+            onClick={() => setHireOpen(true)}
           />
         </div>
+      )}
+
+      {prefs.show_hire_cta && (
+        <HireInquiryDialog
+          open={hireOpen}
+          onOpenChange={setHireOpen}
+          ownerId={profile.id}
+          ownerDisplayName={profile.full_name?.split(" ")[0] || displayName}
+          projectRef={mode === "album" ? album?.title ?? null : null}
+        />
       )}
     </div>
   );
