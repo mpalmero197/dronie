@@ -120,13 +120,15 @@ export function MagneticHireButton({
   email,
   label,
   className,
+  onClick,
 }: {
   email: string;
   label: string;
   className?: string;
+  onClick?: () => void;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
-  const btnRef = useRef<HTMLAnchorElement>(null);
+  const btnRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     const el = wrapRef.current;
@@ -163,18 +165,35 @@ export function MagneticHireButton({
 
   return (
     <div ref={wrapRef} className={`inline-block ${className ?? ""}`}>
-      <a
-        ref={btnRef}
-        href={`mailto:${email}?subject=${encodeURIComponent(`Hiring inquiry — ${label}`)}`}
-        className="inline-block transition-transform duration-200 ease-out will-change-transform"
-      >
-        <Button
-          size="lg"
-          className="gap-2 h-12 px-6 rounded-full shadow-2xl shadow-primary/30 text-base font-semibold"
+      {onClick ? (
+        <button
+          ref={btnRef as React.RefObject<HTMLButtonElement>}
+          type="button"
+          onClick={onClick}
+          className="inline-block transition-transform duration-200 ease-out will-change-transform"
         >
-          <Send className="w-4 h-4" /> Hire {label}
-        </Button>
-      </a>
+          <Button
+            asChild={false}
+            size="lg"
+            className="gap-2 h-12 px-6 rounded-full shadow-2xl shadow-primary/30 text-base font-semibold pointer-events-none"
+          >
+            <span className="inline-flex items-center gap-2"><Send className="w-4 h-4" /> Hire {label}</span>
+          </Button>
+        </button>
+      ) : (
+        <a
+          ref={btnRef as React.RefObject<HTMLAnchorElement>}
+          href={`mailto:${email}?subject=${encodeURIComponent(`Hiring inquiry — ${label}`)}`}
+          className="inline-block transition-transform duration-200 ease-out will-change-transform"
+        >
+          <Button
+            size="lg"
+            className="gap-2 h-12 px-6 rounded-full shadow-2xl shadow-primary/30 text-base font-semibold"
+          >
+            <Send className="w-4 h-4" /> Hire {label}
+          </Button>
+        </a>
+      )}
     </div>
   );
 }
