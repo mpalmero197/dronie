@@ -1,56 +1,87 @@
-# Improve Gaussian Splatting (3DGS) across Dronie
 
-Goal: turn the existing `/splats` studio from a generic uploader into an opinionated 3DGS workflow that teaches users *how* to capture, warns them about the failure modes that wreck splats, and prepares the pipeline for heavy explicit particle datasets.
+# Make every "conceptual" feature actually work
 
-## 1. Capture guidance module (new)
-New component `src/components/splats/CaptureRequirements.tsx` shown above the project picker on `/splats` and inside `TrainDialog` as an info accordion. Covers:
-- Required flight pattern: overlapping **nadir + oblique** (≥70% front / 60% side overlap, two altitudes, orbit pass for verticals).
-- SfM dependency: GPS/RTK preferred; warns that pose quality dictates final fidelity.
-- Recommended image count band per preset (Draft 80–150, Balanced 200–400, Cinematic 500+).
-- Link to a new `/docs/3dgs-capture` markdown page (lightweight in-app doc using existing landing-page styling).
+There are four parts of the app that today *pretend* to work. I'll replace each with a real, paid third-party service that I can call from edge functions. You don't need to run any infrastructure — you only need to create an account on each service and paste the API key when I ask.
 
-## 2. Pre-flight 3DGS checklist
-Extend `src/components/pilot/MissionChecklist.tsx` with a 3DGS-specific variant (or new `SplatPreflightChecklist.tsx`) surfaced when the user picks a "Photoreal 3D / Splat" preset in `PlanWizard` and inside `TrainDialog`:
-- Static scene confirmed (no traffic, water, crowd)
-- Wind below threshold (foliage motion warning)
-- Stable lighting window (no fast-moving shadows; avoid golden hour for long flights)
-- Mechanical shutter preferred; rolling-shutter drones flagged with a soft warning sourced from `src/lib/drone-catalog.ts`
-- Overlap + oblique pass confirmed
-- RTK / GCPs available (recommended)
+---
 
-State persists per project in `localStorage` so the user can revisit.
+## 1. Photogrammetry processing → WebODM Lightning
 
-## 3. Train dialog upgrades
-Update `src/components/splats/TrainDialog.tsx`:
-- Add an **environment self-assessment** section (3 toggles: static scene, stable light, RTK/GCP). If any are off, show inline impact warnings using copy from the spec's `operational_limitations_for_user_warnings`.
-- Add an **image-count sanity check** comparing detected `image_count` from `train-splat` against preset minimums; block submit with a clear message if too low.
-- Add a "rolling shutter detected" advisory when the project's drone model maps to a known rolling-shutter sensor.
+Today `process-project` falls back to a simulator that writes a 1×1 green PNG and a text file labeled `# Dronie reconstructed mesh (placeholder)` when WebODM isn't configured. I'll remove that whole code path.
 
-No backend schema change — extra flags are sent in the request body and stored on `splat_jobs` via a new nullable `capture_flags jsonb` column (migration in step 6).
+**Service:** [WebODM Lightning Network](https://webodm.net) by OpenDroneMap. Pay-as-you-go (~$1–5 per task), no servers to run, REST API.
 
-## 4. Streaming-friendly viewer pipeline
-`src/pages/GaussianSplats.tsx`:
-- Prefer `.ksplat` when multiple formats exist for the same scene (already best for web), show a "Compressed" badge.
-- Add a client-side size guard: if asset > 250 MB, show a banner recommending `.ksplat` conversion and link to a new edge function stub `convert-splat` (returns "queued" — real conversion is out of scope but the surface is in place).
-- Add progressive loading UI: show MB streamed / total via fetch `ReadableStream`, so multi-GB files give feedback instead of appearing frozen.
+What I'll do:
+- Add two secrets: `WEBODM_LIGHTNING_TOKEN`, plus reuse existing `WEBODM_URL` pointed at `https://webodm.net`.
+- Rewrite `process-project` to upload the project's drone images to Lightning, poll the task, and stream the real orthomosaic (.tif), DSM, point cloud (.laz), and textured mesh (.obj/.glb) back into the `project-outputs` bucket.
+- Delete `runSimulatedProcessing`, `generateOrthomosaicPlaceholder`, and the synthesized accuracy report. The real Lightning response includes a genuine quality report.
+- If the token is missing, the Process button is disabled in the UI with a clear "Set up WebODM Lightning to enable processing" message instead of silently faking it.
 
-## 5. Landing + features copy
-- `src/components/SplatHighlightSection.tsx`: rewrite body copy to explain the shift from mesh/NeRF photogrammetry to explicit Gaussians — real-time rasterization, view-dependent color via spherical harmonics — and add a small "What can go wrong" strip listing the 5 limitations as chips with tooltips.
-- `src/components/FeaturesSection.tsx`: tighten the Gaussian Splatting card subtitle to mention "explicit particles, real-time render, capture-sensitive."
-- Add a new short FAQ entry in `src/components/FaqSection.tsx`: "Why did my splat come out blurry?" → summarises lighting / motion / pose causes.
+**You'll need:** a WebODM Lightning account + an API token (free to create, charges per task).
 
-## 6. Minor schema + analytics
-- Migration: `ALTER TABLE public.splat_jobs ADD COLUMN capture_flags jsonb` (nullable, no policy changes needed; existing RLS still applies).
-- Extend `train-splat` edge function to persist `capture_flags` from request body.
-- Add `track()` events: `splats_preflight_warning_shown`, `splats_preflight_overridden`, `splats_capture_doc_opened`.
+---
 
-## Technical notes
-- All new copy lives in components, no i18n layer required.
-- Reuse existing semantic tokens (`primary`, `accent`, `highlight`) — no new colors.
-- Rolling-shutter list seeded from public drone specs in `src/lib/drone-catalog.ts` (add a `rollingShutter: boolean` field; default `true` for consumer DJI, `false` for Mavic 3E mech-shutter, M3M, P1 etc.).
-- Doc page is a plain route in `src/App.tsx`; no MDX dependency added.
+## 2. Gaussian Splatting training → Replicate
 
-## Out of scope
-- Real GPU trainer / real `.ply → .ksplat` conversion (still simulated as today, surfaces only).
-- Vector quantization implementation.
-- Editing / cropping splats in-browser.
+Today `train-splat` uses `setTimeout` to fake a status sequence (`queued → preparing → training → done`) and writes nothing. No GPU is involved.
+
+**Service:** [Replicate](https://replicate.com) — runs `gaussian-splatting` models on real GPUs and returns a `.ply` / `.splat` file. ~$0.50–$3 per scene depending on size.
+
+What I'll do:
+- Add secret `REPLICATE_API_TOKEN`.
+- Rewrite `train-splat` to:
+  1. Zip the project's images from storage and upload them to Replicate.
+  2. Start a prediction against a published 3DGS model (default: `camenduru/gaussian-splatting`).
+  3. Poll until done, download the resulting `.ply`, upload to `project-outputs/<project>/splats/<job>.ply`.
+  4. Persist real `psnr`, `training_seconds`, `image_count` from the model's metrics on the `splat_jobs` row.
+- Update `splat-job-status` to read real status fields.
+- The existing viewer already supports `.ply`/`.splat`/`.ksplat`, so it just works.
+
+**You'll need:** a Replicate account + API token.
+
+---
+
+## 3. Fleet "live telemetry & camera feeds" → Cloudflare Stream Live
+
+Today drones can have a "demo video upload" mode that just plays a pre-recorded file out of the `drone-demos` bucket. There's no actual RTMP ingest.
+
+**Service:** [Cloudflare Stream Live](https://www.cloudflare.com/products/cloudflare-stream/) — $5/month + ~$1 per 1,000 minutes delivered. Accepts RTMP from any drone ground-station (DJI RC Pro, Litchi, etc.) and produces HLS playback in a `<video>` tag.
+
+What I'll do:
+- Add secrets `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_STREAM_TOKEN`.
+- New edge function `fleet-live-input`: creates a Cloudflare Live Input per drone on demand and stores the RTMP URL + stream key + playback HLS URL on the `drones` row (new columns `rtmps_url`, `rtmps_key`, `hls_playback_url`).
+- Replace `StreamSourcePicker` so the "Live RTMP" option shows the operator the RTMP endpoint to paste into their controller, plus a copy-to-clipboard. The "demo upload" option stays available but is clearly labeled "Test mode (pre-recorded clip)".
+- Replace any placeholder/animated map dot with real telemetry: I'll wire `live-telemetry` to a Supabase Realtime channel that the drone or a paired phone publishes GPS to. Until a real telemetry source is connected the map shows "Awaiting telemetry" — no fake numbers.
+
+**You'll need:** a Cloudflare account (free to create) + an API token with `Stream:Edit`.
+
+---
+
+## 4. Reality Capture viewer → real 3D rendering
+
+`RealityCapture.tsx` currently renders a static colored `<PlaceholderBox>` cube instead of the project's actual reconstruction.
+
+What I'll do (no new service needed — purely frontend):
+- Use `@react-three/fiber` + `@react-three/drei` (already in the project) to load the real `.glb` / `.obj` mesh and `.laz`/`.ply` point cloud that WebODM produced, with orbit controls, measurement tool, and screenshot export.
+- Remove `PlaceholderBox` entirely.
+
+---
+
+## 5. Sweep for the rest
+
+I'll grep the codebase for any remaining `simulat`, `mock`, `fake`, `placeholder`, `coming soon`, or `demo data` references and either wire them to real data or hide the UI. Known small ones already found:
+- The "AI Insights" page already calls a real Lovable AI model — no change.
+- Any "demo" sample projects seeded for new users will be moved to a clearly labeled `Sample` tab so they never look like real data.
+
+---
+
+## Order of execution
+
+1. Ask for the three secrets (`WEBODM_LIGHTNING_TOKEN`, `REPLICATE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_STREAM_TOKEN`).
+2. Ship WebODM Lightning integration + delete the processing simulator.
+3. Ship Replicate splat training + delete the splat simulator.
+4. Ship Cloudflare Stream live ingest + replace demo-only stream mode.
+5. Ship real 3D Reality Capture viewer.
+6. Final grep sweep for any leftover placeholder copy and fix.
+
+After approval, the first thing I'll do is open the secret-entry forms so you can paste keys; I won't be able to deploy the new edge functions until those exist.
