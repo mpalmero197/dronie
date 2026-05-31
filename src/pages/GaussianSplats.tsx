@@ -21,6 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { TrainDialog } from "@/components/splats/TrainDialog";
 import { JobList } from "@/components/splats/JobList";
 import { ShareDialog } from "@/components/splats/ShareDialog";
+import CaptureRequirements from "@/components/splats/CaptureRequirements";
 import { track } from "@/lib/analytics";
 
 interface ProjectOpt { id: string; name: string; }
@@ -92,7 +93,14 @@ export default function GaussianSplats() {
         return { name: f.name, url, size: f.metadata?.size ?? 0, format: detectFormat(f.name) };
       });
     setAssets(eligible);
-    setSelected(eligible[0] ?? null);
+    // Prefer the web-optimized .ksplat format when multiple scenes exist —
+    // explicit splats are big and .ksplat streams far better on mobile.
+    const preferred =
+      eligible.find((a) => a.format === "ksplat") ??
+      eligible.find((a) => a.format === "splat") ??
+      eligible[0] ??
+      null;
+    setSelected(preferred);
     setLoading(false);
   };
 
@@ -268,6 +276,8 @@ export default function GaussianSplats() {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5 space-y-5">
+        <CaptureRequirements />
+
         {/* Project + asset picker */}
         <div className="rounded-2xl border border-border bg-card p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
@@ -402,6 +412,21 @@ export default function GaussianSplats() {
                   <button onClick={() => handleDelete(selected)} className="inline-flex items-center gap-1 px-2 py-1 rounded-md hover:bg-destructive/15 text-destructive">
                     <Trash2 className="w-3.5 h-3.5" /> Delete
                   </button>
+                </div>
+              </div>
+            )}
+
+            {selected && selected.size > 250 * 1024 * 1024 && selected.format !== "ksplat" && (
+              <div className="rounded-2xl border border-highlight/30 bg-highlight/10 p-3 text-xs flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-highlight flex-shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="font-semibold text-foreground">
+                    Heavy scene ({(selected.size / 1024 / 1024).toFixed(0)} MB) — consider .ksplat
+                  </p>
+                  <p className="text-muted-foreground leading-relaxed">
+                    Explicit Gaussians scale fast. Convert this scene to <code>.ksplat</code> for vector-quantized
+                    web streaming — mobile viewers will thank you. Use the Export menu above to queue a conversion.
+                  </p>
                 </div>
               </div>
             )}

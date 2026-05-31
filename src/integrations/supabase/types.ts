@@ -1465,6 +1465,7 @@ export type Database = {
       }
       splat_jobs: {
         Row: {
+          capture_flags: Json | null
           created_at: string
           error: string | null
           id: string
@@ -1482,6 +1483,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          capture_flags?: Json | null
           created_at?: string
           error?: string | null
           id?: string
@@ -1499,6 +1501,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          capture_flags?: Json | null
           created_at?: string
           error?: string | null
           id?: string

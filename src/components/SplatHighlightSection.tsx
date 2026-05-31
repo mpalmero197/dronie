@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { ArrowRight, Box, Camera, Globe2, Pencil, Share2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { track } from "@/lib/analytics";
+import { SPLAT_LIMITATIONS } from "@/lib/splat3dgs";
 
 const FEATURES = [
   {
@@ -55,8 +56,9 @@ export default function SplatHighlightSection() {
             Gaussian Splatting, built for drones.
           </h2>
           <p className="mt-4 text-base sm:text-lg text-muted-foreground">
-            Every great GS tool in one workflow — train like Luma, edit like SuperSplat, georeference like DJI Terra,
-            export anywhere, share with one link.
+            Skip the mesh and the neural field. 3DGS represents your scene as millions of explicit anisotropic
+            particles — each with a 3D covariance, opacity and spherical harmonics — rasterized in real time
+            from any browser. Train like Luma, edit like SuperSplat, georeference like DJI Terra, share with one link.
           </p>
         </div>
 
@@ -76,6 +78,28 @@ export default function SplatHighlightSection() {
               </p>
             </article>
           ))}
+        </div>
+
+        <div className="mt-10 rounded-2xl border border-highlight/25 bg-highlight/[0.05] p-5">
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-highlight mb-3">
+            Plan your capture around these limits
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {SPLAT_LIMITATIONS.map((l) => (
+              <span
+                key={l.key}
+                title={l.detail}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-background border border-border text-[11px] hover:border-highlight/50 transition-colors cursor-help"
+              >
+                <span className="font-semibold">{l.label}</span>
+                <span className="text-muted-foreground">· {l.short}</span>
+              </span>
+            ))}
+          </div>
+          <p className="mt-3 text-xs text-muted-foreground leading-relaxed">
+            3DGS is unforgiving with motion, lighting drift and weak SfM poses. The splat studio walks you through
+            a pre-flight checklist before each training run so you don't burn compute on a bad dataset.
+          </p>
         </div>
 
         <div className="mt-10 flex flex-wrap items-center gap-3">

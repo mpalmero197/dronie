@@ -38,6 +38,10 @@ const FAQS = [
     q: "Can I hire a drone pilot through Dronie?",
     a: "Yes. The Dronie Marketplace connects clients with verified Part 107 pilots worldwide. Browse the live pilot map, view public portfolios, request a quote, and pay securely through Stripe Connect — pilots receive their full asking price and the client pays a 1% connection fee. Higher subscription tiers get first access to new client requests.",
   },
+  {
+    q: "Why did my Gaussian splat come out blurry or spiky?",
+    a: "3D Gaussian Splatting is unforgiving to four things: weak Structure-from-Motion poses (low overlap, poor GPS/RTK), shifting lighting during the flight (long missions or fast-moving shadows), non-static elements in the scene (wind in foliage, water, traffic, people) and CMOS rolling-shutter distortion on consumer drones. Each one corrupts the per-particle covariance optimization, producing smeared, spiky or blown-out regions. The Dronie splat studio runs you through a pre-flight checklist before every training run so you can flag these conditions and decide whether to re-fly before burning compute.",
+  },
 ];
 
 export default function FaqSection() {

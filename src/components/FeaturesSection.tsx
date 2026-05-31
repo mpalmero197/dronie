@@ -18,7 +18,7 @@ const features = [
   {
     icon: Sparkles,
     title: "Gaussian Splatting",
-    desc: "Photorealistic 3D scenes from your drone imagery. Upload .ply / .splat / .ksplat and explore in a fluid in-browser viewer with cinematic orbit.",
+    desc: "Photorealistic 3D from explicit particles — real-time rasterization, view-dependent color. Capture-sensitive: needs solid overlap, stable light and clean SfM poses.",
     color: "text-primary",
     bg: "bg-primary/10",
   },

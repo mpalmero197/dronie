@@ -44,6 +44,9 @@ Deno.serve(async (req) => {
     const preset: string = body.preset ?? "balanced";
     const sphDegree: number = Number(body.sphDegree ?? 2);
     const useGeoref: boolean = body.useGeoref ?? true;
+    const captureFlags = body.captureFlags && typeof body.captureFlags === "object"
+      ? body.captureFlags
+      : null;
 
     if (!projectId || !PRESETS[preset]) {
       return new Response(JSON.stringify({ error: "invalid_input" }), {
@@ -77,6 +80,7 @@ Deno.serve(async (req) => {
         use_georef: useGeoref,
         image_count: imageCount,
         status: "queued",
+        capture_flags: captureFlags,
       })
       .select()
       .single();
