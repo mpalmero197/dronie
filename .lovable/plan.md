@@ -1,84 +1,56 @@
+# Improve Gaussian Splatting (3DGS) across Dronie
 
-# Watch-a-Mission: end-to-end product demo
+Goal: turn the existing `/splats` studio from a generic uploader into an opinionated 3DGS workflow that teaches users *how* to capture, warns them about the failure modes that wreck splats, and prepares the pipeline for heavy explicit particle datasets.
 
-## Goal
-A single "Watch a Mission" experience that drives the **real** Dronie pages (not a video, not a mock route) through every stage of a photogrammetry job, end to end. Triggered from the marketing site and from `/dashboard`. Auto-advances by default, with Next/Prev/Pause and "Take control" to exit into the live app at the current step.
+## 1. Capture guidance module (new)
+New component `src/components/splats/CaptureRequirements.tsx` shown above the project picker on `/splats` and inside `TrainDialog` as an info accordion. Covers:
+- Required flight pattern: overlapping **nadir + oblique** (≥70% front / 60% side overlap, two altitudes, orbit pass for verticals).
+- SfM dependency: GPS/RTK preferred; warns that pose quality dictates final fidelity.
+- Recommended image count band per preset (Draft 80–150, Balanced 200–400, Cinematic 500+).
+- Link to a new `/docs/3dgs-capture` markdown page (lightweight in-app doc using existing landing-page styling).
 
-## Stages it walks through
+## 2. Pre-flight 3DGS checklist
+Extend `src/components/pilot/MissionChecklist.tsx` with a 3DGS-specific variant (or new `SplatPreflightChecklist.tsx`) surfaced when the user picks a "Photoreal 3D / Splat" preset in `PlanWizard` and inside `TrainDialog`:
+- Static scene confirmed (no traffic, water, crowd)
+- Wind below threshold (foliage motion warning)
+- Stable lighting window (no fast-moving shadows; avoid golden hour for long flights)
+- Mechanical shutter preferred; rolling-shutter drones flagged with a soft warning sourced from `src/lib/drone-catalog.ts`
+- Overlap + oblique pass confirmed
+- RTK / GCPs available (recommended)
 
-```
-1. Plan         /missions/new           Draw AOI, MissionCalculator, footprint/overlap preview
-2. Export       /missions/new           Generate KMZ, "Open in DJI Fly" handoff card
-3. Fly (live)   /fleet/live/:droneId    Telemetry HUD + camera feed playing real DJI Fly clip
-4. Complete     /fleet/live/:droneId    Mission-complete toast → "View in project"
-5. Process      /project/:id            Stage log animates queued → SfM → dense → ortho → mesh
-6. Deliver      /project/:id            Ortho/DSM/pointcloud viewers, download bundle
-```
+State persists per project in `localStorage` so the user can revisit.
 
-Each stage is the **actual page** with a demo overlay (step chip, caption, Next/Prev/Pause/Exit). The demo seeds and drives a real `projects` row and a real `drones` row so RLS, queries, and UI all behave normally.
+## 3. Train dialog upgrades
+Update `src/components/splats/TrainDialog.tsx`:
+- Add an **environment self-assessment** section (3 toggles: static scene, stable light, RTK/GCP). If any are off, show inline impact warnings using copy from the spec's `operational_limitations_for_user_warnings`.
+- Add an **image-count sanity check** comparing detected `image_count` from `train-splat` against preset minimums; block submit with a clear message if too low.
+- Add a "rolling shutter detected" advisory when the project's drone model maps to a known rolling-shutter sensor.
 
-## What's real vs. scripted
+No backend schema change — extra flags are sent in the request body and stored on `splat_jobs` via a new nullable `capture_flags jsonb` column (migration in step 6).
 
-| Piece | Source |
-| --- | --- |
-| AOI polygon, calculator inputs | Scripted (typed into real inputs via a controller hook) |
-| KMZ export | Real `exportKMZ()` call, downloadable |
-| DJI Fly handoff card | Real component, with QR + deep link |
-| Drone telemetry on map | Scripted writes to `drones` (lat/lng/battery/heading) on a timer, real Realtime subscription renders it |
-| Camera feed | Real `<video>` playing a DJI Fly capture from `drone-demos` bucket (need 1 clip from you, or I'll use the existing `stream_demo_path` sample) |
-| Processing stages | Scripted updates to `projects.current_stage` / `stage_progress` / `stage_log`, real ProjectDetails UI renders them |
-| Deliverables | Pre-seeded sample ortho/DSM/pointcloud already in `project-outputs` (reuse existing demo assets if present; otherwise I'll generate placeholder GeoTIFF + LAZ thumbnails) |
+## 4. Streaming-friendly viewer pipeline
+`src/pages/GaussianSplats.tsx`:
+- Prefer `.ksplat` when multiple formats exist for the same scene (already best for web), show a "Compressed" badge.
+- Add a client-side size guard: if asset > 250 MB, show a banner recommending `.ksplat` conversion and link to a new edge function stub `convert-splat` (returns "queued" — real conversion is out of scope but the surface is in place).
+- Add progressive loading UI: show MB streamed / total via fetch `ReadableStream`, so multi-GB files give feedback instead of appearing frozen.
 
-No new data model. Demo only **writes** to existing tables it owns (a dedicated `demo@dronieapp.com`-style ephemeral session, or the current user's own seeded "Demo project").
+## 5. Landing + features copy
+- `src/components/SplatHighlightSection.tsx`: rewrite body copy to explain the shift from mesh/NeRF photogrammetry to explicit Gaussians — real-time rasterization, view-dependent color via spherical harmonics — and add a small "What can go wrong" strip listing the 5 limitations as chips with tooltips.
+- `src/components/FeaturesSection.tsx`: tighten the Gaussian Splatting card subtitle to mention "explicit particles, real-time render, capture-sensitive."
+- Add a new short FAQ entry in `src/components/FaqSection.tsx`: "Why did my splat come out blurry?" → summarises lighting / motion / pose causes.
 
-## Implementation
+## 6. Minor schema + analytics
+- Migration: `ALTER TABLE public.splat_jobs ADD COLUMN capture_flags jsonb` (nullable, no policy changes needed; existing RLS still applies).
+- Extend `train-splat` edge function to persist `capture_flags` from request body.
+- Add `track()` events: `splats_preflight_warning_shown`, `splats_preflight_overridden`, `splats_capture_doc_opened`.
 
-### 1. Demo runtime (frontend only)
-- `src/demo/DemoController.tsx` — context with `currentStep`, `play/pause/next/prev/exit`, route-aware.
-- `src/demo/steps.ts` — declarative step list: `{ id, route, caption, durationMs, run: async (ctx) => void }`.
-- `src/demo/DemoOverlay.tsx` — fixed bottom bar (step N/6, caption, progress, controls). Hidden when `exit`ed.
-- `src/demo/useScriptedInput.ts` — utility to programmatically set Zustand store values or dispatch input events on real fields, so MissionCalculator etc. update without forking components.
+## Technical notes
+- All new copy lives in components, no i18n layer required.
+- Reuse existing semantic tokens (`primary`, `accent`, `highlight`) — no new colors.
+- Rolling-shutter list seeded from public drone specs in `src/lib/drone-catalog.ts` (add a `rollingShutter: boolean` field; default `true` for consumer DJI, `false` for Mavic 3E mech-shutter, M3M, P1 etc.).
+- Doc page is a plain route in `src/App.tsx`; no MDX dependency added.
 
-### 2. Entry points
-- New route `/demo` that mounts `DemoController` then redirects to step 1's route.
-- "Watch 90-second demo" CTA on `HeroSection` and a "Take the tour" button on `/dashboard`.
-
-### 3. Seed + cleanup
-- On demo start: insert a `projects` row (`name: "Demo — Riverside Quarry"`, `user_id: auth.uid()`) and a `drones` row (`assigned_pilot_id: auth.uid()`, `stream_mode: 'demo'`, `stream_demo_path` pointing at the DJI clip).
-- On exit / finish: soft-keep them (user can replay) but mark with `description: '__demo__'` so they're filterable; add a "Reset demo" button.
-- Requires the user to be signed in. If anonymous on `/demo`, show a one-click "Continue as demo user" that signs them in with a pre-provisioned `demo@dronieapp.com` account (I'll add this account via migration + seed; password stored only in the edge function that issues a magic-link).
-
-### 4. Live-flight simulation
-- A `useDemoFlightTicker(droneId)` hook updates the drone's lat/lng along the planned path every 500 ms using `supabase.from('drones').update(...)`. The existing `/fleet/live` realtime subscription picks it up — no changes to that page.
-- Camera: existing `stream_mode='demo'` + `stream_demo_path` already renders the video. I just need to confirm one good DJI Fly clip is uploaded to `drone-demos`.
-
-### 5. Processing simulation
-- `useDemoProcessingTicker(projectId)` updates `current_stage`, `stage_progress`, `stage_log`, `progress` to mirror real WebODM stages. ProjectDetails already renders these.
-- Final state writes `outputs_urls` pointing to pre-seeded sample deliverables in `project-outputs`.
-
-### 6. Verification
-- After build, I drive the demo with the browser tool end-to-end (all 6 steps), screenshot each, and confirm: KMZ downloads, drone marker animates, video plays, processing bar fills, deliverables render and download.
-
-## What I need from you (asset-level)
-
-1. **DJI Fly aerial clip** (mp4, ~30–60 s, downward/oblique). If you don't have one handy, I'll fall back to whatever's already in the `drone-demos` bucket and we can swap later.
-2. Confirmation that I can create a `demo@dronieapp.com` user for the anonymous entry point (or you'd rather demo require sign-in).
-3. Whether the demo should write into a **dedicated demo project per user** (replayable, leaves a row behind) or into an **ephemeral in-memory project** (no DB writes, but `/fleet/live` and `/project/:id` won't show it through their normal queries — would require fork). I recommend option A.
-
-## Out of scope (call out, do later)
-- Real RTK/PPK processing
-- Actual DJI Fly SDK integration (we're only doing the KMZ handoff + a played-back clip)
-- Multi-language captions
-- Mobile-portrait optimization of the overlay (will work, won't be polished)
-
-## Files I'll add / edit
-- add: `src/demo/{DemoController.tsx, DemoOverlay.tsx, steps.ts, useScriptedInput.ts, useDemoFlightTicker.ts, useDemoProcessingTicker.ts, seed.ts}`
-- add: `src/pages/Demo.tsx` (mounts controller, routes to step 1)
-- edit: `src/App.tsx` (route + provider)
-- edit: `src/components/HeroSection.tsx` (CTA)
-- edit: `src/pages/Dashboard.tsx` (CTA)
-- edit: `src/components/project/MissionCalculator.tsx` (expose imperative ref for scripted input — minimal)
-- migration: ensure `drones.stream_mode='demo'` path is enabled; seed sample deliverable URLs if missing
-- (optional) edge function: `demo-signin` to issue a magic link for the shared demo account
-
-Once you confirm scope + the three asset questions above, I'll build it in one pass and verify each step in the browser.
+## Out of scope
+- Real GPU trainer / real `.ply → .ksplat` conversion (still simulated as today, surfaces only).
+- Vector quantization implementation.
+- Editing / cropping splats in-browser.

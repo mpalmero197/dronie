@@ -1,0 +1,1 @@
+ALTER TABLE public.splat_jobs ADD COLUMN IF NOT EXISTS capture_flags jsonb;
