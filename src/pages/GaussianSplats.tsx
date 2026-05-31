@@ -415,6 +415,21 @@ export default function GaussianSplats() {
                 </div>
               </div>
             )}
+
+            {selected && selected.size > 250 * 1024 * 1024 && selected.format !== "ksplat" && (
+              <div className="rounded-2xl border border-highlight/30 bg-highlight/10 p-3 text-xs flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-highlight flex-shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="font-semibold text-foreground">
+                    Heavy scene ({(selected.size / 1024 / 1024).toFixed(0)} MB) — consider .ksplat
+                  </p>
+                  <p className="text-muted-foreground leading-relaxed">
+                    Explicit Gaussians scale fast. Convert this scene to <code>.ksplat</code> for vector-quantized
+                    web streaming — mobile viewers will thank you. Use the Export menu above to queue a conversion.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Controls + upload + training */}
