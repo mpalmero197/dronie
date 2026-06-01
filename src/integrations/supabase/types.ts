@@ -1774,6 +1774,17 @@ export type Database = {
         Args: { _pilot_id: string; _request_id: string; _user_id: string }
         Returns: boolean
       }
+      create_notification: {
+        Args: {
+          _body?: string
+          _kind: string
+          _link?: string
+          _metadata?: Json
+          _title: string
+          _user_id: string
+        }
+        Returns: string
+      }
       decrypt_app_secret: {
         Args: { _key: string; _name: string }
         Returns: string
