@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { VERTICAL_LIST } from "@/pages/solutions/verticals.config";
+import NotificationBell from "@/components/NotificationBell";
 
 const navLinks = [
 { label: "Features", hash: "features" },
@@ -131,6 +132,7 @@ export default function Navbar() {
           <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" /> :
           user ?
           <>
+              <NotificationBell />
               <Link to="/dashboard">
                 <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground hover:text-foreground">
                   <LayoutDashboard className="w-4 h-4" />
