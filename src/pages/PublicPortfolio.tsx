@@ -21,6 +21,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   DEFAULT_THEME, ensureFontLoaded, normalizeTheme, themeStyle,
 } from "@/lib/portfolioTheme";
+import type { PortfolioLayout } from "@/lib/portfolioTheme";
 import {
   ScrollProgressBar,
   MarqueeTape,
@@ -567,7 +568,7 @@ function PortfolioHero({
 }: {
   profile: PortfolioProfile;
   prefs: PrefsT;
-  layout: "cinematic" | "editorial" | "grid";
+  layout: PortfolioLayout;
   theme: { hideBackdrop?: boolean };
   banner: string | null;
   items: PortfolioItem[];
@@ -649,7 +650,7 @@ function PortfolioHero({
   // anchoring the identity. Award-grade composition: image breathes,
   // content sits in a tight, high-contrast glass panel that scales
   // gracefully from short laptops to ultra-wide monitors.
-  if (layout === "cinematic") {
+  if (layout === "cinematic" || layout === "journal") {
     return (
       <section className="relative border-b border-border overflow-hidden">
         <div className="relative w-full">

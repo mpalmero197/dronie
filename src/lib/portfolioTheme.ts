@@ -2,10 +2,15 @@
 // Stored as JSON in profiles.theme and applied at render time on
 // the public portfolio page.
 
-export type PortfolioLayout = "cinematic" | "editorial" | "grid";
-export type PortfolioFontPair = "modern" | "editorial" | "mono" | "humanist";
+export type PortfolioLayout = "cinematic" | "editorial" | "grid" | "mosaic" | "journal";
+export type PortfolioFontPair =
+  | "modern" | "editorial" | "mono" | "humanist"
+  | "syne" | "instrument" | "dm-serif" | "fraunces-jakarta"
+  | "archivo-mono" | "bricolage" | "outfit-figtree" | "cormorant" | "bebas";
 export type PortfolioColorSwatch =
-  | "forest" | "midnight" | "sunset" | "ocean" | "rose" | "mono" | "noir" | "bone";
+  | "forest" | "midnight" | "sunset" | "ocean" | "rose" | "mono" | "noir" | "bone"
+  | "paper" | "linen" | "indigo" | "ember" | "moss" | "emerald" | "cobalt"
+  | "plum" | "sand" | "carbon" | "arctic" | "terra";
 
 export type PortfolioHeroKind = "none" | "image" | "video" | "slideshow";
 export type PortfolioHeroAlign = "left" | "center";
@@ -72,6 +77,8 @@ export const LAYOUTS: { id: PortfolioLayout; label: string; description: string 
   { id: "cinematic", label: "Cinematic", description: "Big hero with blurred backdrop. Best for moody aerial work." },
   { id: "editorial", label: "Editorial", description: "Magazine-style left-aligned hero. Tall display type, lots of breathing room." },
   { id: "grid", label: "Grid-first", description: "Compact hero, media grid front and center." },
+  { id: "mosaic",    label: "Mosaic",    description: "Bento-grid hero, mixed-size tiles. Showy and modern." },
+  { id: "journal",   label: "Journal",   description: "Full-bleed image + serif drop-cap intro. Editorial long-form." },
 ];
 
 export const FONT_PAIRS: {
@@ -85,6 +92,15 @@ export const FONT_PAIRS: {
   { id: "editorial", label: "Editorial", display: "'Playfair Display', Georgia, serif",     body: "'Inter', system-ui, sans-serif",        preview: "Aa" },
   { id: "humanist",  label: "Humanist",  display: "'Fraunces', Georgia, serif",             body: "'Manrope', system-ui, sans-serif",      preview: "Aa" },
   { id: "mono",      label: "Technical", display: "'JetBrains Mono', ui-monospace, monospace", body: "'Inter', system-ui, sans-serif",     preview: "Aa" },
+  { id: "syne",            label: "Syne",        display: "'Syne', system-ui, sans-serif",         body: "'Plus Jakarta Sans', system-ui, sans-serif", preview: "Aa" },
+  { id: "instrument",      label: "Instrument",  display: "'Instrument Serif', Georgia, serif",   body: "'Work Sans', system-ui, sans-serif",         preview: "Aa" },
+  { id: "dm-serif",        label: "DM Serif",    display: "'DM Serif Display', Georgia, serif",   body: "'Fira Sans', system-ui, sans-serif",         preview: "Aa" },
+  { id: "fraunces-jakarta",label: "Fraunces",    display: "'Fraunces', Georgia, serif",           body: "'Plus Jakarta Sans', system-ui, sans-serif", preview: "Aa" },
+  { id: "archivo-mono",    label: "Archivo",     display: "'Archivo Black', system-ui, sans-serif", body: "'IBM Plex Mono', ui-monospace, monospace", preview: "Aa" },
+  { id: "bricolage",       label: "Bricolage",   display: "'Bricolage Grotesque', system-ui, sans-serif", body: "'Inter', system-ui, sans-serif",     preview: "Aa" },
+  { id: "outfit-figtree",  label: "Outfit",      display: "'Outfit', system-ui, sans-serif",      body: "'Figtree', system-ui, sans-serif",           preview: "Aa" },
+  { id: "cormorant",       label: "Cormorant",   display: "'Cormorant Garamond', Georgia, serif", body: "'Karla', system-ui, sans-serif",             preview: "Aa" },
+  { id: "bebas",           label: "Bebas",       display: "'Bebas Neue', Impact, sans-serif",     body: "'Barlow', system-ui, sans-serif",            preview: "Aa" },
 ];
 
 /**
@@ -100,6 +116,8 @@ export const SWATCHES: {
   surface: string;
   text: string;
   muted: string;
+  /** True if this palette is light-themed (light bg, dark text). */
+  light?: boolean;
 }[] = [
   { id: "forest",   label: "Forest",   accent: "152 60% 38%", bg: "150 30% 6%",  surface: "152 25% 10%", text: "150 20% 96%", muted: "150 12% 65%" },
   { id: "midnight", label: "Midnight", accent: "210 95% 60%", bg: "222 47% 6%",  surface: "222 35% 10%", text: "210 30% 96%", muted: "215 18% 65%" },
@@ -108,7 +126,19 @@ export const SWATCHES: {
   { id: "rose",     label: "Rose",     accent: "340 85% 62%", bg: "340 25% 7%",  surface: "340 22% 11%", text: "340 25% 97%", muted: "340 10% 66%" },
   { id: "mono",     label: "Mono",     accent: "0 0% 92%",    bg: "0 0% 6%",     surface: "0 0% 10%",    text: "0 0% 96%",    muted: "0 0% 62%" },
   { id: "noir",     label: "Noir",     accent: "38 95% 60%",  bg: "0 0% 4%",     surface: "0 0% 8%",     text: "40 12% 95%",  muted: "40 8% 60%" },
-  { id: "bone",     label: "Bone",     accent: "20 25% 18%",  bg: "36 28% 94%",  surface: "36 22% 88%",  text: "20 18% 12%",  muted: "20 8% 38%" },
+  { id: "bone",     label: "Bone",     accent: "20 25% 18%",  bg: "36 28% 94%",  surface: "36 22% 88%",  text: "20 18% 12%",  muted: "20 8% 38%", light: true },
+  { id: "paper",    label: "Paper",    accent: "0 0% 8%",     bg: "40 18% 96%",  surface: "40 14% 90%",  text: "0 0% 10%",    muted: "0 0% 38%", light: true },
+  { id: "linen",    label: "Linen",    accent: "12 50% 42%",  bg: "34 32% 95%",  surface: "34 22% 89%",  text: "20 22% 14%",  muted: "20 10% 38%", light: true },
+  { id: "indigo",   label: "Indigo",   accent: "243 75% 66%", bg: "240 35% 7%",  surface: "240 28% 11%", text: "240 25% 96%", muted: "240 12% 65%" },
+  { id: "ember",    label: "Ember",    accent: "14 88% 56%",  bg: "0 0% 7%",     surface: "0 0% 11%",    text: "20 18% 96%",  muted: "20 8% 62%" },
+  { id: "moss",     label: "Moss",     accent: "84 38% 50%",  bg: "120 18% 8%",  surface: "120 14% 12%", text: "100 20% 96%", muted: "100 10% 64%" },
+  { id: "emerald",  label: "Emerald",  accent: "158 75% 42%", bg: "165 35% 6%",  surface: "165 26% 10%", text: "160 24% 96%", muted: "160 12% 65%" },
+  { id: "cobalt",   label: "Cobalt",   accent: "220 95% 62%", bg: "225 60% 6%",  surface: "225 42% 10%", text: "220 30% 96%", muted: "220 16% 65%" },
+  { id: "plum",     label: "Plum",     accent: "290 70% 65%", bg: "285 35% 6%",  surface: "285 26% 11%", text: "290 22% 96%", muted: "290 12% 65%" },
+  { id: "sand",     label: "Sand",     accent: "32 70% 48%",  bg: "38 30% 94%",  surface: "38 20% 88%",  text: "26 22% 14%",  muted: "26 10% 38%", light: true },
+  { id: "carbon",   label: "Carbon",   accent: "180 85% 50%", bg: "210 18% 8%",  surface: "210 14% 12%", text: "200 18% 96%", muted: "200 8% 62%" },
+  { id: "arctic",   label: "Arctic",   accent: "200 80% 50%", bg: "200 30% 96%", surface: "200 22% 90%", text: "215 35% 12%", muted: "215 14% 38%", light: true },
+  { id: "terra",    label: "Terra",    accent: "18 70% 48%",  bg: "22 20% 8%",   surface: "22 16% 12%",  text: "30 24% 96%",  muted: "26 12% 64%" },
 ];
 
 export function normalizeTheme(raw: any): PortfolioTheme {
@@ -184,8 +214,18 @@ export function ensureFontLoaded(font: PortfolioFontPair) {
     editorial: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@600;700;900&display=swap",
     humanist: "https://fonts.googleapis.com/css2?family=Fraunces:wght@500;700;900&family=Manrope:wght@400;500;600&display=swap",
     mono: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap",
+    syne: "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600&family=Syne:wght@600;700;800&display=swap",
+    instrument: "https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Work+Sans:wght@400;500;600&display=swap",
+    "dm-serif": "https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Fira+Sans:wght@400;500;600&display=swap",
+    "fraunces-jakarta": "https://fonts.googleapis.com/css2?family=Fraunces:wght@500;700;900&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap",
+    "archivo-mono": "https://fonts.googleapis.com/css2?family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500&display=swap",
+    bricolage: "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=Inter:wght@400;500;600&display=swap",
+    "outfit-figtree": "https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Outfit:wght@500;700;800&display=swap",
+    cormorant: "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;700&family=Karla:wght@400;500;600&display=swap",
+    bebas: "https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Bebas+Neue&display=swap",
   };
   const href = map[font];
+  if (!href) return;
   const id = `portfolio-font-${font}`;
   if (document.getElementById(id)) return;
   const link = document.createElement("link");

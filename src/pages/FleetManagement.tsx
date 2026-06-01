@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, RefreshCw, Plane, Video, Loader2, Search, Wifi, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, RefreshCw, Plane, Video, Loader2, Search, Wifi, Pencil, Trash2, Gamepad2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -16,6 +16,7 @@ import AddDroneDialog from "@/components/fleet/AddDroneDialog";
 import EditDroneDialog from "@/components/fleet/EditDroneDialog";
 import DroneStatusBadge from "@/components/fleet/DroneStatusBadge";
 import BroadcastButton from "@/components/fleet/BroadcastButton";
+import DroneControlConsole from "@/components/fleet/DroneControlConsole";
 
 export default function FleetManagement() {
   const navigate = useNavigate();
@@ -33,6 +34,7 @@ export default function FleetManagement() {
   const [editDrone, setEditDrone] = useState<Drone | null>(null);
   const [deleteDrone, setDeleteDrone] = useState<Drone | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [consoleDrone, setConsoleDrone] = useState<Drone | null>(null);
 
   const handleProbe = async () => {
     setProbing(true);
@@ -299,6 +301,10 @@ export default function FleetManagement() {
                     </Button>
                   </div>
                 )}
+
+                <Button size="sm" onClick={() => { setConsoleDrone(selectedDrone); setSelectedDrone(null); }} className="w-full gap-1.5">
+                  <Gamepad2 className="w-3.5 h-3.5" /> Open control console
+                </Button>
               </div>
             </div>
           </div>
@@ -307,6 +313,7 @@ export default function FleetManagement() {
 
       <AddDroneDialog open={showAddDrone} onOpenChange={setShowAddDrone} onAdded={fetchDrones} prefill={addPrefill} hint={addHint} />
       <EditDroneDialog open={!!editDrone} onOpenChange={(o) => !o && setEditDrone(null)} drone={editDrone} onSaved={fetchDrones} />
+      <DroneControlConsole open={!!consoleDrone} onOpenChange={(o) => !o && setConsoleDrone(null)} drone={consoleDrone} />
 
       <AlertDialog open={!!deleteDrone} onOpenChange={(o) => !o && setDeleteDrone(null)}>
         <AlertDialogContent>
