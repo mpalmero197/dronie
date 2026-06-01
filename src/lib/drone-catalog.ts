@@ -1,6 +1,31 @@
 export interface DroneModel {
   name: string;
-  category?: "consumer" | "prosumer" | "enterprise" | "survey" | "fpv" | "fixed-wing";
+  category?: "consumer" | "prosumer" | "enterprise" | "survey" | "fpv" | "fixed-wing" | "heavy-lift" | "vtol" | "military";
+  /** Capability flags drive the Drone Control Console. */
+  capabilities?: {
+    rtk?: boolean;
+    thermal?: boolean;
+    multispectral?: boolean;
+    lidar?: boolean;
+    zoomCamera?: boolean;
+    parachute?: boolean;
+    spotlight?: boolean;
+    speaker?: boolean;
+    sprayer?: boolean;
+    cargo?: boolean;
+    waypointMission?: boolean;
+    obstacleAvoidance?: boolean;
+    adsbIn?: boolean;
+    swarm?: boolean;
+  };
+  /** Operating envelope. */
+  envelope?: {
+    maxAltitudeM?: number;
+    maxSpeedMps?: number;
+    maxFlightMinutes?: number;
+    maxPayloadKg?: number;
+    motorCount?: number;
+  };
 }
 
 export interface DroneManufacturer {
