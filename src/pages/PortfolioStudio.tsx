@@ -34,6 +34,8 @@ import {
   DEFAULT_THEME, FONT_PAIRS, LAYOUTS, SWATCHES, ensureFontLoaded, normalizeTheme,
   type PortfolioTheme,
 } from "@/lib/portfolioTheme";
+import { normalizeHero, type PortfolioHero, DEFAULT_HERO } from "@/lib/portfolioTheme";
+import HeroMediaPanel from "@/components/portfolio/studio/HeroMediaPanel";
 
 interface ProjectOpt { id: string; name: string; }
 
