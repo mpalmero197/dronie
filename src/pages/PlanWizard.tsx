@@ -22,6 +22,7 @@ import {
 import { generateMissionPDF } from "@/lib/generateMissionPDF";
 import { generateDJIFlyKMZ } from "@/lib/generateDJIFlyKMZ";
 import { generateKML, generateGeoJSON, generateWaypointCSV, downloadBlob } from "@/lib/exportFlightPlan";
+import MissionEstimateOverlay from "@/components/plan/MissionEstimateOverlay";
 
 // Fix Leaflet icons (Vite)
 delete (L.Icon.Default.prototype as any)._getIconUrl;
