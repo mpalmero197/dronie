@@ -598,6 +598,42 @@ export type Database = {
         }
         Relationships: []
       }
+      mission_versions: {
+        Row: {
+          created_at: string
+          home_position: Json | null
+          id: string
+          name: string
+          params: Json
+          plan_id: string
+          polygon: Json
+          user_id: string
+          version_number: number
+        }
+        Insert: {
+          created_at?: string
+          home_position?: Json | null
+          id?: string
+          name: string
+          params: Json
+          plan_id: string
+          polygon: Json
+          user_id: string
+          version_number: number
+        }
+        Update: {
+          created_at?: string
+          home_position?: Json | null
+          id?: string
+          name?: string
+          params?: Json
+          plan_id?: string
+          polygon?: Json
+          user_id?: string
+          version_number?: number
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           body: string | null
