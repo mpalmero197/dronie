@@ -532,10 +532,7 @@ export default function ProjectDetail() {
           <div className="flex items-center gap-2">
             {isComplete && (
               <>
-                <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => {
-                  navigator.clipboard.writeText(`${window.location.origin}/viewer/${project.id}`);
-                  toast({ title: "Share link copied!" });
-                }}>
+                <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => setShareOpen(true)}>
                   <Share2 className="w-3 h-3" /> Share
                 </Button>
                 <Button size="sm" className="gap-1.5 text-xs bg-primary text-primary-foreground" onClick={() => navigate(`/viewer/${project.id}`)}>
