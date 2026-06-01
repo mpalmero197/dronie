@@ -370,6 +370,14 @@ export default function SavedMissions() {
                       </Button>
                       <Button
                         size="sm" variant="outline"
+                        onClick={() => setHistoryPlan(plan)}
+                        className="h-8 px-2.5"
+                        title="Version history"
+                      >
+                        <History className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        size="sm" variant="outline"
                         onClick={() => deletePlan(plan)}
                         className="h-8 px-2.5 hover:border-destructive hover:text-destructive"
                         title="Delete"
@@ -384,6 +392,14 @@ export default function SavedMissions() {
           </div>
         )}
       </main>
+
+      <MissionVersionsDialog
+        open={!!historyPlan}
+        onOpenChange={(o) => !o && setHistoryPlan(null)}
+        planId={historyPlan?.id ?? null}
+        planName={historyPlan?.name ?? ""}
+        onRestored={reloadPlans}
+      />
     </div>
   );
 }
