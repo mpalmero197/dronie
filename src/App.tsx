@@ -99,6 +99,7 @@ const App = () => (
             <Route path="/compliance" element={<Compliance />} />
             <Route path="/splats" element={<GaussianSplats />} />
             <Route path="/embed/splats/:token" element={<EmbedSplats />} />
+            <Route path="/share/:token" element={<SharedDeliverables />} />
             <Route path="/portfolio" element={<PortfolioStudio />} />
             <Route path="/portfolio/edit" element={<VideoEditor />} />
             <Route path="/portfolio/edit/:itemId" element={<VideoEditor />} />
