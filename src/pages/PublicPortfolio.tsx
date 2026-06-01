@@ -623,13 +623,16 @@ function PortfolioHero({
   );
 
   // ───── CINEMATIC ──────────────────────────────────────────────
-  // Full-bleed banner / backdrop image, content overlaid at bottom-left.
+  // Full-bleed banner / backdrop image, with a contained editorial card
+  // anchoring the identity. Award-grade composition: image breathes,
+  // content sits in a tight, high-contrast glass panel that scales
+  // gracefully from short laptops to ultra-wide monitors.
   if (layout === "cinematic") {
     return (
       <section className="relative border-b border-border overflow-hidden">
-        <div className="relative h-[68vh] min-h-[480px] max-h-[760px] w-full">
+        <div className="relative w-full">
           {/* Backdrop */}
-          <div className="absolute inset-0">
+          <div className="absolute inset-0 -z-0">
             {(banner || fallbackBackdrop) ? (
               <img
                 src={banner || fallbackBackdrop || ""}
@@ -641,39 +644,82 @@ function PortfolioHero({
             ) : (
               <div className="w-full h-full bg-gradient-to-br from-primary/30 via-background to-background" />
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-background/10" />
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_hsl(var(--primary)/0.25),_transparent_60%)]" />
+            {/* Vertical scrim — keeps copy legible on any banner */}
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/85 to-background/30" />
+            {/* Left-side scrim — anchors the editorial card */}
+            <div className="absolute inset-0 bg-gradient-to-r from-background/85 via-background/40 to-transparent" />
+            {/* Subtle color wash from primary */}
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_hsl(var(--primary)/0.22),_transparent_55%)]" />
           </div>
 
           {/* Cinematic HUD overlay */}
           <FilmHud count={allItemsCount} location={prefs.show_location ? profile.location : null} />
 
-          <div className="relative h-full max-w-6xl mx-auto px-4 sm:px-6 flex items-end pb-10 sm:pb-16">
-            <div className="max-w-2xl space-y-4">
-              <Avatar profile={profile} displayName={displayName} size="lg" />
-              <div className="space-y-2">
-                <h1
-                  className="font-700 text-5xl sm:text-7xl tracking-tight leading-[0.95] drop-shadow-[0_4px_24px_rgba(0,0,0,0.5)]"
-                  style={{ fontFamily: "var(--portfolio-display-font)" }}
-                >
-                  {displayName}
-                </h1>
+          <div className="relative max-w-6xl mx-auto px-4 sm:px-6 pt-24 sm:pt-28 pb-12 sm:pb-20 grid lg:grid-cols-12 gap-8 items-end min-h-[600px] sm:min-h-[640px]">
+            {/* Editorial identity card — left column, glassmorphic */}
+            <div className="lg:col-span-7 xl:col-span-6">
+              <div className="relative rounded-3xl border border-white/10 bg-background/55 backdrop-blur-xl p-6 sm:p-8 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.6)]">
+                {/* Editorial corner ticks */}
+                <span aria-hidden className="absolute top-3 left-3 w-3 h-3 border-l border-t border-primary/70" />
+                <span aria-hidden className="absolute top-3 right-3 w-3 h-3 border-r border-t border-primary/70" />
+                <span aria-hidden className="absolute bottom-3 left-3 w-3 h-3 border-l border-b border-primary/70" />
+                <span aria-hidden className="absolute bottom-3 right-3 w-3 h-3 border-r border-b border-primary/70" />
+
+                <div className="flex items-center gap-4 sm:gap-5">
+                  <Avatar profile={profile} displayName={displayName} size="md" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-primary mb-1.5">
+                      Aerial portfolio · @{profile.username}
+                    </p>
+                    <h1
+                      className="font-700 text-4xl sm:text-5xl xl:text-6xl tracking-tight leading-[0.95]"
+                      style={{ fontFamily: "var(--portfolio-display-font)" }}
+                    >
+                      {displayName}
+                    </h1>
+                  </div>
+                </div>
+
                 {profile.headline && (
-                  <p className="text-lg sm:text-xl text-foreground/90 leading-relaxed">
+                  <p className="text-base sm:text-lg text-foreground/90 leading-snug mt-5 border-l-2 border-primary/60 pl-3">
                     {profile.headline}
                   </p>
                 )}
+
+                <div className="mt-5 space-y-4">
+                  {meta}
+                  {prefs.show_services && services.length > 0 && (
+                    <ServiceChips services={services} />
+                  )}
+                  {profile.bio && (
+                    <p className="text-sm text-foreground/75 whitespace-pre-line leading-relaxed line-clamp-4">
+                      {profile.bio}
+                    </p>
+                  )}
+                  {ctas}
+                </div>
               </div>
-              {meta}
-              {prefs.show_services && services.length > 0 && (
-                <ServiceChips services={services} />
-              )}
-              {profile.bio && (
-                <p className="text-sm text-foreground/75 max-w-xl whitespace-pre-line leading-relaxed">
-                  {profile.bio}
+            </div>
+
+            {/* Right column — keeps the banner breathing on wide screens.
+                On mobile/tablet it collapses; the backdrop alone carries the visual. */}
+            <div className="hidden lg:flex lg:col-span-5 xl:col-span-6 self-stretch items-end justify-end">
+              <div className="text-right text-white/80 max-w-xs space-y-2">
+                <p className="text-[10px] font-mono uppercase tracking-[0.24em] text-white/60">
+                  Reel · {new Date().getFullYear()}
                 </p>
-              )}
-              {ctas}
+                {typeof allItemsCount === "number" && allItemsCount > 0 && (
+                  <p
+                    className="font-700 text-5xl xl:text-6xl tabular-nums leading-none drop-shadow-[0_4px_18px_rgba(0,0,0,0.5)]"
+                    style={{ fontFamily: "var(--portfolio-display-font)" }}
+                  >
+                    {String(allItemsCount).padStart(2, "0")}
+                  </p>
+                )}
+                <p className="text-xs uppercase tracking-[0.22em] text-white/70">
+                  Shots in this portfolio
+                </p>
+              </div>
             </div>
           </div>
         </div>
