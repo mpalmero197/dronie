@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Plane, MapPin, Calendar, Download, Trash2, Edit3,
-  Loader2, Search, Plus, Folder, Filter, AlertCircle, History,
+  Loader2, Search, Plus, Folder, Filter, AlertCircle, History, CalendarClock, Copy,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ import {
 } from "@/lib/flightPathGenerators";
 import { generateDJIFlyKMZ } from "@/lib/generateDJIFlyKMZ";
 import MissionVersionsDialog from "@/components/plan/MissionVersionsDialog";
+import ScheduleMissionDialog from "@/components/plan/ScheduleMissionDialog";
 
 interface SavedPlan {
   id: string;
@@ -103,6 +104,7 @@ export default function SavedMissions() {
   const [filterProject, setFilterProject] = useState<string>("all");
   const [exporting, setExporting] = useState<string | null>(null);
   const [historyPlan, setHistoryPlan] = useState<SavedPlan | null>(null);
+  const [schedulePlan, setSchedulePlan] = useState<SavedPlan | null>(null);
 
   const reloadPlans = useCallback(async () => {
     if (!user) return;
@@ -221,6 +223,31 @@ export default function SavedMissions() {
     if (plan.project_id) navigate(`/viewer/${plan.project_id}?mode=plan&plan=${plan.id}`);
     else navigate(`/plan?load=${plan.id}`);
   }, [navigate]);
+
+  const duplicatePlan = useCallback(async (plan: SavedPlan) => {
+    if (!user) return;
+    const { data, error } = await supabase.from("saved_flight_plans").insert({
+      user_id: user.id,
+      project_id: plan.project_id,
+      name: `${plan.name} (copy)`,
+      polygon: plan.polygon,
+      home_position: plan.home_position,
+      params: plan.params,
+    }).select().single();
+    if (error || !data) {
+      toast({ title: "Duplicate failed", description: error?.message, variant: "destructive" });
+      return;
+    }
+    setPlans((prev) => [data as unknown as SavedPlan, ...prev]);
+    toast({ title: "Mission duplicated" });
+  }, [user, toast]);
+
+  const polygonCenter = useCallback((plan: SavedPlan): [number, number] | null => {
+    if (!plan.polygon?.length) return null;
+    const lat = plan.polygon.reduce((s, p) => s + p[0], 0) / plan.polygon.length;
+    const lng = plan.polygon.reduce((s, p) => s + p[1], 0) / plan.polygon.length;
+    return [lat, lng];
+  }, []);
 
   // ---------------- Render ----------------
   return (
@@ -350,7 +377,7 @@ export default function SavedMissions() {
                     </div>
 
                     {/* Actions */}
-                    <div className="flex items-center gap-1.5 pt-1">
+                    <div className="flex items-center gap-1.5 pt-1 flex-wrap">
                       <Button
                         size="sm"
                         onClick={() => reExportKMZ(plan)}
@@ -367,6 +394,22 @@ export default function SavedMissions() {
                         title="Edit in planner"
                       >
                         <Edit3 className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        size="sm" variant="outline"
+                        onClick={() => setSchedulePlan(plan)}
+                        className="h-8 px-2.5"
+                        title="Schedule with weather check"
+                      >
+                        <CalendarClock className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        size="sm" variant="outline"
+                        onClick={() => duplicatePlan(plan)}
+                        className="h-8 px-2.5"
+                        title="Duplicate mission"
+                      >
+                        <Copy className="w-3 h-3" />
                       </Button>
                       <Button
                         size="sm" variant="outline"
@@ -399,6 +442,15 @@ export default function SavedMissions() {
         planId={historyPlan?.id ?? null}
         planName={historyPlan?.name ?? ""}
         onRestored={reloadPlans}
+      />
+
+      <ScheduleMissionDialog
+        open={!!schedulePlan}
+        onOpenChange={(o) => !o && setSchedulePlan(null)}
+        planId={schedulePlan?.id ?? null}
+        planName={schedulePlan?.name ?? ""}
+        centerLat={schedulePlan ? polygonCenter(schedulePlan)?.[0] : null}
+        centerLng={schedulePlan ? polygonCenter(schedulePlan)?.[1] : null}
       />
     </div>
   );
