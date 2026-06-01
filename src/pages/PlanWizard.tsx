@@ -22,6 +22,7 @@ import {
 import { generateMissionPDF } from "@/lib/generateMissionPDF";
 import { generateDJIFlyKMZ } from "@/lib/generateDJIFlyKMZ";
 import { generateKML, generateGeoJSON, generateWaypointCSV, downloadBlob } from "@/lib/exportFlightPlan";
+import MissionEstimateOverlay from "@/components/plan/MissionEstimateOverlay";
 
 // Fix Leaflet icons (Vite)
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -739,6 +740,16 @@ export default function PlanWizard() {
             <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[900] bg-card/95 backdrop-blur border border-border rounded-full px-3 py-1.5 shadow text-[11px] text-muted-foreground">
               Click to place vertices · <kbd className="px-1 rounded border border-border bg-secondary/50 font-mono">Z</kbd> undo · <kbd className="px-1 rounded border border-border bg-secondary/50 font-mono">Enter</kbd> finish · <kbd className="px-1 rounded border border-border bg-secondary/50 font-mono">Esc</kbd> cancel
             </div>
+          )}
+
+          {/* Live mission HUD on step 3 */}
+          {step === 3 && (
+            <MissionEstimateOverlay
+              stats={stats}
+              formatTime={formatTime}
+              formatDist={formatDist}
+              formatArea={formatArea}
+            />
           )}
         </div>
       </div>

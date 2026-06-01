@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Plane, MapPin, Calendar, Download, Trash2, Edit3,
-  Loader2, Search, Plus, Folder, Filter, AlertCircle,
+  Loader2, Search, Plus, Folder, Filter, AlertCircle, History,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import {
   haversineDistance, polygonArea, generateLawnmowerPath,
 } from "@/lib/flightPathGenerators";
 import { generateDJIFlyKMZ } from "@/lib/generateDJIFlyKMZ";
+import MissionVersionsDialog from "@/components/plan/MissionVersionsDialog";
 
 interface SavedPlan {
   id: string;
@@ -101,6 +102,17 @@ export default function SavedMissions() {
   const [search, setSearch] = useState("");
   const [filterProject, setFilterProject] = useState<string>("all");
   const [exporting, setExporting] = useState<string | null>(null);
+  const [historyPlan, setHistoryPlan] = useState<SavedPlan | null>(null);
+
+  const reloadPlans = useCallback(async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("saved_flight_plans")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("updated_at", { ascending: false });
+    setPlans(((data ?? []) as unknown) as SavedPlan[]);
+  }, [user]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -358,6 +370,14 @@ export default function SavedMissions() {
                       </Button>
                       <Button
                         size="sm" variant="outline"
+                        onClick={() => setHistoryPlan(plan)}
+                        className="h-8 px-2.5"
+                        title="Version history"
+                      >
+                        <History className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        size="sm" variant="outline"
                         onClick={() => deletePlan(plan)}
                         className="h-8 px-2.5 hover:border-destructive hover:text-destructive"
                         title="Delete"
@@ -372,6 +392,14 @@ export default function SavedMissions() {
           </div>
         )}
       </main>
+
+      <MissionVersionsDialog
+        open={!!historyPlan}
+        onOpenChange={(o) => !o && setHistoryPlan(null)}
+        planId={historyPlan?.id ?? null}
+        planName={historyPlan?.name ?? ""}
+        onRestored={reloadPlans}
+      />
     </div>
   );
 }
