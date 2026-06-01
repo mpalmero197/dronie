@@ -185,6 +185,13 @@ export function themeStyle(theme: PortfolioTheme): React.CSSProperties {
   const swatch = SWATCHES.find((s) => s.id === theme.swatch) ?? SWATCHES[0];
   const fonts = FONT_PAIRS.find((f) => f.id === theme.font) ?? FONT_PAIRS[0];
   const accent = theme.accent ?? swatch.accent;
+  // Pick a legible primary-foreground based on accent lightness, and
+  // border lightness based on whether the palette is light or dark themed.
+  const accentL = parseFloat(accent.split(" ")[2]?.replace("%", "") ?? "50");
+  const primaryFg = accentL > 55 ? "0 0% 8%" : "0 0% 100%";
+  const borderHsl = swatch.light
+    ? `${swatch.text.split(" ")[0]} 12% 82%`
+    : `${swatch.text.split(" ")[0]} 12% 18%`;
   return {
     // Scoped overrides — these consume the same tokens used in components.
     ["--background" as any]: swatch.bg,
@@ -195,9 +202,10 @@ export function themeStyle(theme: PortfolioTheme): React.CSSProperties {
     ["--muted-foreground" as any]: swatch.muted,
     ["--secondary" as any]: swatch.surface,
     ["--secondary-foreground" as any]: swatch.text,
-    ["--border" as any]: `${swatch.text.split(" ")[0]} 12% 18%`,
+    ["--border" as any]: borderHsl,
+    ["--input" as any]: borderHsl,
     ["--primary" as any]: accent,
-    ["--primary-foreground" as any]: "0 0% 100%",
+    ["--primary-foreground" as any]: primaryFg,
     ["--ring" as any]: accent,
     ["--portfolio-accent" as any]: accent,
     ["--portfolio-display-font" as any]: fonts.display,
