@@ -675,6 +675,10 @@ export default function ProjectDetail() {
               </div>
             )}
 
+            {isComplete && user && (
+              <AnnotationsPanel projectId={project.id} userId={user.id} />
+            )}
+
             {/* Files Tab */}
             <div className="bg-card rounded-2xl border border-border p-5 space-y-4">
               <Tabs defaultValue="images">
