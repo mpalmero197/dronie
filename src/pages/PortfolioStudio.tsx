@@ -601,6 +601,20 @@ export default function PortfolioStudio() {
           saving={savingProfile}
         />
 
+        {/* Cinematic hero — video / slideshow / image */}
+        <HeroMediaPanel
+          hero={normalizeHero(normalizeTheme(profile.theme).hero)}
+          items={items}
+          displayName={profile.full_name || profile.username || "Pilot"}
+          headline={profile.headline ?? null}
+          fallbackImage={profile.banner_url ?? null}
+          onPatchHero={(patch) => patchTheme({
+            hero: { ...normalizeHero(normalizeTheme(profile.theme).hero), ...patch },
+          })}
+          uploadBlob={async (blob, suffix, contentType) => uploadBlobToBucket(blob, suffix, contentType)}
+          saving={savingProfile}
+        />
+
         {/* Hire-me details */}
         <HireMeSection
           profile={profile}
