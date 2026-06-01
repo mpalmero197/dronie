@@ -71,6 +71,62 @@ export type Database = {
         }
         Relationships: []
       }
+      deliverable_shares: {
+        Row: {
+          created_at: string
+          deliverable_keys: string[]
+          expires_at: string | null
+          id: string
+          last_viewed_at: string | null
+          owner_id: string
+          password_hash: string | null
+          permission: string
+          project_id: string
+          revoked_at: string | null
+          token: string
+          updated_at: string
+          view_count: number
+        }
+        Insert: {
+          created_at?: string
+          deliverable_keys?: string[]
+          expires_at?: string | null
+          id?: string
+          last_viewed_at?: string | null
+          owner_id: string
+          password_hash?: string | null
+          permission?: string
+          project_id: string
+          revoked_at?: string | null
+          token: string
+          updated_at?: string
+          view_count?: number
+        }
+        Update: {
+          created_at?: string
+          deliverable_keys?: string[]
+          expires_at?: string | null
+          id?: string
+          last_viewed_at?: string | null
+          owner_id?: string
+          password_hash?: string | null
+          permission?: string
+          project_id?: string
+          revoked_at?: string | null
+          token?: string
+          updated_at?: string
+          view_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deliverable_shares_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       drone_commands: {
         Row: {
           acked_at: string | null
@@ -1459,6 +1515,59 @@ export type Database = {
           },
         ]
       }
+      project_annotations: {
+        Row: {
+          body: string | null
+          color: string | null
+          created_at: string
+          geometry: Json
+          id: string
+          kind: string
+          label: string | null
+          measurement: Json | null
+          project_id: string
+          resolved: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          color?: string | null
+          created_at?: string
+          geometry?: Json
+          id?: string
+          kind: string
+          label?: string | null
+          measurement?: Json | null
+          project_id: string
+          resolved?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          color?: string | null
+          created_at?: string
+          geometry?: Json
+          id?: string
+          kind?: string
+          label?: string | null
+          measurement?: Json | null
+          project_id?: string
+          resolved?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_annotations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           accuracy_report: Json | null
@@ -1904,6 +2013,17 @@ export type Database = {
           service_area_label: string
           verticals: Database["public"]["Enums"]["industry_vertical"][]
           years_experience: number
+        }[]
+      }
+      get_deliverable_share_by_token: {
+        Args: { _token: string }
+        Returns: {
+          deliverable_keys: string[]
+          expires_at: string
+          id: string
+          permission: string
+          project_id: string
+          revoked_at: string
         }[]
       }
       get_marketplace_requests: {
