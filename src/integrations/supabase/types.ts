@@ -598,6 +598,68 @@ export type Database = {
         }
         Relationships: []
       }
+      mission_schedules: {
+        Row: {
+          created_at: string
+          id: string
+          max_precip_pct: number
+          max_wind_kph: number
+          min_temp_c: number
+          min_visibility_km: number
+          notes: string | null
+          plan_id: string
+          scheduled_at: string
+          status: string
+          updated_at: string
+          user_id: string
+          weather_checked_at: string | null
+          weather_status: string
+          weather_summary: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          max_precip_pct?: number
+          max_wind_kph?: number
+          min_temp_c?: number
+          min_visibility_km?: number
+          notes?: string | null
+          plan_id: string
+          scheduled_at: string
+          status?: string
+          updated_at?: string
+          user_id: string
+          weather_checked_at?: string | null
+          weather_status?: string
+          weather_summary?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          max_precip_pct?: number
+          max_wind_kph?: number
+          min_temp_c?: number
+          min_visibility_km?: number
+          notes?: string | null
+          plan_id?: string
+          scheduled_at?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+          weather_checked_at?: string | null
+          weather_status?: string
+          weather_summary?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mission_schedules_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "saved_flight_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mission_versions: {
         Row: {
           created_at: string
