@@ -27,6 +27,10 @@ import { PresetPicker } from "@/components/project/PresetPicker";
 import { EstimatePanel } from "@/components/project/EstimatePanel";
 import { ImageQAReport } from "@/components/project/ImageQAReport";
 import { DeliverableCard } from "@/components/project/DeliverableCard";
+import { OverlapHeatmap } from "@/components/project/OverlapHeatmap";
+import { PresetDetailCard } from "@/components/project/PresetDetailCard";
+import { DeliverableShareDialog } from "@/components/project/DeliverableShareDialog";
+import { AnnotationsPanel } from "@/components/project/AnnotationsPanel";
 import { AccuracyReport, type AccuracyData } from "@/components/project/AccuracyReport";
 import { DroneCameraPicker } from "@/components/project/DroneCameraPicker";
 import { MissionCalculator } from "@/components/project/MissionCalculator";
@@ -214,6 +218,8 @@ export default function ProjectDetail() {
   );
   const [sensor, setSensor] = useState<SensorSpec>(GENERIC_SPEC);
   const [sensorAutoDetected, setSensorAutoDetected] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [selectedDeliverables, setSelectedDeliverables] = useState<string[]>([]);
 
   const fpInputRef = useRef<HTMLInputElement>(null);
   const imgInputRef = useRef<HTMLInputElement>(null);
@@ -526,10 +532,7 @@ export default function ProjectDetail() {
           <div className="flex items-center gap-2">
             {isComplete && (
               <>
-                <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => {
-                  navigator.clipboard.writeText(`${window.location.origin}/viewer/${project.id}`);
-                  toast({ title: "Share link copied!" });
-                }}>
+                <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => setShareOpen(true)}>
                   <Share2 className="w-3 h-3" /> Share
                 </Button>
                 <Button size="sm" className="gap-1.5 text-xs bg-primary text-primary-foreground" onClick={() => navigate(`/viewer/${project.id}`)}>
@@ -650,11 +653,30 @@ export default function ProjectDetail() {
                         downloadUrl={project.outputs_urls?.error ? null : downloadUrl}
                         previewUrl={previewUrl}
                         viewerHref={viewerHref}
+                        selected={selectedDeliverables.includes(meta.key)}
+                        onSelect={(sel) => setSelectedDeliverables((p) => sel ? [...p, meta.key] : p.filter((k) => k !== meta.key))}
                       />
                     );
                   })}
                 </div>
+                {user && (
+                  <DeliverableShareDialog
+                    open={shareOpen}
+                    onOpenChange={setShareOpen}
+                    projectId={project.id}
+                    ownerId={user.id}
+                    selectedKeys={selectedDeliverables}
+                    availableKeys={project.outputs.map((name) => {
+                      const meta = OUTPUT_META[name] || { ext: "", desc: name, key: "default" };
+                      return { key: meta.key, label: name };
+                    })}
+                  />
+                )}
               </div>
+            )}
+
+            {isComplete && user && (
+              <AnnotationsPanel projectId={project.id} userId={user.id} />
             )}
 
             {/* Files Tab */}
@@ -848,6 +870,7 @@ export default function ProjectDetail() {
                 Industry Preset
               </h2>
               <PresetPicker value={presetId} onChange={applyPreset} disabled={isProcessing} />
+              <PresetDetailCard presetId={presetId} imageCount={project.image_count || droneImages.length} />
             </div>
 
             {/* Estimate */}
@@ -861,12 +884,17 @@ export default function ProjectDetail() {
 
             {/* Image QA */}
             {(droneImages.length > 0 || (project.gps_points && Array.isArray(project.gps_points))) && (
-              <ImageQAReport
-                qa={runImageQa({
-                  totalImages: project.image_count || droneImages.length,
-                  gpsPoints: (Array.isArray(project.gps_points) ? (project.gps_points as GpsPoint[]) : []),
-                })}
-              />
+              <div className="space-y-3">
+                <ImageQAReport
+                  qa={runImageQa({
+                    totalImages: project.image_count || droneImages.length,
+                    gpsPoints: (Array.isArray(project.gps_points) ? (project.gps_points as GpsPoint[]) : []),
+                  })}
+                />
+                {Array.isArray(project.gps_points) && (project.gps_points as any[]).length > 0 && (
+                  <OverlapHeatmap points={project.gps_points as GpsPoint[]} />
+                )}
+              </div>
             )}
 
             <div className="bg-card rounded-2xl border border-border p-5 space-y-5 sticky top-24">
