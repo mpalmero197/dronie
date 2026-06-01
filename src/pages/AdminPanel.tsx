@@ -12,6 +12,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import VerificationReviews from "@/components/admin/VerificationReviews";
+import ApiKeysManager from "@/components/admin/ApiKeysManager";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface AdminUser {
   id: string;
@@ -302,7 +304,18 @@ export default function AdminPanel() {
           </div>
         )}
 
-        <VerificationReviews />
+        <Tabs defaultValue="verifications" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 max-w-sm">
+            <TabsTrigger value="verifications">Verifications</TabsTrigger>
+            <TabsTrigger value="api">API Keys</TabsTrigger>
+          </TabsList>
+          <TabsContent value="verifications" className="mt-4">
+            <VerificationReviews />
+          </TabsContent>
+          <TabsContent value="api" className="mt-4">
+            <ApiKeysManager />
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );
