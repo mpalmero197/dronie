@@ -51,8 +51,15 @@ import ScrollToTop from "./components/ScrollToTop.tsx";
 import Demo from "./pages/Demo.tsx";
 import { DemoProvider } from "./demo/DemoContext";
 import DemoOverlay from "./demo/DemoOverlay";
+import CommandPalette from "./components/CommandPalette.tsx";
+import { usePageViewTracker } from "./hooks/useTrack";
 
 const queryClient = new QueryClient();
+
+const RouterEffects = () => {
+  usePageViewTracker();
+  return null;
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -63,6 +70,8 @@ const App = () => (
         <AuthProvider>
           <DemoProvider>
             <ScrollToTop />
+            <RouterEffects />
+            <CommandPalette />
             <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<AuthPage />} />
