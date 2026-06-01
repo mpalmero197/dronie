@@ -87,26 +87,32 @@ export function FilmHud({
   }, []);
   return (
     <div
-      className="absolute top-4 left-4 sm:top-5 sm:left-5 z-10 flex items-center gap-3 text-[10px] sm:text-[11px] font-mono uppercase tracking-[0.18em] text-white/85 select-none"
+      className="pointer-events-none absolute top-0 inset-x-0 z-10"
       aria-hidden
     >
-      <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-sm bg-black/40 backdrop-blur border border-white/15">
-        <span className="w-1.5 h-1.5 rounded-full bg-red-500 portfolio-blink" />
-        REC
-      </span>
-      <span className="hidden sm:inline-block px-2 py-1 rounded-sm bg-black/40 backdrop-blur border border-white/15 tabular-nums">
-        F · {String(frame).padStart(4, "0")}
-      </span>
-      {typeof count === "number" && count > 0 && (
-        <span className="px-2 py-1 rounded-sm bg-black/40 backdrop-blur border border-white/15 tabular-nums">
-          {String(count).padStart(3, "0")} SHOTS
-        </span>
-      )}
-      {location && (
-        <span className="hidden md:inline-block px-2 py-1 rounded-sm bg-black/40 backdrop-blur border border-white/15 truncate max-w-[220px]">
-          ⊕ {location}
-        </span>
-      )}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-4 sm:pt-5 flex items-center justify-between gap-3 text-[10px] sm:text-[11px] font-mono uppercase tracking-[0.18em] text-white/85 select-none">
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-sm bg-black/45 backdrop-blur border border-white/15">
+            <span className="w-1.5 h-1.5 rounded-full bg-red-500 portfolio-blink" />
+            REC
+          </span>
+          <span className="hidden sm:inline-block px-2 py-1 rounded-sm bg-black/45 backdrop-blur border border-white/15 tabular-nums">
+            F · {String(frame).padStart(4, "0")}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          {typeof count === "number" && count > 0 && (
+            <span className="px-2 py-1 rounded-sm bg-black/45 backdrop-blur border border-white/15 tabular-nums">
+              {String(count).padStart(3, "0")} SHOTS
+            </span>
+          )}
+          {location && (
+            <span className="hidden md:inline-block px-2 py-1 rounded-sm bg-black/45 backdrop-blur border border-white/15 truncate max-w-[220px]">
+              ⊕ {location}
+            </span>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
