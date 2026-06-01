@@ -102,6 +102,17 @@ export default function SavedMissions() {
   const [search, setSearch] = useState("");
   const [filterProject, setFilterProject] = useState<string>("all");
   const [exporting, setExporting] = useState<string | null>(null);
+  const [historyPlan, setHistoryPlan] = useState<SavedPlan | null>(null);
+
+  const reloadPlans = useCallback(async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("saved_flight_plans")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("updated_at", { ascending: false });
+    setPlans(((data ?? []) as unknown) as SavedPlan[]);
+  }, [user]);
 
   useEffect(() => {
     if (authLoading) return;
