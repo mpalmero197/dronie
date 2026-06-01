@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { DroneCommandName } from "./fleet-types";
+import type { Json } from "@/integrations/supabase/types";
 
 export async function sendDroneCommand(
   droneId: string,
@@ -11,7 +12,7 @@ export async function sendDroneCommand(
   if (!uid) throw new Error("Sign in required to issue commands.");
   const { data, error } = await supabase
     .from("drone_commands")
-    .insert({ drone_id: droneId, issued_by: uid, command, params })
+    .insert({ drone_id: droneId, issued_by: uid, command, params: params as Json })
     .select()
     .single();
   if (error) throw error;
