@@ -34,6 +34,8 @@ import {
   DEFAULT_THEME, FONT_PAIRS, LAYOUTS, SWATCHES, ensureFontLoaded, normalizeTheme,
   type PortfolioTheme,
 } from "@/lib/portfolioTheme";
+import { normalizeHero } from "@/lib/portfolioTheme";
+import HeroMediaPanel from "@/components/portfolio/studio/HeroMediaPanel";
 
 interface ProjectOpt { id: string; name: string; }
 
@@ -596,6 +598,20 @@ export default function PortfolioStudio() {
             setProfile((p: any) => ({ ...p, banner_url: null }));
           }}
           onSave={saveProfile}
+          saving={savingProfile}
+        />
+
+        {/* Cinematic hero — video / slideshow / image */}
+        <HeroMediaPanel
+          hero={normalizeHero(normalizeTheme(profile.theme).hero)}
+          items={items}
+          displayName={profile.full_name || profile.username || "Pilot"}
+          headline={profile.headline ?? null}
+          fallbackImage={profile.banner_url ?? null}
+          onPatchHero={(patch) => patchTheme({
+            hero: { ...normalizeHero(normalizeTheme(profile.theme).hero), ...patch },
+          })}
+          uploadBlob={async (blob, suffix, contentType) => uploadBlobToBucket(blob, suffix, contentType)}
           saving={savingProfile}
         />
 

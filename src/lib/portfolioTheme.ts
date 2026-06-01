@@ -7,6 +7,46 @@ export type PortfolioFontPair = "modern" | "editorial" | "mono" | "humanist";
 export type PortfolioColorSwatch =
   | "forest" | "midnight" | "sunset" | "ocean" | "rose" | "mono" | "noir" | "bone";
 
+export type PortfolioHeroKind = "none" | "image" | "video" | "slideshow";
+export type PortfolioHeroAlign = "left" | "center";
+export type PortfolioHeroSlideMode = "kenburns" | "fade";
+
+export interface PortfolioHero {
+  /** What the immersive hero shows. `none` = fall back to the legacy banner hero. */
+  kind: PortfolioHeroKind;
+  /** Direct .mp4/.webm URL when kind === "video". */
+  videoUrl?: string | null;
+  /** Optional poster frame for the video (also used as LCP image). */
+  posterUrl?: string | null;
+  /** Portfolio item IDs to cycle through when kind === "slideshow". */
+  slideshowItemIds?: string[];
+  /** Animation style for slideshow images. */
+  slideshowMode?: PortfolioHeroSlideMode;
+  /** ms per slide for the slideshow. */
+  slideshowIntervalMs?: number;
+  /** 0–1 darkness over the media so headline copy stays legible. */
+  overlayOpacity?: number;
+  /** Headline alignment over the hero. */
+  align?: PortfolioHeroAlign;
+  /** Show the animated scroll cue at the bottom. */
+  showScrollCue?: boolean;
+  /** Enable the Apple-style pinned/scroll-driven sections below the hero. */
+  scrollyActs?: boolean;
+}
+
+export const DEFAULT_HERO: PortfolioHero = {
+  kind: "none",
+  videoUrl: null,
+  posterUrl: null,
+  slideshowItemIds: [],
+  slideshowMode: "kenburns",
+  slideshowIntervalMs: 4500,
+  overlayOpacity: 0.35,
+  align: "left",
+  showScrollCue: true,
+  scrollyActs: true,
+};
+
 export interface PortfolioTheme {
   layout: PortfolioLayout;
   font: PortfolioFontPair;
@@ -15,6 +55,8 @@ export interface PortfolioTheme {
   accent?: string | null;
   /** Hide the auto-generated blurred backdrop in the hero. */
   hideBackdrop?: boolean;
+  /** Cinematic hero reel/video/slideshow configuration. */
+  hero?: PortfolioHero;
 }
 
 export const DEFAULT_THEME: PortfolioTheme = {
@@ -23,6 +65,7 @@ export const DEFAULT_THEME: PortfolioTheme = {
   swatch: "forest",
   accent: null,
   hideBackdrop: false,
+  hero: { ...DEFAULT_HERO },
 };
 
 export const LAYOUTS: { id: PortfolioLayout; label: string; description: string }[] = [
@@ -77,6 +120,33 @@ export function normalizeTheme(raw: any): PortfolioTheme {
     swatch: (SWATCHES.find((s) => s.id === t.swatch)?.id) ?? DEFAULT_THEME.swatch,
     accent: typeof t.accent === "string" && t.accent.trim() ? t.accent : null,
     hideBackdrop: !!t.hideBackdrop,
+    hero: normalizeHero((t as any).hero),
+  };
+}
+
+export function normalizeHero(raw: any): PortfolioHero {
+  const base = { ...DEFAULT_HERO };
+  if (!raw || typeof raw !== "object") return base;
+  const r = raw as Partial<PortfolioHero>;
+  const kind: PortfolioHeroKind =
+    r.kind === "image" || r.kind === "video" || r.kind === "slideshow" ? r.kind : "none";
+  return {
+    kind,
+    videoUrl: typeof r.videoUrl === "string" ? r.videoUrl : null,
+    posterUrl: typeof r.posterUrl === "string" ? r.posterUrl : null,
+    slideshowItemIds: Array.isArray(r.slideshowItemIds)
+      ? (r.slideshowItemIds.filter((x) => typeof x === "string") as string[]).slice(0, 12)
+      : [],
+    slideshowMode: r.slideshowMode === "fade" ? "fade" : "kenburns",
+    slideshowIntervalMs: typeof r.slideshowIntervalMs === "number"
+      ? Math.min(12000, Math.max(2000, r.slideshowIntervalMs))
+      : base.slideshowIntervalMs,
+    overlayOpacity: typeof r.overlayOpacity === "number"
+      ? Math.min(0.85, Math.max(0, r.overlayOpacity))
+      : base.overlayOpacity,
+    align: r.align === "center" ? "center" : "left",
+    showScrollCue: r.showScrollCue !== false,
+    scrollyActs: r.scrollyActs !== false,
   };
 }
 
