@@ -866,6 +866,7 @@ export default function ProjectDetail() {
                 Industry Preset
               </h2>
               <PresetPicker value={presetId} onChange={applyPreset} disabled={isProcessing} />
+              <PresetDetailCard presetId={presetId} imageCount={project.image_count || droneImages.length} />
             </div>
 
             {/* Estimate */}
@@ -879,12 +880,17 @@ export default function ProjectDetail() {
 
             {/* Image QA */}
             {(droneImages.length > 0 || (project.gps_points && Array.isArray(project.gps_points))) && (
-              <ImageQAReport
-                qa={runImageQa({
-                  totalImages: project.image_count || droneImages.length,
-                  gpsPoints: (Array.isArray(project.gps_points) ? (project.gps_points as GpsPoint[]) : []),
-                })}
-              />
+              <div className="space-y-3">
+                <ImageQAReport
+                  qa={runImageQa({
+                    totalImages: project.image_count || droneImages.length,
+                    gpsPoints: (Array.isArray(project.gps_points) ? (project.gps_points as GpsPoint[]) : []),
+                  })}
+                />
+                {Array.isArray(project.gps_points) && (project.gps_points as any[]).length > 0 && (
+                  <OverlapHeatmap points={project.gps_points as GpsPoint[]} />
+                )}
+              </div>
             )}
 
             <div className="bg-card rounded-2xl border border-border p-5 space-y-5 sticky top-24">
