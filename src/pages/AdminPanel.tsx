@@ -304,15 +304,11 @@ export default function AdminPanel() {
           </div>
         )}
 
-        <Tabs defaultValue="users" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 max-w-md">
-            <TabsTrigger value="users">Users</TabsTrigger>
+        <Tabs defaultValue="verifications" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 max-w-sm">
             <TabsTrigger value="verifications">Verifications</TabsTrigger>
             <TabsTrigger value="api">API Keys</TabsTrigger>
           </TabsList>
-          <TabsContent value="users" className="mt-4">
-            <p className="text-xs text-muted-foreground">User list shown above.</p>
-          </TabsContent>
           <TabsContent value="verifications" className="mt-4">
             <VerificationReviews />
           </TabsContent>
