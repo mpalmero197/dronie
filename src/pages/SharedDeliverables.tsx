@@ -60,7 +60,7 @@ export default function SharedDeliverables() {
       } else {
         setData(rows[0] as SharePayload);
         // Fire-and-forget view counter bump
-        supabase.rpc("bump_share_view", { _token: token }).catch(() => {});
+        void supabase.rpc("bump_share_view", { _token: token }).then(() => {}, () => {});
       }
       setLoading(false);
     })();
