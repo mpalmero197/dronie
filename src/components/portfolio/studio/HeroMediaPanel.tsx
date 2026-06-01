@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import HeroReel from "@/components/portfolio/HeroReel";
 import type { PortfolioHero } from "@/lib/portfolioTheme";
-import { DEFAULT_HERO } from "@/lib/portfolioTheme";
 import type { PortfolioItem } from "@/lib/portfolio";
 
 type HeroKind = PortfolioHero["kind"];
