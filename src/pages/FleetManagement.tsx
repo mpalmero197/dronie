@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, RefreshCw, Plane, Video, Loader2, Search, Wifi, Pencil, Trash2, Gamepad2 } from "lucide-react";
+import { ArrowLeft, Plus, RefreshCw, Plane, Video, Loader2, Search, Wifi, Pencil, Trash2, Gamepad2, Map as MapIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,6 +17,7 @@ import EditDroneDialog from "@/components/fleet/EditDroneDialog";
 import DroneStatusBadge from "@/components/fleet/DroneStatusBadge";
 import BroadcastButton from "@/components/fleet/BroadcastButton";
 import DroneControlConsole from "@/components/fleet/DroneControlConsole";
+import LiveFleetMap from "@/components/fleet/LiveFleetMap";
 
 export default function FleetManagement() {
   const navigate = useNavigate();
@@ -160,6 +161,9 @@ export default function FleetManagement() {
             <TabsTrigger value="fleet" className="gap-1.5">
               <Plane className="w-3.5 h-3.5" /> Fleet
             </TabsTrigger>
+            <TabsTrigger value="map" className="gap-1.5">
+              <MapIcon className="w-3.5 h-3.5" /> Live Map
+            </TabsTrigger>
             <TabsTrigger value="cameras" className="gap-1.5">
               <Video className="w-3.5 h-3.5" /> Camera Feeds
             </TabsTrigger>
@@ -207,6 +211,13 @@ export default function FleetManagement() {
                 ))}
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="map" className="space-y-4">
+            <LiveFleetMap
+              drones={drones}
+              onSelect={(d) => setSelectedDrone(d)}
+            />
           </TabsContent>
 
           <TabsContent value="cameras" className="space-y-4">
