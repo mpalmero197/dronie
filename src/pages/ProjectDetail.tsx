@@ -653,10 +653,25 @@ export default function ProjectDetail() {
                         downloadUrl={project.outputs_urls?.error ? null : downloadUrl}
                         previewUrl={previewUrl}
                         viewerHref={viewerHref}
+                        selected={selectedDeliverables.includes(meta.key)}
+                        onSelect={(sel) => setSelectedDeliverables((p) => sel ? [...p, meta.key] : p.filter((k) => k !== meta.key))}
                       />
                     );
                   })}
                 </div>
+                {user && (
+                  <DeliverableShareDialog
+                    open={shareOpen}
+                    onOpenChange={setShareOpen}
+                    projectId={project.id}
+                    ownerId={user.id}
+                    selectedKeys={selectedDeliverables}
+                    availableKeys={project.outputs.map((name) => {
+                      const meta = OUTPUT_META[name] || { ext: "", desc: name, key: "default" };
+                      return { key: meta.key, label: name };
+                    })}
+                  />
+                )}
               </div>
             )}
 
