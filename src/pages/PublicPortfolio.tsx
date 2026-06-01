@@ -568,7 +568,7 @@ function PortfolioHero({
 }: {
   profile: PortfolioProfile;
   prefs: PrefsT;
-  layout: "cinematic" | "editorial" | "grid";
+  layout: PortfolioLayout;
   theme: { hideBackdrop?: boolean };
   banner: string | null;
   items: PortfolioItem[];
