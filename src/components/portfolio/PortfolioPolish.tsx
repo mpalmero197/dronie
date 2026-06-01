@@ -172,20 +172,15 @@ export function MagneticHireButton({
   return (
     <div ref={wrapRef} className={`inline-block ${className ?? ""}`}>
       {onClick ? (
-        <button
+        <Button
           ref={btnRef as React.RefObject<HTMLButtonElement>}
           type="button"
           onClick={onClick}
-          className="inline-block transition-transform duration-200 ease-out will-change-transform"
+          size="lg"
+          className="gap-2 h-12 px-6 rounded-full shadow-2xl shadow-primary/30 text-base font-semibold inline-flex items-center transition-transform duration-200 ease-out will-change-transform"
         >
-          <Button
-            asChild={false}
-            size="lg"
-            className="gap-2 h-12 px-6 rounded-full shadow-2xl shadow-primary/30 text-base font-semibold pointer-events-none"
-          >
-            <span className="inline-flex items-center gap-2"><Send className="w-4 h-4" /> Hire {label}</span>
-          </Button>
-        </button>
+          <Send className="w-4 h-4" /> Hire {label}
+        </Button>
       ) : (
         <a
           ref={btnRef as React.RefObject<HTMLAnchorElement>}
