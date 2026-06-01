@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Plane, MapPin, Calendar, Download, Trash2, Edit3,
-  Loader2, Search, Plus, Folder, Filter, AlertCircle,
+  Loader2, Search, Plus, Folder, Filter, AlertCircle, History,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import {
   haversineDistance, polygonArea, generateLawnmowerPath,
 } from "@/lib/flightPathGenerators";
 import { generateDJIFlyKMZ } from "@/lib/generateDJIFlyKMZ";
+import MissionVersionsDialog from "@/components/plan/MissionVersionsDialog";
 
 interface SavedPlan {
   id: string;
