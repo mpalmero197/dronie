@@ -218,6 +218,8 @@ export default function ProjectDetail() {
   );
   const [sensor, setSensor] = useState<SensorSpec>(GENERIC_SPEC);
   const [sensorAutoDetected, setSensorAutoDetected] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [selectedDeliverables, setSelectedDeliverables] = useState<string[]>([]);
 
   const fpInputRef = useRef<HTMLInputElement>(null);
   const imgInputRef = useRef<HTMLInputElement>(null);
