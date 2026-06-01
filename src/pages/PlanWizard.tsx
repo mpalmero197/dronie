@@ -741,6 +741,16 @@ export default function PlanWizard() {
               Click to place vertices · <kbd className="px-1 rounded border border-border bg-secondary/50 font-mono">Z</kbd> undo · <kbd className="px-1 rounded border border-border bg-secondary/50 font-mono">Enter</kbd> finish · <kbd className="px-1 rounded border border-border bg-secondary/50 font-mono">Esc</kbd> cancel
             </div>
           )}
+
+          {/* Live mission HUD on step 3 */}
+          {step === 3 && (
+            <MissionEstimateOverlay
+              stats={stats}
+              formatTime={formatTime}
+              formatDist={formatDist}
+              formatArea={formatArea}
+            />
+          )}
         </div>
       </div>
     </div>
