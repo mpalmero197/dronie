@@ -1977,6 +1977,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      bump_share_view: { Args: { _token: string }; Returns: undefined }
       can_access_request_thread: {
         Args: { _pilot_id: string; _request_id: string; _user_id: string }
         Returns: boolean
@@ -2194,6 +2195,20 @@ export type Database = {
           software: string[]
           verticals: Database["public"]["Enums"]["industry_vertical"][]
           years_experience: number
+        }[]
+      }
+      get_share_payload: {
+        Args: { _token: string }
+        Returns: {
+          deliverable_keys: string[]
+          expires_at: string
+          outputs: string[]
+          outputs_urls: Json
+          owner_username: string
+          permission: string
+          project_id: string
+          project_name: string
+          share_id: string
         }[]
       }
       get_splat_share_by_token: {

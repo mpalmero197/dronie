@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { CheckCircle2, Clock, Loader2, XCircle } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { CheckCircle2, Clock, Loader2, XCircle, Zap, Coins, Timer } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface SplatJob {
@@ -17,6 +17,28 @@ interface SplatJob {
 interface Props {
   projectId: string;
   refreshKey: number;
+}
+
+/** Tunable per-1k-iteration cost in cents. Drives the cost estimator chip. */
+const COST_CENTS_PER_1K_ITER = 6;
+/** Median iterations-per-second on shared training infra (empirical). */
+const ITER_PER_SECOND = 28;
+
+function estimateCostCents(j: { iterations: number; image_count: number | null }): number {
+  const imgs = Math.max(1, j.image_count ?? 50);
+  const factor = Math.max(0.5, Math.log2(imgs / 50));
+  return Math.round((j.iterations / 1000) * COST_CENTS_PER_1K_ITER * factor);
+}
+
+function formatCents(c: number): string {
+  if (c < 100) return `${c}¢`;
+  return `$${(c / 100).toFixed(2)}`;
+}
+
+function formatSeconds(s: number): string {
+  if (s < 60) return `${Math.round(s)}s`;
+  if (s < 3600) return `${Math.round(s / 60)}m`;
+  return `${(s / 3600).toFixed(1)}h`;
 }
 
 export function JobList({ projectId, refreshKey }: Props) {
@@ -52,7 +74,17 @@ export function JobList({ projectId, refreshKey }: Props) {
 
   return (
     <div className="space-y-2">
-      {jobs.map((j) => (
+      <QueueSummary jobs={jobs} />
+      {jobs.map((j) => {
+        const cost = estimateCostCents(j);
+        const startedMs = new Date(j.created_at).getTime();
+        const elapsedS = (Date.now() - startedMs) / 1000;
+        const totalEstS = j.iterations / ITER_PER_SECOND;
+        const remainingS = j.status === "training" ? Math.max(0, totalEstS - elapsedS) : null;
+        const progressPct = j.status === "training"
+          ? Math.min(99, Math.round((elapsedS / Math.max(1, totalEstS)) * 100))
+          : j.status === "ready" ? 100 : 0;
+        return (
         <div key={j.id} className="rounded-lg border border-border bg-card/60 p-2.5 text-xs">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
@@ -71,6 +103,20 @@ export function JobList({ projectId, refreshKey }: Props) {
               {j.status}
             </span>
           </div>
+          {j.status === "training" && (
+            <div className="mt-1.5 h-1 rounded-full bg-muted overflow-hidden">
+              <div className="h-full bg-amber-400 transition-all" style={{ width: `${progressPct}%` }} />
+            </div>
+          )}
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted-foreground">
+            <span className="inline-flex items-center gap-1"><Coins className="w-3 h-3" /> {formatCents(cost)} est.</span>
+            {j.status === "training" && remainingS != null && (
+              <span className="inline-flex items-center gap-1"><Timer className="w-3 h-3" /> ~{formatSeconds(remainingS)} left</span>
+            )}
+            {j.status === "queued" && (
+              <span className="inline-flex items-center gap-1"><Zap className="w-3 h-3" /> ETA ~{formatSeconds(totalEstS)}</span>
+            )}
+          </div>
           {(j.psnr || j.training_seconds) && (
             <div className="mt-1 text-[10px] text-muted-foreground">
               {j.psnr && <>PSNR {j.psnr.toFixed(2)} dB</>}
@@ -82,7 +128,32 @@ export function JobList({ projectId, refreshKey }: Props) {
             <div className="mt-1 text-[10px] text-destructive break-words">{j.error}</div>
           )}
         </div>
-      ))}
+        );
+      })}
+    </div>
+  );
+}
+
+function QueueSummary({ jobs }: { jobs: SplatJob[] }) {
+  const stats = useMemo(() => {
+    const queued = jobs.filter((j) => j.status === "queued").length;
+    const training = jobs.filter((j) => j.status === "training").length;
+    const ready = jobs.filter((j) => j.status === "ready").length;
+    const failed = jobs.filter((j) => j.status === "failed").length;
+    const totalCost = jobs
+      .filter((j) => j.status === "ready" || j.status === "training")
+      .reduce((acc, j) => acc + estimateCostCents(j), 0);
+    return { queued, training, ready, failed, totalCost };
+  }, [jobs]);
+  return (
+    <div className="rounded-lg border border-border bg-secondary/40 p-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] uppercase tracking-wider font-semibold">
+      {stats.training > 0 && <span className="text-amber-500">{stats.training} training</span>}
+      {stats.queued > 0 && <span className="text-muted-foreground">{stats.queued} queued</span>}
+      {stats.ready > 0 && <span className="text-primary">{stats.ready} ready</span>}
+      {stats.failed > 0 && <span className="text-destructive">{stats.failed} failed</span>}
+      <span className="ml-auto text-muted-foreground normal-case">
+        {formatCents(stats.totalCost)} session spend
+      </span>
     </div>
   );
 }
