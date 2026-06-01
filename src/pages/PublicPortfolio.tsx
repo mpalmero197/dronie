@@ -21,6 +21,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   DEFAULT_THEME, ensureFontLoaded, normalizeTheme, themeStyle,
 } from "@/lib/portfolioTheme";
+import type { PortfolioLayout } from "@/lib/portfolioTheme";
 import {
   ScrollProgressBar,
   MarqueeTape,
