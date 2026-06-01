@@ -71,6 +71,53 @@ export type Database = {
         }
         Relationships: []
       }
+      drone_commands: {
+        Row: {
+          acked_at: string | null
+          command: string
+          created_at: string
+          drone_id: string
+          error: string | null
+          id: string
+          issued_by: string
+          params: Json | null
+          response: Json | null
+          status: string
+        }
+        Insert: {
+          acked_at?: string | null
+          command: string
+          created_at?: string
+          drone_id: string
+          error?: string | null
+          id?: string
+          issued_by: string
+          params?: Json | null
+          response?: Json | null
+          status?: string
+        }
+        Update: {
+          acked_at?: string | null
+          command?: string
+          created_at?: string
+          drone_id?: string
+          error?: string | null
+          id?: string
+          issued_by?: string
+          params?: Json | null
+          response?: Json | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "drone_commands_drone_id_fkey"
+            columns: ["drone_id"]
+            isOneToOne: false
+            referencedRelation: "drones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       drone_maintenance: {
         Row: {
           created_at: string
@@ -151,60 +198,138 @@ export type Database = {
           assigned_pilot_id: string | null
           battery_level: number
           created_at: string
+          firmware_version: string | null
+          flight_mode: string | null
           flight_time_minutes: number | null
+          geofence_radius_m: number | null
+          gimbal_pitch: number | null
+          gimbal_yaw: number | null
+          gps_satellites: number | null
+          has_lidar: boolean | null
+          has_parachute: boolean | null
+          has_rtk: boolean | null
+          has_speaker: boolean | null
+          has_spotlight: boolean | null
+          has_thermal: boolean | null
           heading: number | null
+          home_latitude: number | null
+          home_longitude: number | null
           id: string
+          is_armed: boolean | null
           latitude: number | null
+          link_quality: number | null
           longitude: number | null
+          max_altitude_m: number | null
           model: string
+          motor_count: number | null
           name: string
+          payload_type: string | null
+          rc_battery_level: number | null
+          recording: boolean | null
           serial_number: string
+          signal_strength: number | null
           speed: number | null
           status: Database["public"]["Enums"]["drone_status"]
           stream_demo_path: string | null
           stream_mode: string
           stream_url: string | null
+          temperature_c: number | null
           updated_at: string
+          wind_direction: number | null
+          wind_speed: number | null
+          zoom_level: number | null
         }
         Insert: {
           altitude?: number | null
           assigned_pilot_id?: string | null
           battery_level?: number
           created_at?: string
+          firmware_version?: string | null
+          flight_mode?: string | null
           flight_time_minutes?: number | null
+          geofence_radius_m?: number | null
+          gimbal_pitch?: number | null
+          gimbal_yaw?: number | null
+          gps_satellites?: number | null
+          has_lidar?: boolean | null
+          has_parachute?: boolean | null
+          has_rtk?: boolean | null
+          has_speaker?: boolean | null
+          has_spotlight?: boolean | null
+          has_thermal?: boolean | null
           heading?: number | null
+          home_latitude?: number | null
+          home_longitude?: number | null
           id?: string
+          is_armed?: boolean | null
           latitude?: number | null
+          link_quality?: number | null
           longitude?: number | null
+          max_altitude_m?: number | null
           model?: string
+          motor_count?: number | null
           name: string
+          payload_type?: string | null
+          rc_battery_level?: number | null
+          recording?: boolean | null
           serial_number?: string
+          signal_strength?: number | null
           speed?: number | null
           status?: Database["public"]["Enums"]["drone_status"]
           stream_demo_path?: string | null
           stream_mode?: string
           stream_url?: string | null
+          temperature_c?: number | null
           updated_at?: string
+          wind_direction?: number | null
+          wind_speed?: number | null
+          zoom_level?: number | null
         }
         Update: {
           altitude?: number | null
           assigned_pilot_id?: string | null
           battery_level?: number
           created_at?: string
+          firmware_version?: string | null
+          flight_mode?: string | null
           flight_time_minutes?: number | null
+          geofence_radius_m?: number | null
+          gimbal_pitch?: number | null
+          gimbal_yaw?: number | null
+          gps_satellites?: number | null
+          has_lidar?: boolean | null
+          has_parachute?: boolean | null
+          has_rtk?: boolean | null
+          has_speaker?: boolean | null
+          has_spotlight?: boolean | null
+          has_thermal?: boolean | null
           heading?: number | null
+          home_latitude?: number | null
+          home_longitude?: number | null
           id?: string
+          is_armed?: boolean | null
           latitude?: number | null
+          link_quality?: number | null
           longitude?: number | null
+          max_altitude_m?: number | null
           model?: string
+          motor_count?: number | null
           name?: string
+          payload_type?: string | null
+          rc_battery_level?: number | null
+          recording?: boolean | null
           serial_number?: string
+          signal_strength?: number | null
           speed?: number | null
           status?: Database["public"]["Enums"]["drone_status"]
           stream_demo_path?: string | null
           stream_mode?: string
           stream_url?: string | null
+          temperature_c?: number | null
           updated_at?: string
+          wind_direction?: number | null
+          wind_speed?: number | null
+          zoom_level?: number | null
         }
         Relationships: []
       }
