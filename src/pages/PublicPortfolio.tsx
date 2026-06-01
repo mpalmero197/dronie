@@ -32,6 +32,9 @@ import {
 } from "@/components/portfolio/PortfolioPolish";
 import HireInquiryDialog from "@/components/portfolio/HireInquiryDialog";
 import PortfolioSeo from "@/components/seo/PortfolioSeo";
+import HeroReel from "@/components/portfolio/HeroReel";
+import ScrollReveal from "@/components/portfolio/ScrollReveal";
+import { Send } from "lucide-react";
 
 type Mode = "home" | "photos" | "videos" | "album";
 
