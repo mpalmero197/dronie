@@ -16,10 +16,12 @@ export const PresetDetailCard = forwardRef<HTMLDivElement, PresetDetailCardProps
   function PresetDetailCard({ presetId, imageCount }, ref) {
     const preset = PRESETS.find((p) => p.id === presetId);
     if (!preset) return null;
-    const profile = (QUALITY_PROFILE as any)?.[preset.defaultSettings?.qualityProfile ?? "standard"];
-    const minPerImg = profile?.minutesPerImage ?? 0.18;
+    const s = preset.settings;
+    const profile = QUALITY_PROFILE[s.quality];
+    // Rough heuristic: minutes/image scales with imageScale + depthmap resolution.
+    const minPerImg = 0.06 * Math.max(0.5, s.imageScale ?? 1) * (profile.depthmapResolution / 640);
     const eta = imageCount ? Math.max(1, Math.round(imageCount * minPerImg)) : null;
-    const outputs = preset.defaultSettings?.extraOutputs ?? [];
+    const outputs = s.extraOutputs ?? [];
 
     return (
       <div ref={ref} className="rounded-xl border border-border bg-card/60 p-4 space-y-3">
@@ -29,13 +31,13 @@ export const PresetDetailCard = forwardRef<HTMLDivElement, PresetDetailCardProps
             <p className="text-[11px] text-muted-foreground leading-snug">{preset.description}</p>
           </div>
           <span className="text-[10px] uppercase tracking-wider font-semibold text-primary bg-primary/10 border border-primary/20 rounded-md px-2 py-1">
-            {preset.defaultSettings?.qualityProfile ?? "standard"}
+            {s.quality}
           </span>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          <Stat icon={Layers} label="GSD target" value={profile?.gsdCm != null ? `${profile.gsdCm} cm/px` : "—"} />
-          <Stat icon={ImageIcon} label="Overlap" value={`${preset.defaultSettings?.overlapForward ?? 75}/${preset.defaultSettings?.overlapSide ?? 65}%`} />
-          <Stat icon={Cpu} label="Outputs" value={String((outputs.length || 1))} />
+          <Stat icon={Layers} label="GSD target" value={s.targetGsdCm != null ? `${s.targetGsdCm} cm/px` : "—"} />
+          <Stat icon={ImageIcon} label="Mesh" value={s.meshType} />
+          <Stat icon={Cpu} label="Outputs" value={String(outputs.length + (s.dsmEnabled ? 1 : 0) + (s.contoursEnabled ? 1 : 0) + 1)} />
           <Stat icon={Clock} label="Est. ETA" value={eta ? `${eta} min` : "—"} />
         </div>
         {outputs.length > 0 && (
