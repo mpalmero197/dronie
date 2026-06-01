@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, RefreshCw, Plane, Video, Loader2, Search, Wifi, Pencil, Trash2, Gamepad2, Map as MapIcon } from "lucide-react";
+import { ArrowLeft, Plus, RefreshCw, Plane, Video, Loader2, Search, Wifi, Pencil, Trash2, Gamepad2, Map as MapIcon, Wrench, FileClock, ArrowRightLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -18,6 +18,9 @@ import DroneStatusBadge from "@/components/fleet/DroneStatusBadge";
 import BroadcastButton from "@/components/fleet/BroadcastButton";
 import DroneControlConsole from "@/components/fleet/DroneControlConsole";
 import LiveFleetMap from "@/components/fleet/LiveFleetMap";
+import MaintenancePanel from "@/components/fleet/MaintenancePanel";
+import BlackBoxPlayback from "@/components/fleet/BlackBoxPlayback";
+import HandoffDialog from "@/components/fleet/HandoffDialog";
 
 export default function FleetManagement() {
   const navigate = useNavigate();
@@ -36,6 +39,7 @@ export default function FleetManagement() {
   const [deleteDrone, setDeleteDrone] = useState<Drone | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [consoleDrone, setConsoleDrone] = useState<Drone | null>(null);
+  const [handoffDrone, setHandoffDrone] = useState<Drone | null>(null);
 
   const handleProbe = async () => {
     setProbing(true);
@@ -167,6 +171,12 @@ export default function FleetManagement() {
             <TabsTrigger value="cameras" className="gap-1.5">
               <Video className="w-3.5 h-3.5" /> Camera Feeds
             </TabsTrigger>
+            <TabsTrigger value="maintenance" className="gap-1.5">
+              <Wrench className="w-3.5 h-3.5" /> Maintenance
+            </TabsTrigger>
+            <TabsTrigger value="blackbox" className="gap-1.5">
+              <FileClock className="w-3.5 h-3.5" /> Black Box
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="fleet" className="space-y-4">
@@ -245,6 +255,14 @@ export default function FleetManagement() {
               </div>
             )}
           </TabsContent>
+
+          <TabsContent value="maintenance" className="space-y-4">
+            <MaintenancePanel drones={drones} />
+          </TabsContent>
+
+          <TabsContent value="blackbox" className="space-y-4">
+            <BlackBoxPlayback />
+          </TabsContent>
         </Tabs>
 
         {/* Drone detail side panel */}
@@ -316,6 +334,9 @@ export default function FleetManagement() {
                 <Button size="sm" onClick={() => { setConsoleDrone(selectedDrone); setSelectedDrone(null); }} className="w-full gap-1.5">
                   <Gamepad2 className="w-3.5 h-3.5" /> Open control console
                 </Button>
+                <Button variant="outline" size="sm" onClick={() => { setHandoffDrone(selectedDrone); setSelectedDrone(null); }} className="w-full gap-1.5">
+                  <ArrowRightLeft className="w-3.5 h-3.5" /> Transfer control
+                </Button>
               </div>
             </div>
           </div>
@@ -325,6 +346,7 @@ export default function FleetManagement() {
       <AddDroneDialog open={showAddDrone} onOpenChange={setShowAddDrone} onAdded={fetchDrones} prefill={addPrefill} hint={addHint} />
       <EditDroneDialog open={!!editDrone} onOpenChange={(o) => !o && setEditDrone(null)} drone={editDrone} onSaved={fetchDrones} />
       <DroneControlConsole open={!!consoleDrone} onOpenChange={(o) => !o && setConsoleDrone(null)} drone={consoleDrone} />
+      <HandoffDialog open={!!handoffDrone} onOpenChange={(o) => !o && setHandoffDrone(null)} drone={handoffDrone} />
 
       <AlertDialog open={!!deleteDrone} onOpenChange={(o) => !o && setDeleteDrone(null)}>
         <AlertDialogContent>
