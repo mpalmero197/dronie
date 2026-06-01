@@ -240,14 +240,14 @@ export function SectionDots({
           <a
             key={s.id}
             href={`#${s.id}`}
-            className="flex items-center gap-2 group"
+            className="relative flex items-center justify-end h-4 w-4 group"
             onClick={(e) => {
               e.preventDefault();
               document.getElementById(s.id)?.scrollIntoView({ behavior: "smooth", block: "start" });
             }}
           >
             <span
-              className={`text-[10px] font-mono uppercase tracking-[0.2em] opacity-0 group-hover:opacity-100 group-hover/dots:opacity-80 transition-opacity ${
+              className={`absolute right-full mr-3 whitespace-nowrap text-[10px] font-mono uppercase tracking-[0.2em] px-2 py-1 rounded-md bg-background/80 backdrop-blur border border-border opacity-0 group-hover:opacity-100 group-hover/dots:opacity-90 transition-opacity ${
                 isActive ? "text-foreground" : "text-muted-foreground"
               }`}
             >
