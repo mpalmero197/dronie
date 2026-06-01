@@ -341,6 +341,26 @@ export default function PublicPortfolio({ mode }: Props) {
       {/* Hero / about */}
       {mode === "home" && (
         <div id="intro">
+          {theme.hero && theme.hero.kind !== "none" && (
+            <HeroReel
+              hero={theme.hero}
+              fallbackImage={banner || profile.avatar_url}
+              items={allItems}
+              displayName={displayName}
+              headline={profile.headline}
+              kicker={`Aerial portfolio · @${profile.username}`}
+            >
+              {prefs.show_hire_cta && hireEmail && (
+                <Button
+                  size="lg"
+                  className="gap-1.5 shadow-2xl shadow-primary/30"
+                  onClick={() => setHireOpen(true)}
+                >
+                  Hire {profile.full_name?.split(" ")[0] || displayName}
+                </Button>
+              )}
+            </HeroReel>
+          )}
           <PortfolioHero
             profile={profile}
             prefs={prefs}
