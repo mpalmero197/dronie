@@ -41,6 +41,36 @@ export type Database = {
         }
         Relationships: []
       }
+      app_secrets: {
+        Row: {
+          category: string
+          created_at: string
+          hint: string | null
+          name: string
+          updated_at: string
+          updated_by: string | null
+          value_encrypted: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          hint?: string | null
+          name: string
+          updated_at?: string
+          updated_by?: string | null
+          value_encrypted: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          hint?: string | null
+          name?: string
+          updated_at?: string
+          updated_by?: string | null
+          value_encrypted?: string
+        }
+        Relationships: []
+      }
       drone_maintenance: {
         Row: {
           created_at: string
@@ -1582,6 +1612,14 @@ export type Database = {
       can_access_request_thread: {
         Args: { _pilot_id: string; _request_id: string; _user_id: string }
         Returns: boolean
+      }
+      decrypt_app_secret: {
+        Args: { _key: string; _name: string }
+        Returns: string
+      }
+      encrypt_app_secret: {
+        Args: { _key: string; _value: string }
+        Returns: string
       }
       find_matching_pilots: {
         Args: { _request_id: string }
