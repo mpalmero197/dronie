@@ -652,8 +652,8 @@ function PortfolioHero({
   // anchoring the identity. Award-grade composition: image breathes,
   // content sits in a tight, high-contrast glass panel that scales
   // gracefully from short laptops to ultra-wide monitors.
-  if (layout === "cinematic" || layout === "journal") {
-    // journal & cinematic share the immersive full-bleed hero
+  if (layout === "cinematic") {
+    // Cinematic — immersive full-bleed hero
     return (
       <section className="relative border-b border-border overflow-hidden">
         <div className="relative w-full">
