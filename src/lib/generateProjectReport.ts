@@ -75,11 +75,12 @@ export function generateProjectReport({ project, annotations, pilotName }: Repor
   if (acc) {
     y = section(doc, y, "Accuracy & Quality");
     const rows: [string, string][] = [
-      ["RMSE horizontal", acc.rmse_horizontal_cm != null ? `${acc.rmse_horizontal_cm.toFixed(1)} cm` : "—"],
-      ["RMSE vertical",   acc.rmse_vertical_cm != null ? `${acc.rmse_vertical_cm.toFixed(1)} cm` : "—"],
-      ["GSD", acc.gsd_cm_px != null ? `${acc.gsd_cm_px.toFixed(2)} cm/px` : "—"],
-      ["Overlap (fwd/side)", acc.overlap_forward != null && acc.overlap_side != null ? `${acc.overlap_forward}% / ${acc.overlap_side}%` : "—"],
-      ["GCPs used", acc.gcp_count != null ? String(acc.gcp_count) : "—"],
+      ["GSD", acc.gsd_cm != null ? `${acc.gsd_cm.toFixed(2)} cm/px` : "—"],
+      ["RMSE", acc.rmse_m != null ? `${(acc.rmse_m * 100).toFixed(1)} cm` : "—"],
+      ["Reprojection error", acc.reprojection_error_px != null ? `${acc.reprojection_error_px.toFixed(2)} px` : "—"],
+      ["Registered images", acc.registered_images != null && acc.total_images != null ? `${acc.registered_images} / ${acc.total_images}` : "—"],
+      ["Tie points", acc.tie_points != null ? acc.tie_points.toLocaleString() : "—"],
+      ["GCPs", acc.gcp_residuals ? String(acc.gcp_residuals.length) : "—"],
     ];
     rows.forEach(([k, v]) => { y = kvRow(doc, y, k, v); });
   }
