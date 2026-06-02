@@ -32,6 +32,8 @@ import { PresetDetailCard } from "@/components/project/PresetDetailCard";
 import { DeliverableShareDialog } from "@/components/project/DeliverableShareDialog";
 import { AnnotationsPanel } from "@/components/project/AnnotationsPanel";
 import { AccuracyReport, type AccuracyData } from "@/components/project/AccuracyReport";
+import { downloadProjectReport } from "@/lib/generateProjectReport";
+import { listAnnotations } from "@/lib/projectAnnotations";
 import { DroneCameraPicker } from "@/components/project/DroneCameraPicker";
 import { MissionCalculator } from "@/components/project/MissionCalculator";
 import { GcpAdvisor } from "@/components/project/GcpAdvisor";
@@ -534,6 +536,22 @@ export default function ProjectDetail() {
               <>
                 <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => setShareOpen(true)}>
                   <Share2 className="w-3 h-3" /> Share
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 text-xs"
+                  onClick={async () => {
+                    try {
+                      const ann = await listAnnotations(project.id);
+                      downloadProjectReport({ project, annotations: ann });
+                      toast({ title: "Report ready", description: "PDF downloaded." });
+                    } catch (e: any) {
+                      toast({ title: "Report failed", description: e?.message ?? String(e), variant: "destructive" });
+                    }
+                  }}
+                >
+                  <FileText className="w-3 h-3" /> PDF report
                 </Button>
                 <Button size="sm" className="gap-1.5 text-xs bg-primary text-primary-foreground" onClick={() => navigate(`/viewer/${project.id}`)}>
                   <Eye className="w-3 h-3" /> Open Viewer
