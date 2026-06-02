@@ -310,6 +310,7 @@ export default function PublicPortfolio({ mode }: Props) {
       />
       <ScrollProgressBar />
       {mode === "home" && <SectionDots sections={dotSections} />}
+      <Watermark watermark={theme.watermark} />
       {isOwner && isUnpublished && (
         <div className="bg-amber-500/10 border-b border-amber-500/30 text-amber-200">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 py-2.5 text-xs sm:text-sm flex flex-wrap items-center justify-between gap-2">
