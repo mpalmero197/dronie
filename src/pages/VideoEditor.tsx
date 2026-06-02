@@ -22,7 +22,7 @@ import {
   CaptionStyle, CaptionCue, clipStartGlobal, newId, totalDuration,
 } from "@/lib/videoEditor/types";
 import { probeVideo, renderProject } from "@/lib/videoEditor/render";
-import { extractAudioBase64, transcribeAudio } from "@/lib/videoEditor/transcribe";
+import { extractAudioBase64, transcribeAudio, translateCues } from "@/lib/videoEditor/transcribe";
 import { cuesToSrt } from "@/lib/videoEditor/ass";
 import { PORTFOLIO_BUCKET, PortfolioItem } from "@/lib/portfolio";
 import { captureVideoFrame } from "@/lib/videoFrame";
@@ -37,6 +37,29 @@ const TRANSITIONS: { value: TransitionKind; label: string }[] = [
   { value: "slideright", label: "Slide →" },
   { value: "fadeblack", label: "Fade to Black" },
   { value: "fadewhite", label: "Fade to White" },
+];
+
+const RENDER_PRESETS: { id: string; label: string; w: number; h: number; fps: number; hint: string }[] = [
+  { id: "reels", label: "Reels / TikTok", w: 1080, h: 1920, fps: 30, hint: "9:16 vertical" },
+  { id: "yt", label: "YouTube HD", w: 1920, h: 1080, fps: 30, hint: "16:9 landscape" },
+  { id: "yt4k", label: "YouTube 4K", w: 3840, h: 2160, fps: 30, hint: "16:9 ultra HD" },
+  { id: "square", label: "Square", w: 1080, h: 1080, fps: 30, hint: "1:1 feed" },
+  { id: "preview", label: "Fast preview", w: 1280, h: 720, fps: 24, hint: "720p draft" },
+];
+
+const TRANSLATE_LANGS = [
+  { code: "Spanish", label: "Spanish" },
+  { code: "French", label: "French" },
+  { code: "German", label: "German" },
+  { code: "Portuguese", label: "Portuguese" },
+  { code: "Italian", label: "Italian" },
+  { code: "Dutch", label: "Dutch" },
+  { code: "Japanese", label: "Japanese" },
+  { code: "Korean", label: "Korean" },
+  { code: "Mandarin Chinese", label: "Chinese (Mandarin)" },
+  { code: "Arabic", label: "Arabic" },
+  { code: "Hindi", label: "Hindi" },
+  { code: "English", label: "English" },
 ];
 
 const FILTERS: { value: FilterPreset; label: string }[] = [
@@ -94,6 +117,8 @@ export default function VideoEditor() {
   const [renderedBlob, setRenderedBlob] = useState<Blob | null>(null);
   const [saveOpen, setSaveOpen] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
+  const [translating, setTranslating] = useState(false);
+  const [translateLang, setTranslateLang] = useState<string>("Spanish");
 
   const previewRef = useRef<HTMLVideoElement | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
@@ -300,6 +325,30 @@ export default function VideoEditor() {
       setTranscribing(false);
       setRenderMsg("");
     }
+  };
+
+  const translateAllCues = async () => {
+    if (project.captions.cues.length === 0) return;
+    setTranslating(true);
+    try {
+      const out = await translateCues(project.captions.cues, translateLang);
+      updateCaptions({ cues: out as CaptionCue[] });
+      toast({ title: `Translated to ${translateLang}` });
+    } catch (e) {
+      toast({
+        title: e instanceof Error ? e.message : "Translation failed",
+        variant: "destructive",
+      });
+    } finally {
+      setTranslating(false);
+    }
+  };
+
+  const applyRenderPreset = (id: string) => {
+    const p = RENDER_PRESETS.find((x) => x.id === id);
+    if (!p) return;
+    setProject((proj) => ({ ...proj, width: p.w, height: p.h, fps: p.fps }));
+    toast({ title: `Render preset: ${p.label}`, description: `${p.w}×${p.h} @ ${p.fps}fps` });
   };
 
   // ===== Render =====
@@ -761,6 +810,23 @@ export default function VideoEditor() {
                   {transcribing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
                   Auto-transcribe with AI
                 </Button>
+                <div className="rounded-lg border border-border bg-background/40 p-2 space-y-1.5">
+                  <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Auto-translate cues</Label>
+                  <div className="flex gap-1.5">
+                    <Select value={translateLang} onValueChange={setTranslateLang}>
+                      <SelectTrigger className="h-8 text-xs flex-1"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {TRANSLATE_LANGS.map((l) => (
+                          <SelectItem key={l.code} value={l.code} className="text-xs">{l.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button size="sm" variant="outline" className="h-8 gap-1" onClick={translateAllCues} disabled={translating || project.captions.cues.length === 0}>
+                      {translating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                      Translate
+                    </Button>
+                  </div>
+                </div>
                 <Button size="sm" variant="ghost" className="w-full" onClick={addCue}>
                   <Plus className="w-3.5 h-3.5 mr-1" /> Add cue at playhead
                 </Button>
@@ -788,6 +854,26 @@ export default function VideoEditor() {
 
             {/* Effects panel */}
             <TabsContent value="effects" className="space-y-3">
+              <div className="rounded-xl border border-border bg-secondary/30 p-3 space-y-2">
+                <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Render preset</Label>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {RENDER_PRESETS.map((p) => {
+                    const active = project.width === p.w && project.height === p.h && project.fps === p.fps;
+                    return (
+                      <Button
+                        key={p.id}
+                        size="sm"
+                        variant={active ? "default" : "outline"}
+                        className="h-auto py-1.5 flex flex-col items-start gap-0"
+                        onClick={() => applyRenderPreset(p.id)}
+                      >
+                        <span className="text-xs font-medium">{p.label}</span>
+                        <span className="text-[9px] opacity-70">{p.hint}</span>
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
               <div className="rounded-xl border border-border bg-secondary/30 p-3 space-y-3">
                 <div>
                   <Label className="text-xs">Master volume ({Math.round(project.audioVolume * 100)}%)</Label>
