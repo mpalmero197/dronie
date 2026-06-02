@@ -810,6 +810,23 @@ export default function VideoEditor() {
                   {transcribing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
                   Auto-transcribe with AI
                 </Button>
+                <div className="rounded-lg border border-border bg-background/40 p-2 space-y-1.5">
+                  <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Auto-translate cues</Label>
+                  <div className="flex gap-1.5">
+                    <Select value={translateLang} onValueChange={setTranslateLang}>
+                      <SelectTrigger className="h-8 text-xs flex-1"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {TRANSLATE_LANGS.map((l) => (
+                          <SelectItem key={l.code} value={l.code} className="text-xs">{l.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button size="sm" variant="outline" className="h-8 gap-1" onClick={translateAllCues} disabled={translating || project.captions.cues.length === 0}>
+                      {translating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                      Translate
+                    </Button>
+                  </div>
+                </div>
                 <Button size="sm" variant="ghost" className="w-full" onClick={addCue}>
                   <Plus className="w-3.5 h-3.5 mr-1" /> Add cue at playhead
                 </Button>
@@ -837,6 +854,26 @@ export default function VideoEditor() {
 
             {/* Effects panel */}
             <TabsContent value="effects" className="space-y-3">
+              <div className="rounded-xl border border-border bg-secondary/30 p-3 space-y-2">
+                <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Render preset</Label>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {RENDER_PRESETS.map((p) => {
+                    const active = project.width === p.w && project.height === p.h && project.fps === p.fps;
+                    return (
+                      <Button
+                        key={p.id}
+                        size="sm"
+                        variant={active ? "default" : "outline"}
+                        className="h-auto py-1.5 flex flex-col items-start gap-0"
+                        onClick={() => applyRenderPreset(p.id)}
+                      >
+                        <span className="text-xs font-medium">{p.label}</span>
+                        <span className="text-[9px] opacity-70">{p.hint}</span>
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
               <div className="rounded-xl border border-border bg-secondary/30 p-3 space-y-3">
                 <div>
                   <Label className="text-xs">Master volume ({Math.round(project.audioVolume * 100)}%)</Label>
