@@ -652,8 +652,8 @@ function PortfolioHero({
   // anchoring the identity. Award-grade composition: image breathes,
   // content sits in a tight, high-contrast glass panel that scales
   // gracefully from short laptops to ultra-wide monitors.
-  if (layout === "cinematic" || layout === "journal") {
-    // journal & cinematic share the immersive full-bleed hero
+  if (layout === "cinematic") {
+    // Cinematic — immersive full-bleed hero
     return (
       <section className="relative border-b border-border overflow-hidden">
         <div className="relative w-full">
@@ -806,6 +806,177 @@ function PortfolioHero({
               <Avatar profile={profile} displayName={displayName} size="md" />
             </div>
           </div>
+        </div>
+        <ContactRail profile={profile} prefs={prefs} hasAnySocial={hasAnySocial} />
+      </section>
+    );
+  }
+
+  // ───── JOURNAL ────────────────────────────────────────────────
+  // Long-form editorial: full-bleed cover image, then a contained
+  // article-like intro with a large serif drop-cap pulling the reader in.
+  if (layout === "journal") {
+    const intro = profile.bio || profile.headline || "";
+    const dropCap = (intro.trim()[0] || displayName[0] || "A").toUpperCase();
+    const restIntro = intro.trim().slice(1);
+    return (
+      <section className="relative border-b border-border overflow-hidden">
+        {/* Full-bleed cover */}
+        <div className="relative w-full h-[60vh] sm:h-[72vh] min-h-[420px] max-h-[820px] overflow-hidden">
+          {(banner || fallbackBackdrop) ? (
+            <img
+              src={banner || fallbackBackdrop || ""}
+              alt=""
+              aria-hidden
+              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+              className="w-full h-full object-cover portfolio-kenburns"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-primary/40 via-background to-background" />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-background/10" />
+          <div className="absolute inset-x-0 bottom-0 max-w-3xl mx-auto px-4 sm:px-6 pb-8 sm:pb-12 text-center">
+            <p className="text-[10px] sm:text-xs font-mono uppercase tracking-[0.32em] text-primary mb-3">
+              Issue · {new Date().getFullYear()} — @{profile.username}
+            </p>
+            <h1
+              className="font-700 text-5xl sm:text-7xl xl:text-8xl tracking-tight leading-[0.95] drop-shadow-[0_6px_24px_rgba(0,0,0,0.5)]"
+              style={{ fontFamily: "var(--portfolio-display-font)" }}
+            >
+              {displayName}
+            </h1>
+            {profile.headline && (
+              <p className="mt-4 text-base sm:text-xl italic text-foreground/85 max-w-2xl mx-auto leading-snug">
+                “{profile.headline}”
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Contained article intro w/ drop-cap */}
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
+          <div className="flex items-center justify-center gap-3 mb-6 text-xs uppercase tracking-[0.28em] text-muted-foreground">
+            <span className="h-px w-10 bg-border" />
+            <span>Featured Folio</span>
+            <span className="h-px w-10 bg-border" />
+          </div>
+
+          {intro ? (
+            <p className="text-lg sm:text-xl leading-[1.7] text-foreground/85 first-letter:font-700 first-letter:text-6xl sm:first-letter:text-7xl first-letter:float-left first-letter:mr-3 first-letter:mt-1 first-letter:leading-[0.85] first-letter:text-primary"
+               style={{ fontFamily: "var(--portfolio-display-font)" }}
+            >
+              <span style={{ fontFamily: "var(--portfolio-display-font)" }}>{dropCap}</span>
+              <span style={{ fontFamily: "inherit" }} className="font-400">
+                {restIntro || ` story by ${displayName}, captured from above.`}
+              </span>
+            </p>
+          ) : (
+            <p className="text-lg sm:text-xl leading-[1.7] text-foreground/80 text-center italic">
+              A visual journal by {displayName}.
+            </p>
+          )}
+
+          <div className="mt-8 flex flex-col items-center gap-5">
+            {meta}
+            {prefs.show_services && services.length > 0 && (
+              <ServiceChips services={services} />
+            )}
+            <div className="pt-2">{ctas}</div>
+          </div>
+        </div>
+        <ContactRail profile={profile} prefs={prefs} hasAnySocial={hasAnySocial} />
+      </section>
+    );
+  }
+
+  // ───── MOSAIC ─────────────────────────────────────────────────
+  // Bento-grid hero: large showcase tile + identity tile + several
+  // mixed-size work tiles. Image-forward, very modern.
+  if (layout === "mosaic") {
+    const tiles = items.filter((i) => i.thumb_url || i.media_url).slice(0, 6);
+    const placeholders = Math.max(0, 6 - tiles.length);
+    return (
+      <section className="relative border-b border-border overflow-hidden">
+        <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top_left,_hsl(var(--primary)/0.16),_transparent_55%)]" />
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 py-8 sm:py-12">
+          <div
+            className="grid gap-2 sm:gap-3 auto-rows-[110px] sm:auto-rows-[150px] lg:auto-rows-[170px] grid-cols-2 md:grid-cols-4 lg:grid-cols-6"
+          >
+            {/* Identity tile — spans 2x2 */}
+            <div className="col-span-2 row-span-2 rounded-2xl border border-border bg-card/80 backdrop-blur-sm p-5 sm:p-6 flex flex-col justify-between relative overflow-hidden">
+              <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-primary/10 blur-2xl" />
+              <div className="relative">
+                <p className="text-[10px] font-mono uppercase tracking-[0.24em] text-primary mb-2">
+                  @{profile.username}
+                </p>
+                <h1
+                  className="font-700 text-3xl sm:text-4xl xl:text-5xl tracking-tight leading-[0.95]"
+                  style={{ fontFamily: "var(--portfolio-display-font)" }}
+                >
+                  {displayName}
+                </h1>
+                {profile.headline && (
+                  <p className="mt-3 text-sm sm:text-base text-foreground/80 leading-snug line-clamp-3">
+                    {profile.headline}
+                  </p>
+                )}
+              </div>
+              <div className="relative space-y-3">
+                {meta}
+                {ctas}
+              </div>
+            </div>
+
+            {/* Big hero tile — spans 2x2 on md, 4x2 on lg */}
+            {(tiles[0] || banner || fallbackBackdrop) && (
+              <div className="col-span-2 row-span-2 md:col-span-2 lg:col-span-4 rounded-2xl overflow-hidden border border-border relative group bg-secondary">
+                <img
+                  src={tiles[0]?.thumb_url || tiles[0]?.media_url || banner || fallbackBackdrop || ""}
+                  alt={tiles[0]?.title ?? ""}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-background/70 via-transparent to-transparent" />
+                <div className="absolute bottom-3 left-4 right-4 flex items-end justify-between gap-2 text-white">
+                  <p className="text-[10px] sm:text-xs font-mono uppercase tracking-[0.24em] opacity-90">
+                    Featured work
+                  </p>
+                  {typeof allItemsCount === "number" && allItemsCount > 0 && (
+                    <p className="text-2xl sm:text-3xl font-700 tabular-nums leading-none drop-shadow-md"
+                       style={{ fontFamily: "var(--portfolio-display-font)" }}>
+                      {String(allItemsCount).padStart(2, "0")}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Mixed remaining tiles */}
+            {tiles.slice(1).map((it, idx) => {
+              const span = idx === 1 ? "md:col-span-2" : "";
+              return (
+                <div key={it.id} className={`rounded-2xl overflow-hidden border border-border relative group bg-secondary ${span}`}>
+                  <img
+                    src={it.thumb_url || it.media_url || ""}
+                    alt={it.title ?? ""}
+                    loading="lazy"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                  />
+                </div>
+              );
+            })}
+
+            {Array.from({ length: placeholders }).map((_, i) => (
+              <div key={`mph${i}`} className="rounded-2xl border border-border bg-gradient-to-br from-primary/15 to-primary/5" />
+            ))}
+          </div>
+
+          {prefs.show_services && services.length > 0 && (
+            <div className="mt-6 flex justify-center">
+              <ServiceChips services={services} />
+            </div>
+          )}
         </div>
         <ContactRail profile={profile} prefs={prefs} hasAnySocial={hasAnySocial} />
       </section>
