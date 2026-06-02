@@ -34,3 +34,15 @@ export async function transcribeAudio(b64: string, mime: string, durationS?: num
   if (data?.error) throw new Error(data.error);
   return (data?.cues ?? []) as TranscriptCue[];
 }
+
+export async function translateCues<T extends { startS: number; endS: number; text: string }>(
+  cues: T[],
+  targetLang: string,
+): Promise<T[]> {
+  const { data, error } = await supabase.functions.invoke("translate-captions", {
+    body: { cues, targetLang },
+  });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  return (data?.cues ?? cues) as T[];
+}
