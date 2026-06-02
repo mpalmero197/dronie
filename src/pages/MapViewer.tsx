@@ -494,6 +494,28 @@ export default function MapViewer() {
 
         {/* Embed Modal */}
         {showEmbed && projectId && <EmbedModal projectId={projectId} onClose={() => setShowEmbed(false)} />}
+
+        {/* Before/After compare overlay */}
+        {compareOpen && project?.outputs_urls?.orthomosaic && (
+          <div className="absolute inset-0 z-[1100] bg-background/95 backdrop-blur p-4 flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-display font-700 text-foreground text-sm">Before / After</p>
+                <p className="text-[11px] text-muted-foreground">Drag the handle to wipe between satellite basemap and the processed orthomosaic.</p>
+              </div>
+              <Button size="sm" variant="outline" onClick={() => setCompareOpen(false)}>Close</Button>
+            </div>
+            <div className="flex-1 min-h-0">
+              <BeforeAfterSlider
+                beforeUrl={`https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/12/1583/655`}
+                afterUrl={project.outputs_urls.orthomosaic as string}
+                beforeLabel="Satellite"
+                afterLabel="Orthomosaic"
+                className="h-full !aspect-auto"
+              />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
