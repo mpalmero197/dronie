@@ -22,6 +22,7 @@ import {
   DEFAULT_THEME, ensureFontLoaded, normalizeTheme, themeStyle,
 } from "@/lib/portfolioTheme";
 import type { PortfolioLayout } from "@/lib/portfolioTheme";
+import Watermark from "@/components/portfolio/Watermark";
 import {
   ScrollProgressBar,
   MarqueeTape,
