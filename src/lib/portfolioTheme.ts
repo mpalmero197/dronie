@@ -62,7 +62,23 @@ export interface PortfolioTheme {
   hideBackdrop?: boolean;
   /** Cinematic hero reel/video/slideshow configuration. */
   hero?: PortfolioHero;
+  /** Discrete branding stamp shown on the public portfolio (bottom-right). */
+  watermark?: PortfolioWatermark;
 }
+
+export interface PortfolioWatermark {
+  enabled: boolean;
+  text: string;
+  opacity: number; // 0..1
+  position: "bottom-right" | "bottom-left" | "top-right" | "top-left";
+}
+
+export const DEFAULT_WATERMARK: PortfolioWatermark = {
+  enabled: false,
+  text: "",
+  opacity: 0.6,
+  position: "bottom-right",
+};
 
 export const DEFAULT_THEME: PortfolioTheme = {
   layout: "cinematic",
@@ -71,6 +87,7 @@ export const DEFAULT_THEME: PortfolioTheme = {
   accent: null,
   hideBackdrop: false,
   hero: { ...DEFAULT_HERO },
+  watermark: { ...DEFAULT_WATERMARK },
 };
 
 export const LAYOUTS: { id: PortfolioLayout; label: string; description: string }[] = [
@@ -151,6 +168,22 @@ export function normalizeTheme(raw: any): PortfolioTheme {
     accent: typeof t.accent === "string" && t.accent.trim() ? t.accent : null,
     hideBackdrop: !!t.hideBackdrop,
     hero: normalizeHero((t as any).hero),
+    watermark: normalizeWatermark((t as any).watermark),
+  };
+}
+
+export function normalizeWatermark(raw: any): PortfolioWatermark {
+  const base = { ...DEFAULT_WATERMARK };
+  if (!raw || typeof raw !== "object") return base;
+  const r = raw as Partial<PortfolioWatermark>;
+  const pos = (["bottom-right", "bottom-left", "top-right", "top-left"] as const).includes(r.position as any)
+    ? (r.position as PortfolioWatermark["position"])
+    : base.position;
+  return {
+    enabled: !!r.enabled,
+    text: typeof r.text === "string" ? r.text.slice(0, 80) : "",
+    opacity: typeof r.opacity === "number" ? Math.min(1, Math.max(0.1, r.opacity)) : base.opacity,
+    position: pos,
   };
 }
 

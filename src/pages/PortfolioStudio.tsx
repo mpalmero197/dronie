@@ -20,6 +20,7 @@ import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Slider } from "@/components/ui/slider";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -1328,6 +1329,83 @@ function AppearanceSection({
             <Switch checked={!theme.hideBackdrop} onCheckedChange={(v) => onPatchTheme({ hideBackdrop: !v })} />
             Show blurred photo backdrop when no banner
           </label>
+        </div>
+      </div>
+
+      {/* Watermark */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+          Watermark
+        </div>
+        <div className="rounded-xl border border-border bg-secondary/30 p-3 space-y-2">
+          <label className="flex items-center justify-between text-sm">
+            <span>Show branding stamp on public portfolio</span>
+            <Switch
+              checked={!!theme.watermark?.enabled}
+              onCheckedChange={(v) =>
+                onPatchTheme({
+                  watermark: {
+                    enabled: v,
+                    text: theme.watermark?.text ?? "",
+                    opacity: theme.watermark?.opacity ?? 0.6,
+                    position: theme.watermark?.position ?? "bottom-right",
+                  },
+                })
+              }
+            />
+          </label>
+          {theme.watermark?.enabled && (
+            <div className="grid grid-cols-2 gap-2">
+              <div className="col-span-2">
+                <Label className="text-[10px] uppercase tracking-wide">Watermark text</Label>
+                <Input
+                  className="h-8 mt-1"
+                  placeholder="Your studio name"
+                  value={theme.watermark?.text ?? ""}
+                  maxLength={60}
+                  onChange={(e) =>
+                    onPatchTheme({
+                      watermark: { ...(theme.watermark ?? { enabled: true, opacity: 0.6, position: "bottom-right" }), text: e.target.value, enabled: true } as any,
+                    })
+                  }
+                />
+              </div>
+              <div>
+                <Label className="text-[10px] uppercase tracking-wide">Position</Label>
+                <Select
+                  value={theme.watermark?.position ?? "bottom-right"}
+                  onValueChange={(v) =>
+                    onPatchTheme({
+                      watermark: { ...(theme.watermark ?? { enabled: true, text: "", opacity: 0.6 }), position: v as any } as any,
+                    })
+                  }
+                >
+                  <SelectTrigger className="h-8 mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="bottom-right">Bottom-right</SelectItem>
+                    <SelectItem value="bottom-left">Bottom-left</SelectItem>
+                    <SelectItem value="top-right">Top-right</SelectItem>
+                    <SelectItem value="top-left">Top-left</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-[10px] uppercase tracking-wide">Opacity ({Math.round((theme.watermark?.opacity ?? 0.6) * 100)}%)</Label>
+                <Slider
+                  className="mt-2"
+                  min={0.1}
+                  max={1}
+                  step={0.05}
+                  value={[theme.watermark?.opacity ?? 0.6]}
+                  onValueChange={([v]) =>
+                    onPatchTheme({
+                      watermark: { ...(theme.watermark ?? { enabled: true, text: "", position: "bottom-right" }), opacity: v } as any,
+                    })
+                  }
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
