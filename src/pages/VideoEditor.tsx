@@ -290,6 +290,29 @@ export default function VideoEditor() {
   const removeText = (id: string) =>
     setProject((p) => ({ ...p, texts: p.texts.filter((t) => t.id !== id) }));
 
+  const addEndCard = (preset: "thanks" | "subscribe" | "handle" | "credit") => {
+    const end = Math.max(0.5, total);
+    const startS = Math.max(0, end - 3);
+    const presets: Record<typeof preset, Partial<TextOverlay>> = {
+      thanks:    { text: "Thanks for watching",     fontSize: 96, color: "#ffffff", bgColor: "#000000", bgOpacity: 0.55, weight: "bold", align: "center", y: 0.5 },
+      subscribe: { text: "Subscribe for more →",    fontSize: 72, color: "#ffffff", bgColor: "#22c55e", bgOpacity: 0.85, weight: "bold", align: "center", y: 0.5 },
+      handle:    { text: `@${user?.email?.split("@")[0] ?? "your-handle"}`, fontSize: 80, color: "#ffffff", bgColor: "#000000", bgOpacity: 0.6, weight: "bold", align: "center", y: 0.85 },
+      credit:    { text: "Shot & edited with Dronie", fontSize: 56, color: "#ffffff", bgColor: "#000000", bgOpacity: 0.4, weight: "normal", align: "center", y: 0.92 },
+    };
+    const t: TextOverlay = {
+      id: newId(),
+      x: 0.5, y: 0.5, fontSize: 64,
+      color: "#ffffff", bgColor: "#000000", bgOpacity: 0,
+      weight: "bold", fontFamily: "Sans", align: "center",
+      startS, endS: end + 0.05,
+      text: "End card",
+      ...presets[preset],
+    } as TextOverlay;
+    setProject((p) => ({ ...p, texts: [...p.texts, t] }));
+    setActiveTab("text");
+    toast({ title: "End card added", description: `Pinned to the last ${Math.round(end - startS)}s of the timeline.` });
+  };
+
   // ===== Captions =====
   const updateCaptions = (patch: Partial<typeof project.captions>) =>
     setProject((p) => ({ ...p, captions: { ...p.captions, ...patch } }));
