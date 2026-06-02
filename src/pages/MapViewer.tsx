@@ -7,6 +7,8 @@ import html2canvas from "html2canvas";
 import {
   Map, ArrowLeft, Share2, CheckCircle2, Loader2, Plane,
 } from "lucide-react";
+import { Columns } from "lucide-react";
+import { BeforeAfterSlider } from "@/components/project/BeforeAfterSlider";
 import { Button } from "@/components/ui/button";
 import { supabase, Project } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -97,6 +99,7 @@ export default function MapViewer() {
   const [upgradePrompt, setUpgradePrompt] = useState<{ feature: string; description: string } | null>(null);
   const [showCoachmark, setShowCoachmark] = useState(false);
   const [coachmarkForce, setCoachmarkForce] = useState(0);
+  const [compareOpen, setCompareOpen] = useState(false);
 
   const { subscriptionTier, isAdmin } = useAuth();
   const hasPro = isAdmin || canUseFeature(subscriptionTier, "priorityProcessing");
@@ -347,6 +350,16 @@ export default function MapViewer() {
           >
             Info
           </Button>
+          {project?.outputs_urls?.orthomosaic && (
+            <Button
+              variant={compareOpen ? "default" : "outline"}
+              size="sm"
+              onClick={() => setCompareOpen(v => !v)}
+              className="gap-1.5 text-xs"
+            >
+              <Columns className="w-3.5 h-3.5" /> Compare
+            </Button>
+          )}
           <Button
             size="sm" onClick={shareLink}
             className="gap-1.5 text-xs bg-primary text-primary-foreground hover:bg-primary/90"
