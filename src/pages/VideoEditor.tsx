@@ -117,6 +117,8 @@ export default function VideoEditor() {
   const [renderedBlob, setRenderedBlob] = useState<Blob | null>(null);
   const [saveOpen, setSaveOpen] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
+  const [translating, setTranslating] = useState(false);
+  const [translateLang, setTranslateLang] = useState<string>("Spanish");
 
   const previewRef = useRef<HTMLVideoElement | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
