@@ -167,3 +167,73 @@ export function stopDemoTimers() {
     processingTimer = null;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/*  Extra cinematic side-effects used by the expanded demo steps.      */
+/* ------------------------------------------------------------------ */
+
+let captureTimer: number | null = null;
+
+/** Simulate image capture progress during the "Fly" step. */
+export async function animateCapture(projectId: string) {
+  if (captureTimer) {
+    window.clearInterval(captureTimer);
+    captureTimer = null;
+  }
+  let captured = 0;
+  const target = 184;
+  await supabase.from("projects").update({
+    image_count: 0,
+    stage_log: [{ ts: new Date().toISOString(), level: "info", message: "Demo: drone armed, mission start" }],
+  }).eq("id", projectId);
+
+  captureTimer = window.setInterval(async () => {
+    captured = Math.min(target, captured + 12);
+    await supabase.from("projects").update({
+      image_count: captured,
+    }).eq("id", projectId);
+    if (captured >= target && captureTimer) {
+      window.clearInterval(captureTimer);
+      captureTimer = null;
+    }
+  }, 600);
+}
+
+/** Seed a Gaussian Splat job record for the splat reveal step. */
+export async function seedSplatJob(projectId: string) {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    // Best-effort — table may not exist in every environment. Failures are silent.
+    await supabase.from("splat_jobs" as any).insert({
+      user_id: user.id,
+      project_id: projectId,
+      name: "Demo — Riverside Quarry splat",
+      status: "ready",
+      iterations: 30000,
+      image_count: 184,
+    } as any);
+  } catch {
+    /* no-op */
+  }
+}
+
+/** Touch the project so it surfaces as a fresh portfolio moment. */
+export async function publishPortfolioMoment(projectId: string) {
+  try {
+    await supabase.from("projects").update({
+      updated_at: new Date().toISOString(),
+    } as any).eq("id", projectId);
+  } catch {
+    /* no-op */
+  }
+}
+
+/** Cancel every demo background timer. */
+export function stopAllDemoTimers() {
+  stopDemoTimers();
+  if (captureTimer) {
+    window.clearInterval(captureTimer);
+    captureTimer = null;
+  }
+}
