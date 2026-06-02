@@ -327,6 +327,30 @@ export default function VideoEditor() {
     }
   };
 
+  const translateAllCues = async () => {
+    if (project.captions.cues.length === 0) return;
+    setTranslating(true);
+    try {
+      const out = await translateCues(project.captions.cues, translateLang);
+      updateCaptions({ cues: out as CaptionCue[] });
+      toast({ title: `Translated to ${translateLang}` });
+    } catch (e) {
+      toast({
+        title: e instanceof Error ? e.message : "Translation failed",
+        variant: "destructive",
+      });
+    } finally {
+      setTranslating(false);
+    }
+  };
+
+  const applyRenderPreset = (id: string) => {
+    const p = RENDER_PRESETS.find((x) => x.id === id);
+    if (!p) return;
+    setProject((proj) => ({ ...proj, width: p.w, height: p.h, fps: p.fps }));
+    toast({ title: `Render preset: ${p.label}`, description: `${p.w}×${p.h} @ ${p.fps}fps` });
+  };
+
   // ===== Render =====
   const doRender = async () => {
     if (project.clips.length === 0) {
