@@ -32,6 +32,17 @@ export default function DemoOverlay() {
     return () => window.removeEventListener("keydown", onKey);
   }, [demo]);
 
+  // Group steps into chapters for the rail (hook must run unconditionally)
+  const chapters = useMemo(() => {
+    const map = new Map<string, { name: string; from: number; to: number }>();
+    demo.steps.forEach((s, i) => {
+      const c = map.get(s.chapter);
+      if (!c) map.set(s.chapter, { name: s.chapter, from: i, to: i });
+      else c.to = i;
+    });
+    return Array.from(map.values());
+  }, [demo.steps]);
+
   if (!demo.active || !demo.currentStep) return null;
 
   const elapsed = (tick * 150) % demo.currentStep.durationMs;
@@ -46,17 +57,6 @@ export default function DemoOverlay() {
   const total = demo.steps.length;
   const isLast = demo.stepIndex === total - 1;
   const step = demo.currentStep;
-
-  // Group steps into chapters for the rail
-  const chapters = useMemo(() => {
-    const map = new Map<string, { name: string; from: number; to: number }>();
-    demo.steps.forEach((s, i) => {
-      const c = map.get(s.chapter);
-      if (!c) map.set(s.chapter, { name: s.chapter, from: i, to: i });
-      else c.to = i;
-    });
-    return Array.from(map.values());
-  }, [demo.steps]);
 
   return (
     <>
