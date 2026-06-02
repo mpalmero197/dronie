@@ -732,6 +732,23 @@ export default function VideoEditor() {
               <Button size="sm" variant="outline" className="w-full" onClick={addText}>
                 <Plus className="w-3.5 h-3.5 mr-1" /> Add text overlay
               </Button>
+              <div className="rounded-lg border border-border bg-secondary/30 p-2 space-y-1.5">
+                <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">End-card templates</Label>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <Button size="sm" variant="ghost" className="h-7 text-[11px] justify-start" onClick={() => addEndCard("thanks")}>
+                    Thanks for watching
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-7 text-[11px] justify-start" onClick={() => addEndCard("subscribe")}>
+                    Subscribe CTA
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-7 text-[11px] justify-start" onClick={() => addEndCard("handle")}>
+                    Your @handle
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-7 text-[11px] justify-start" onClick={() => addEndCard("credit")}>
+                    Dronie credit
+                  </Button>
+                </div>
+              </div>
               {project.texts.length === 0 && (
                 <p className="text-xs text-muted-foreground text-center py-4">No text overlays yet.</p>
               )}
