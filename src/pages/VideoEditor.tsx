@@ -22,7 +22,7 @@ import {
   CaptionStyle, CaptionCue, clipStartGlobal, newId, totalDuration,
 } from "@/lib/videoEditor/types";
 import { probeVideo, renderProject } from "@/lib/videoEditor/render";
-import { extractAudioBase64, transcribeAudio } from "@/lib/videoEditor/transcribe";
+import { extractAudioBase64, transcribeAudio, translateCues } from "@/lib/videoEditor/transcribe";
 import { cuesToSrt } from "@/lib/videoEditor/ass";
 import { PORTFOLIO_BUCKET, PortfolioItem } from "@/lib/portfolio";
 import { captureVideoFrame } from "@/lib/videoFrame";
@@ -37,6 +37,29 @@ const TRANSITIONS: { value: TransitionKind; label: string }[] = [
   { value: "slideright", label: "Slide →" },
   { value: "fadeblack", label: "Fade to Black" },
   { value: "fadewhite", label: "Fade to White" },
+];
+
+const RENDER_PRESETS: { id: string; label: string; w: number; h: number; fps: number; hint: string }[] = [
+  { id: "reels", label: "Reels / TikTok", w: 1080, h: 1920, fps: 30, hint: "9:16 vertical" },
+  { id: "yt", label: "YouTube HD", w: 1920, h: 1080, fps: 30, hint: "16:9 landscape" },
+  { id: "yt4k", label: "YouTube 4K", w: 3840, h: 2160, fps: 30, hint: "16:9 ultra HD" },
+  { id: "square", label: "Square", w: 1080, h: 1080, fps: 30, hint: "1:1 feed" },
+  { id: "preview", label: "Fast preview", w: 1280, h: 720, fps: 24, hint: "720p draft" },
+];
+
+const TRANSLATE_LANGS = [
+  { code: "Spanish", label: "Spanish" },
+  { code: "French", label: "French" },
+  { code: "German", label: "German" },
+  { code: "Portuguese", label: "Portuguese" },
+  { code: "Italian", label: "Italian" },
+  { code: "Dutch", label: "Dutch" },
+  { code: "Japanese", label: "Japanese" },
+  { code: "Korean", label: "Korean" },
+  { code: "Mandarin Chinese", label: "Chinese (Mandarin)" },
+  { code: "Arabic", label: "Arabic" },
+  { code: "Hindi", label: "Hindi" },
+  { code: "English", label: "English" },
 ];
 
 const FILTERS: { value: FilterPreset; label: string }[] = [
