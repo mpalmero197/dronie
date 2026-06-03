@@ -50,6 +50,9 @@ import OrgDetail from "./pages/OrgDetail.tsx";
 import AcceptOrgInvite from "./pages/AcceptOrgInvite.tsx";
 import ScrollToTop from "./components/ScrollToTop.tsx";
 import Demo from "./pages/Demo.tsx";
+import About from "./pages/About.tsx";
+import Contact from "./pages/Contact.tsx";
+import FieldGuides from "./pages/FieldGuides.tsx";
 import { DemoProvider } from "./demo/DemoContext";
 import DemoOverlay from "./demo/DemoOverlay";
 import CommandPalette from "./components/CommandPalette.tsx";
@@ -123,6 +126,9 @@ const App = () => (
             <Route path="/orgs/accept" element={<AcceptOrgInvite />} />
             <Route path="/orgs/:id" element={<OrgDetail />} />
             <Route path="/demo" element={<Demo />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/field-guides" element={<FieldGuides />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
             </Routes>
