@@ -44,7 +44,7 @@ const cols: { title: string; links: FooterLink[] }[] = [
       { label: "Mission Planner", href: "/plan" },
       { label: "Saved Missions", href: "/missions" },
       { label: "Install Apps", href: "/install" },
-      { label: "📖 Field Guide on Amazon", href: "https://amzn.to/4cCG9m6", external: true },
+      { label: "📖 Field Guides & Books", href: "/field-guides" },
     ],
   },
   {
@@ -66,6 +66,8 @@ const cols: { title: string; links: FooterLink[] }[] = [
   {
     title: "Company",
     links: [
+      { label: "About", href: "/about" },
+      { label: "Contact", href: "/contact" },
       { label: "For Business", href: "/orgs" },
       { label: "Sign In", href: "/auth" },
       { label: "Privacy Policy", href: "/privacy" },
