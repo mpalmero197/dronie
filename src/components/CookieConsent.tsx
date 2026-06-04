@@ -61,6 +61,7 @@ export default function CookieConsent() {
           </div>
           <button
             onClick={decline}
+            aria-label="Close"
             className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors flex-shrink-0"
           >
             <X className="w-4 h-4" />

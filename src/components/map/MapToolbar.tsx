@@ -137,6 +137,8 @@ export default function MapToolbar({
       {/* Draw tools — collapsible */}
       <button
         onClick={() => setDrawExpanded(v => !v)}
+        aria-label={drawExpanded ? "Collapse draw tools" : "Expand draw tools"}
+        aria-expanded={drawExpanded}
         className={`w-8 h-5 rounded flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors ${hasActiveDrawTool ? "text-primary" : ""}`}
       >
         {drawExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
@@ -192,6 +194,8 @@ export default function MapToolbar({
       {/* More tools — collapsible */}
       <button
         onClick={() => setMoreExpanded(v => !v)}
+        aria-label={moreExpanded ? "Collapse more tools" : "Expand more tools"}
+        aria-expanded={moreExpanded}
         className={`w-8 h-5 rounded flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors ${hasActiveSpecial ? "text-primary" : ""}`}
       >
         {moreExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}

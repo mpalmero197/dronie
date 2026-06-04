@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { Plus, Loader2, Filter, Inbox } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import FooterSection from "@/components/FooterSection";
@@ -52,8 +53,17 @@ export default function Marketplace() {
 
   return (
     <div className="min-h-screen bg-background">
+      <Helmet>
+        <title>Find Drone Jobs & Service Requests | Dronie</title>
+        <meta name="description" content="Browse open drone service requests from clients in construction, real estate, agriculture, energy and more. Submit a quote and get hired on Dronie." />
+        <link rel="canonical" href="https://dronieapp.com/marketplace" />
+        <meta property="og:title" content="Find Drone Jobs & Service Requests | Dronie" />
+        <meta property="og:description" content="Browse open drone service requests from verified clients. Submit a quote and get hired on the Dronie marketplace." />
+        <meta property="og:url" content="https://dronieapp.com/marketplace" />
+      </Helmet>
       <Navbar />
 
+      <main>
       <section className="pt-28 pb-10 bg-secondary/40 border-b border-border">
         <div className="container mx-auto px-6">
           <div className="flex flex-wrap items-end justify-between gap-4">
@@ -131,6 +141,7 @@ export default function Marketplace() {
           )}
         </div>
       </section>
+      </main>
 
       <FooterSection />
     </div>
