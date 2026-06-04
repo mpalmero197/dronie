@@ -1,9 +1,18 @@
 import { ArrowLeft, Map } from "lucide-react";
 import { Link } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 
 export default function PrivacyPolicy() {
   return (
     <div className="min-h-screen bg-background">
+      <Helmet>
+        <title>Privacy Policy | Dronie</title>
+        <meta name="description" content="How Dronie (a Halcyon Systems Group product) collects, uses, stores, and protects your account data, drone imagery, and project files." />
+        <link rel="canonical" href="https://dronieapp.com/privacy" />
+        <meta property="og:title" content="Privacy Policy | Dronie" />
+        <meta property="og:description" content="How Dronie collects, uses, and protects your account data, drone imagery, and project files." />
+        <meta property="og:url" content="https://dronieapp.com/privacy" />
+      </Helmet>
       <header className="border-b border-border bg-card/80 backdrop-blur sticky top-0 z-50">
         <div className="container mx-auto px-6 h-14 flex items-center gap-3">
           <Link to="/" className="flex items-center gap-2.5">
