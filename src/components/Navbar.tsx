@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Menu, X, Map, LogOut, LayoutDashboard, Loader2, ChevronDown,
-  Briefcase, Building2, Plane, Layers, Settings, Tag, UserPlus,
+  Briefcase, Building2, Plane, Layers, Settings, Tag, UserPlus, MessagesSquare,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { VERTICAL_LIST } from "@/pages/solutions/verticals.config";
@@ -120,6 +120,10 @@ export default function Navbar() {
             <UserPlus className="w-3.5 h-3.5" />
             For Pilots
           </Link>
+          <Link to="/community" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+            <MessagesSquare className="w-3.5 h-3.5" />
+            Community
+          </Link>
           <Link to="/orgs" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
             <Building2 className="w-3.5 h-3.5" />
             For Business
@@ -209,6 +213,9 @@ export default function Navbar() {
           </Link>
           <Link to="/pilots/join" onClick={() => setOpen(false)} className="block py-2 text-sm font-medium text-muted-foreground hover:text-foreground">
             <span className="inline-flex items-center gap-2"><UserPlus className="w-4 h-4" />For Pilots</span>
+          </Link>
+          <Link to="/community" onClick={() => setOpen(false)} className="block py-2 text-sm font-medium text-muted-foreground hover:text-foreground">
+            <span className="inline-flex items-center gap-2"><MessagesSquare className="w-4 h-4" />Community</span>
           </Link>
           <Link to="/orgs" onClick={() => setOpen(false)} className="block py-2 text-sm font-medium text-muted-foreground hover:text-foreground">
             <span className="inline-flex items-center gap-2"><Building2 className="w-4 h-4" />For Business</span>

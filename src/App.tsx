@@ -53,6 +53,10 @@ import Demo from "./pages/Demo.tsx";
 import About from "./pages/About.tsx";
 import Contact from "./pages/Contact.tsx";
 import FieldGuides from "./pages/FieldGuides.tsx";
+import Community from "./pages/Community.tsx";
+import CommunityCategory from "./pages/CommunityCategory.tsx";
+import CommunityThread from "./pages/CommunityThread.tsx";
+import CommunityNewThread from "./pages/CommunityNewThread.tsx";
 import { DemoProvider } from "./demo/DemoContext";
 import DemoOverlay from "./demo/DemoOverlay";
 import CommandPalette from "./components/CommandPalette.tsx";
@@ -129,6 +133,10 @@ const App = () => (
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/field-guides" element={<FieldGuides />} />
+            <Route path="/community" element={<Community />} />
+            <Route path="/community/new" element={<CommunityNewThread />} />
+            <Route path="/community/c/:slug" element={<CommunityCategory />} />
+            <Route path="/community/t/:id" element={<CommunityThread />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
             </Routes>
