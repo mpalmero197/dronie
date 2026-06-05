@@ -64,7 +64,8 @@ export default function CommunityNewThread() {
     }
     setSubmitting(true);
     try {
-      const t = await createThread({ ...parsed.data, author_id: user.id });
+      const { category_id, title: tt, body: bb } = parsed.data;
+      const t = await createThread({ category_id: category_id!, title: tt!, body: bb!, author_id: user.id });
       toast.success("Thread posted");
       navigate(`/community/t/${t.id}`);
     } catch (err: any) {
