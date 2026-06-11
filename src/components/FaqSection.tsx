@@ -16,11 +16,11 @@ const FAQS = [
   },
   {
     q: "How is Dronie different from DroneDeploy or Maps Made Easy?",
-    a: "Dronie is faster and significantly cheaper than DroneDeploy and Maps Made Easy for the same outputs. There is no desktop install, no per-image surcharge on the free tier, and Gaussian splat training is included on paid plans — most competitors charge separately or do not support splats at all. Dronie also bundles a public pilot marketplace, portfolio sites, and fleet telemetry that traditional photogrammetry tools do not offer.",
+    a: "Dronie is faster and significantly cheaper than DroneDeploy and Maps Made Easy for the same outputs. There is no desktop install, no per-image surcharge on the entry Pilot plan, and Gaussian splat training is included on higher plans — most competitors charge separately or do not support splats at all. Dronie also bundles a public pilot marketplace, portfolio sites, and fleet telemetry that traditional photogrammetry tools do not offer.",
   },
   {
     q: "How much does Dronie cost?",
-    a: "The Free plan includes 3 projects per month with up to 500 images per project — no credit card required. The Professional plan is $49/month and unlocks unlimited projects, priority processing, 50 GB of storage, and Gaussian splat training. The Enterprise plan is $149/month and adds unlimited images per project, API access, a white-label embeddable viewer, and an SLA guarantee. Marketplace clients pay a flat 1% platform fee on top of the pilot's quoted price.",
+    a: "The Pilot plan is $9/month and includes 3 projects per month with up to 500 images per project. The Professional plan is $49/month and unlocks unlimited projects, priority processing, 50 GB of storage, and Gaussian splat training. The Enterprise plan is $149/month and adds unlimited images per project, API access, a white-label embeddable viewer, and an SLA guarantee. Marketplace clients pay a flat 1% platform fee on top of the pilot's quoted price.",
   },
   {
     q: "What file formats and drones are supported?",

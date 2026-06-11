@@ -108,7 +108,6 @@ export default function PricingSection() {
     return () => observer.disconnect();
   }, []);
 
-  async function handleCheckout(tier: "professional" | "enterprise") {
   async function handleCheckout(tier: "pilot" | "professional" | "enterprise") {
     if (!user) {
       navigate("/auth");

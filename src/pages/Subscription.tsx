@@ -102,7 +102,7 @@ export default function Subscription() {
   }
 
   const plans = [
-    { key: null, name: "Pilot (Free)", price: "$0", period: "/mo", features: ["3 projects/month", "500 images/project", "1 GB storage", "Orthomosaic & DSM"] },
+    { key: "pilot" as const, name: "Pilot", price: "$9", period: "/mo", features: ["3 projects/month", "500 images/project", "1 GB storage", "Orthomosaic & DSM"] },
     { key: "professional" as const, name: "Professional", price: "$49", period: "/mo", features: ["Unlimited projects", "5,000 images/project", "50 GB storage", "Point cloud & contours", "Priority processing", "Share links", "Flight Planner & LAANC"] },
     { key: "enterprise" as const, name: "Enterprise", price: "$149", period: "/mo", features: ["Unlimited everything", "500 GB storage", "Multi-spectral (NDVI)", "API access", "White-label viewer", "Dedicated support"] },
   ];
@@ -149,7 +149,7 @@ export default function Subscription() {
                     ? "Full admin access — all limits bypassed"
                     : isSubscribed && subscriptionEnd
                       ? `Renews ${new Date(subscriptionEnd).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}`
-                      : "Free tier — upgrade anytime"}
+                      : "No active subscription — pick a plan to get started"}
                 </p>
               </div>
             </div>
