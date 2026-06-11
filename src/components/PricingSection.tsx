@@ -145,9 +145,7 @@ export default function PricingSection() {
       is_current_plan: isCurrentPlan(plan),
       authenticated: !!user,
     });
-    if (plan.ctaAction === "auth") {
-      navigate("/auth");
-    } else if (plan.ctaAction === "checkout" && plan.tier) {
+    if (plan.ctaAction === "checkout" && plan.tier) {
       handleCheckout(plan.tier);
     }
   }

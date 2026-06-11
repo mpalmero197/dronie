@@ -70,7 +70,7 @@ export default function Subscription() {
     }
   }
 
-  async function handleCheckout(tier: "professional" | "enterprise") {
+  async function handleCheckout(tier: "pilot" | "professional" | "enterprise") {
     setCheckoutLoading(tier);
     try {
       const priceId = SUBSCRIPTION_TIERS[tier].price_id;
