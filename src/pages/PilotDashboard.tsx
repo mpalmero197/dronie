@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import PilotVerificationBanner from "@/components/PilotVerificationBanner";
+import Part107Prompt from "@/components/Part107Prompt";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -256,6 +257,7 @@ export default function PilotDashboard() {
         </div>
 
         {/* Verification CTA — live updates via Realtime */}
+        <Part107Prompt className="mb-4" />
         <PilotVerificationBanner className="mb-6" />
 
         {/* Stats */}
