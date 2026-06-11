@@ -10,6 +10,7 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import ProjectDetailDialog from "@/components/ProjectDetailDialog";
 import PilotVerificationBanner from "@/components/PilotVerificationBanner";
+import Part107Prompt from "@/components/Part107Prompt";
 import MyDronesPanel from "@/components/fleet/MyDronesPanel";
 import { Button } from "@/components/ui/button";
 import {
@@ -574,6 +575,7 @@ export default function Dashboard() {
         </header>
 
         <div className="flex-1 p-4 sm:p-6 space-y-6 min-w-0">
+          <Part107Prompt />
           <PilotVerificationBanner hideWhenUnverified />
           {sidebarView === "analytics" && <AnalyticsPanel projects={projects} />}
           {sidebarView === "storage" && <StoragePanel projects={projects} tierLimits={tierLimits} />}

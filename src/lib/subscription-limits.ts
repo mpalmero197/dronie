@@ -31,7 +31,7 @@ export interface TierLimits {
 }
 
 const LIMITS: Record<string, TierLimits> = {
-  free: {
+  pilot: {
     projectsPerMonth: 3,
     imagesPerProject: 500,
     storageGB: 1,
@@ -43,7 +43,7 @@ const LIMITS: Record<string, TierLimits> = {
     multiSpectral: false,
     apiAccess: false,
     whiteLabel: false,
-    tierLabel: "Pilot (Free)",
+    tierLabel: "Pilot",
   },
   professional: {
     projectsPerMonth: Infinity,
@@ -77,7 +77,7 @@ const LIMITS: Record<string, TierLimits> = {
 
 export function getTierLimits(tier: SubscriptionTier, isAdmin = false): TierLimits {
   if (isAdmin) return ADMIN_LIMITS;
-  return LIMITS[tier || "free"];
+  return LIMITS[tier || "pilot"];
 }
 
 export function canCreateProject(tier: SubscriptionTier, currentMonthProjectCount: number, isAdmin = false): boolean {

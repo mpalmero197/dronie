@@ -11,10 +11,10 @@ import { track } from "@/lib/analytics";
 const plans = [
   {
     name: "Pilot",
-    price: "Free",
-    period: "",
+    price: "$9",
+    period: "/ month",
     tagline: "For hobbyists and small jobs",
-    tier: null as null,
+    tier: "pilot" as const,
     features: [
       "3 projects / month",
       "Up to 500 images / project",
@@ -23,9 +23,9 @@ const plans = [
       "GeoTIFF download",
       "1 GB storage",
     ],
-    cta: "Start Free",
-    ctaSub: "No credit card required",
-    ctaAction: "auth" as const,
+    cta: "Start as Pilot",
+    ctaSub: "Cancel anytime",
+    ctaAction: "checkout" as const,
     highlight: false,
   },
   {
@@ -108,7 +108,7 @@ export default function PricingSection() {
     return () => observer.disconnect();
   }, []);
 
-  async function handleCheckout(tier: "professional" | "enterprise") {
+  async function handleCheckout(tier: "pilot" | "professional" | "enterprise") {
     if (!user) {
       navigate("/auth");
       return;
@@ -145,9 +145,7 @@ export default function PricingSection() {
       is_current_plan: isCurrentPlan(plan),
       authenticated: !!user,
     });
-    if (plan.ctaAction === "auth") {
-      navigate("/auth");
-    } else if (plan.ctaAction === "checkout" && plan.tier) {
+    if (plan.ctaAction === "checkout" && plan.tier) {
       handleCheckout(plan.tier);
     }
   }

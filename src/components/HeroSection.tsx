@@ -119,7 +119,7 @@ export default function HeroSection() {
                 className="bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg hover:shadow-xl transition-all active:scale-[0.97] font-semibold gap-2"
               >
                 <Upload className="w-4 h-4" />
-                Upload Images Free
+                Upload Images
               </Button>
               <Button
                 size="lg"
