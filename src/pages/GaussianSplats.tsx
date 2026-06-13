@@ -376,7 +376,7 @@ export default function GaussianSplats() {
               )}
             </div>
 
-            {selected && (
+            {selected && selected.url !== DEMO_SCENE.url && (
               <div className="rounded-2xl border border-border bg-card p-3 flex items-center justify-between gap-2 text-xs flex-wrap">
                 <div className="flex items-center gap-2 min-w-0">
                   <Eye className="w-3.5 h-3.5 text-primary flex-shrink-0" />
@@ -432,6 +432,19 @@ export default function GaussianSplats() {
                   <button onClick={() => handleDelete(selected)} className="inline-flex items-center gap-1 px-2 py-1 rounded-md hover:bg-destructive/15 text-destructive">
                     <Trash2 className="w-3.5 h-3.5" /> Delete
                   </button>
+                </div>
+              </div>
+            )}
+
+            {selected && selected.url === DEMO_SCENE.url && (
+              <div className="rounded-2xl border border-primary/30 bg-primary/5 p-3 text-xs flex items-start gap-2">
+                <Sparkles className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="font-semibold text-foreground">You're viewing the demo bonsai scene</p>
+                  <p className="text-muted-foreground leading-relaxed">
+                    Orbit, zoom, and tune the render controls to feel out 3DGS. When you're ready, train a scene from
+                    one of your projects on the Train tab or upload an existing <code>.ply</code> / <code>.ksplat</code>.
+                  </p>
                 </div>
               </div>
             )}
