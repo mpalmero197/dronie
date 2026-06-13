@@ -31,6 +31,16 @@ const SPLAT_RX = /\.(ply|splat|ksplat)$/i;
 const BUCKET = "project-outputs";
 const SPLAT_PREFIX = "splats";
 
+// Bundled demo scene so paid users can experience the viewer immediately,
+// even before they've trained or uploaded their own splat. ~4 MB ksplat
+// served from /public so CORS is never an issue.
+const DEMO_SCENE: SplatAsset = {
+  name: "Demo · Bonsai (sample)",
+  url: "/demo/bonsai.ksplat",
+  size: 4244696,
+  format: "ksplat",
+};
+
 function detectFormat(name: string): SplatAsset["format"] {
   const lower = name.toLowerCase();
   if (lower.endsWith(".ksplat")) return "ksplat";
