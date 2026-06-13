@@ -105,11 +105,13 @@ export default function GaussianSplats() {
     setAssets(eligible);
     // Prefer the web-optimized .ksplat format when multiple scenes exist —
     // explicit splats are big and .ksplat streams far better on mobile.
+    // If the user has no scenes yet, auto-load the bundled demo so the
+    // viewer is never empty for a paid pilot exploring 3DGS.
     const preferred =
       eligible.find((a) => a.format === "ksplat") ??
       eligible.find((a) => a.format === "splat") ??
       eligible[0] ??
-      null;
+      DEMO_SCENE;
     setSelected(preferred);
     setLoading(false);
   };
