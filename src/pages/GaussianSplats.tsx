@@ -31,6 +31,16 @@ const SPLAT_RX = /\.(ply|splat|ksplat)$/i;
 const BUCKET = "project-outputs";
 const SPLAT_PREFIX = "splats";
 
+// Bundled demo scene so paid users can experience the viewer immediately,
+// even before they've trained or uploaded their own splat. ~4 MB ksplat
+// served from /public so CORS is never an issue.
+const DEMO_SCENE: SplatAsset = {
+  name: "Demo · Bonsai (sample)",
+  url: "/demo/bonsai.ksplat",
+  size: 4244696,
+  format: "ksplat",
+};
+
 function detectFormat(name: string): SplatAsset["format"] {
   const lower = name.toLowerCase();
   if (lower.endsWith(".ksplat")) return "ksplat";
@@ -95,11 +105,13 @@ export default function GaussianSplats() {
     setAssets(eligible);
     // Prefer the web-optimized .ksplat format when multiple scenes exist —
     // explicit splats are big and .ksplat streams far better on mobile.
+    // If the user has no scenes yet, auto-load the bundled demo so the
+    // viewer is never empty for a paid pilot exploring 3DGS.
     const preferred =
       eligible.find((a) => a.format === "ksplat") ??
       eligible.find((a) => a.format === "splat") ??
       eligible[0] ??
-      null;
+      DEMO_SCENE;
     setSelected(preferred);
     setLoading(false);
   };
@@ -301,21 +313,29 @@ export default function GaussianSplats() {
             <label className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5 mb-1.5">
               <FileBox className="w-3.5 h-3.5 text-primary" /> Splat scene
             </label>
-            {assets.length === 0 ? (
-              <div className="h-9 px-3 flex items-center text-sm text-muted-foreground border border-dashed border-border rounded-md">
-                {loading ? "Loading…" : "No splat scenes yet · upload below"}
-              </div>
-            ) : (
-              <Select value={selected?.name ?? ""} onValueChange={(n) => setSelected(assets.find((a) => a.name === n) ?? null)}>
-                <SelectTrigger><SelectValue placeholder="Select scene" /></SelectTrigger>
-                <SelectContent>
-                  {assets.map((a) => (
-                    <SelectItem key={a.name} value={a.name}>
-                      {a.name} · {(a.size / 1024 / 1024).toFixed(1)} MB · .{a.format}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <Select
+              value={selected?.name ?? DEMO_SCENE.name}
+              onValueChange={(n) => {
+                if (n === DEMO_SCENE.name) { setSelected(DEMO_SCENE); return; }
+                setSelected(assets.find((a) => a.name === n) ?? null);
+              }}
+            >
+              <SelectTrigger><SelectValue placeholder="Select scene" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value={DEMO_SCENE.name}>
+                  {DEMO_SCENE.name} · {(DEMO_SCENE.size / 1024 / 1024).toFixed(1)} MB · .ksplat
+                </SelectItem>
+                {assets.map((a) => (
+                  <SelectItem key={a.name} value={a.name}>
+                    {a.name} · {(a.size / 1024 / 1024).toFixed(1)} MB · .{a.format}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {assets.length === 0 && (
+              <p className="mt-1.5 text-[10px] text-muted-foreground">
+                {loading ? "Loading your scenes…" : "Demo scene loaded — upload or train your own below."}
+              </p>
             )}
           </div>
         </div>
@@ -356,7 +376,7 @@ export default function GaussianSplats() {
               )}
             </div>
 
-            {selected && (
+            {selected && selected.url !== DEMO_SCENE.url && (
               <div className="rounded-2xl border border-border bg-card p-3 flex items-center justify-between gap-2 text-xs flex-wrap">
                 <div className="flex items-center gap-2 min-w-0">
                   <Eye className="w-3.5 h-3.5 text-primary flex-shrink-0" />
@@ -412,6 +432,19 @@ export default function GaussianSplats() {
                   <button onClick={() => handleDelete(selected)} className="inline-flex items-center gap-1 px-2 py-1 rounded-md hover:bg-destructive/15 text-destructive">
                     <Trash2 className="w-3.5 h-3.5" /> Delete
                   </button>
+                </div>
+              </div>
+            )}
+
+            {selected && selected.url === DEMO_SCENE.url && (
+              <div className="rounded-2xl border border-primary/30 bg-primary/5 p-3 text-xs flex items-start gap-2">
+                <Sparkles className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="font-semibold text-foreground">You're viewing the demo bonsai scene</p>
+                  <p className="text-muted-foreground leading-relaxed">
+                    Orbit, zoom, and tune the render controls to feel out 3DGS. When you're ready, train a scene from
+                    one of your projects on the Train tab or upload an existing <code>.ply</code> / <code>.ksplat</code>.
+                  </p>
                 </div>
               </div>
             )}
