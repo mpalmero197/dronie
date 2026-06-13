@@ -154,14 +154,18 @@ export default function GaussianSplats() {
           selected.format === "splat" ? GS.SceneFormat.Splat :
           GS.SceneFormat.Ply;
 
+        // Bonsai demo ships SH=0 and needs mkellogg's documented camera
+        // params or the scene renders out of frame. For user assets we
+        // fall back to a generic top-down orbit that fits most surveys.
+        const isDemo = selected.url === DEMO_SCENE.url;
         const viewer = new GS.Viewer({
           rootElement: containerRef.current!,
-          cameraUp: [0, -1, -0.6],
-          initialCameraPosition: [-1, -4, 6],
-          initialCameraLookAt: [0, 1, 0],
+          cameraUp: isDemo ? [0, -1, -0.17] : [0, -1, -0.6],
+          initialCameraPosition: isDemo ? [-1, -4, 6] : [-1, -4, 6],
+          initialCameraLookAt: isDemo ? [0, 4, 0] : [0, 1, 0],
           sharedMemoryForWorkers: false,
           gpuAcceleratedSort: true,
-          sphericalHarmonicsDegree: sphericalHarmonics ? 2 : 0,
+          sphericalHarmonicsDegree: isDemo ? 0 : (sphericalHarmonics ? 2 : 0),
         });
         viewerRef.current = viewer;
 
