@@ -313,21 +313,29 @@ export default function GaussianSplats() {
             <label className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5 mb-1.5">
               <FileBox className="w-3.5 h-3.5 text-primary" /> Splat scene
             </label>
-            {assets.length === 0 ? (
-              <div className="h-9 px-3 flex items-center text-sm text-muted-foreground border border-dashed border-border rounded-md">
-                {loading ? "Loading…" : "No splat scenes yet · upload below"}
-              </div>
-            ) : (
-              <Select value={selected?.name ?? ""} onValueChange={(n) => setSelected(assets.find((a) => a.name === n) ?? null)}>
-                <SelectTrigger><SelectValue placeholder="Select scene" /></SelectTrigger>
-                <SelectContent>
-                  {assets.map((a) => (
-                    <SelectItem key={a.name} value={a.name}>
-                      {a.name} · {(a.size / 1024 / 1024).toFixed(1)} MB · .{a.format}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <Select
+              value={selected?.name ?? DEMO_SCENE.name}
+              onValueChange={(n) => {
+                if (n === DEMO_SCENE.name) { setSelected(DEMO_SCENE); return; }
+                setSelected(assets.find((a) => a.name === n) ?? null);
+              }}
+            >
+              <SelectTrigger><SelectValue placeholder="Select scene" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value={DEMO_SCENE.name}>
+                  {DEMO_SCENE.name} · {(DEMO_SCENE.size / 1024 / 1024).toFixed(1)} MB · .ksplat
+                </SelectItem>
+                {assets.map((a) => (
+                  <SelectItem key={a.name} value={a.name}>
+                    {a.name} · {(a.size / 1024 / 1024).toFixed(1)} MB · .{a.format}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {assets.length === 0 && (
+              <p className="mt-1.5 text-[10px] text-muted-foreground">
+                {loading ? "Loading your scenes…" : "Demo scene loaded — upload or train your own below."}
+              </p>
             )}
           </div>
         </div>
