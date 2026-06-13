@@ -118,6 +118,29 @@ export default function AuthPage() {
             <span className="font-display font-700 text-lg text-foreground">Dronie</span>
           </div>
 
+          {paidOnlyNotice && (
+            <div className="rounded-xl border border-accent/30 bg-accent/10 p-4 space-y-2">
+              <div className="flex items-center gap-2 text-accent">
+                <Sparkles className="w-4 h-4" />
+                <p className="text-sm font-semibold">Thank you for testing Dronie</p>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Dronie is now a paid platform and we no longer offer a free tier.
+                We're grateful for the time you spent exploring the product during our
+                preview period. To continue using your account, please choose a
+                subscription plan that fits your work.
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                className="w-full bg-accent text-accent-foreground hover:bg-accent/90"
+                onClick={() => navigate('/subscription')}
+              >
+                View subscription plans
+              </Button>
+            </div>
+          )}
+
           <div>
             <h1 className="text-2xl font-display font-700 text-foreground">
               {mode === 'login' ? 'Welcome back' : 'Create account'}
