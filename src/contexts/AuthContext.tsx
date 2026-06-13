@@ -53,9 +53,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error('Error checking subscription:', error);
         return;
       }
-      setIsSubscribed(data?.subscribed ?? false);
+      const subscribed = data?.subscribed ?? false;
+      setIsSubscribed(subscribed);
       setSubscriptionTier(getTierByProductId(data?.product_id));
       setSubscriptionEnd(data?.subscription_end ?? null);
+
+      // Paid-only platform gate: sign out non-admin users without an active subscription.
+      if (!subscribed) {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const uid = sessionData.session?.user?.id;
+        if (uid) {
+          const { data: rolesData } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', uid);
+          const isAdminUser = (rolesData ?? []).some((r) => r.role === 'admin');
+          if (!isAdminUser) {
+            try {
+              sessionStorage.setItem('dronie_paid_only_notice', '1');
+            } catch {}
+            await supabase.auth.signOut();
+            if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/auth')) {
+              window.location.href = '/auth';
+            }
+          }
+        }
+      }
     } catch (err) {
       console.error('Subscription check failed:', err);
     }

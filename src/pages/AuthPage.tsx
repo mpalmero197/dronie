@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Map, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Map, Eye, EyeOff, Loader2, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function AuthPage() {
@@ -14,8 +14,18 @@ export default function AuthPage() {
   const [fullName, setFullName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [paidOnlyNotice, setPaidOnlyNotice] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem('dronie_paid_only_notice') === '1') {
+        setPaidOnlyNotice(true);
+        sessionStorage.removeItem('dronie_paid_only_notice');
+      }
+    } catch {}
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -31,8 +41,28 @@ export default function AuthPage() {
         toast({ title: 'Account created!', description: 'Welcome to Dronie.' });
         navigate('/dashboard');
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { data: signInData, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+
+        // Paid-only gate: verify subscription (admins exempt) before allowing access.
+        const uid = signInData.user?.id;
+        if (uid) {
+          const { data: rolesData } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', uid);
+          const isAdminUser = (rolesData ?? []).some((r) => r.role === 'admin');
+
+          if (!isAdminUser) {
+            const { data: subData } = await supabase.functions.invoke('check-subscription');
+            if (!subData?.subscribed) {
+              await supabase.auth.signOut();
+              setPaidOnlyNotice(true);
+              setLoading(false);
+              return;
+            }
+          }
+        }
         navigate('/dashboard');
       }
     } catch (err: any) {
@@ -87,6 +117,29 @@ export default function AuthPage() {
             </div>
             <span className="font-display font-700 text-lg text-foreground">Dronie</span>
           </div>
+
+          {paidOnlyNotice && (
+            <div className="rounded-xl border border-accent/30 bg-accent/10 p-4 space-y-2">
+              <div className="flex items-center gap-2 text-accent">
+                <Sparkles className="w-4 h-4" />
+                <p className="text-sm font-semibold">Thank you for testing Dronie</p>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Dronie is now a paid platform and we no longer offer a free tier.
+                We're grateful for the time you spent exploring the product during our
+                preview period. To continue using your account, please choose a
+                subscription plan that fits your work.
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                className="w-full bg-accent text-accent-foreground hover:bg-accent/90"
+                onClick={() => navigate('/subscription')}
+              >
+                View subscription plans
+              </Button>
+            </div>
+          )}
 
           <div>
             <h1 className="text-2xl font-display font-700 text-foreground">
