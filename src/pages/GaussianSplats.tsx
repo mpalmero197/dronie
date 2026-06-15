@@ -190,7 +190,7 @@ export default function GaussianSplats() {
           // mkellogg's documented bonsai demo settings — without these the
           // scene renders far off-camera and looks blank.
           cameraUp: isDemo ? [0, -1, -0.17] : [0, -1, -0.6],
-          initialCameraPosition: isDemo ? [-1.93, -3.16, -3.07] : [-1, -4, 6],
+          initialCameraPosition: isDemo ? [-0.7, -1.15, -1.12] : [-1, -4, 6],
           initialCameraLookAt: isDemo ? [0, 0, 0] : [0, 1, 0],
           sharedMemoryForWorkers: false,
           gpuAcceleratedSort: false,
@@ -209,7 +209,9 @@ export default function GaussianSplats() {
           // aspect-ratio container — use our own overlay instead.
           showLoadingUI: false,
           progressiveLoad: false,
-          scale: [splatScale[0], splatScale[0], splatScale[0]],
+          scale: isDemo
+            ? [splatScale[0] * 3, splatScale[0] * 3, splatScale[0] * 3]
+            : [splatScale[0], splatScale[0], splatScale[0]],
           onProgress: (percent: number) => setLoadProgress(Math.max(0, Math.min(100, Math.round(percent)))),
         });
         if (cancelled) { cleanup(); return; }
