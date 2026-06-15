@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import * as THREE from "three";
 import {
   ArrowLeft, FolderOpen, Loader2, RefreshCw, Sparkles, Upload, Trash2,
   AlertCircle, Eye, FileBox, RotateCw, Download, ChevronDown,
@@ -55,6 +56,8 @@ export default function GaussianSplats() {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<any>(null);
+  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const rafRef = useRef<number | null>(null);
 
   const [projects, setProjects] = useState<ProjectOpt[]>([]);
@@ -64,6 +67,7 @@ export default function GaussianSplats() {
   const [loading, setLoading] = useState(false);
   const [viewerStatus, setViewerStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
+  const [loadProgress, setLoadProgress] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [jobsRefresh, setJobsRefresh] = useState(0);
 
@@ -124,12 +128,16 @@ export default function GaussianSplats() {
     const cleanup = () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
+      resizeObserverRef.current?.disconnect();
+      resizeObserverRef.current = null;
       try {
         if (viewerRef.current) {
           viewerRef.current.dispose?.();
         }
       } catch { /* ignore */ }
       viewerRef.current = null;
+      rendererRef.current?.dispose();
+      rendererRef.current = null;
       if (containerRef.current) containerRef.current.innerHTML = "";
     };
 
@@ -141,6 +149,7 @@ export default function GaussianSplats() {
 
     setViewerStatus("loading");
     setError(null);
+    setLoadProgress(0);
 
     (async () => {
       try {
@@ -158,17 +167,39 @@ export default function GaussianSplats() {
         // params or the scene renders out of frame. For user assets we
         // fall back to a generic top-down orbit that fits most surveys.
         const isDemo = selected.url === DEMO_SCENE.url;
+        const root = containerRef.current!;
+        const resizeRenderer = () => {
+          const width = Math.max(1, root.clientWidth);
+          const height = Math.max(1, root.clientHeight);
+          renderer.setSize(width, height, false);
+          if (viewer.camera?.isPerspectiveCamera) {
+            viewer.camera.aspect = width / height;
+            viewer.camera.updateProjectionMatrix();
+          }
+          viewer.forceRenderNextFrame?.();
+        };
+        const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true, precision: "highp" });
+        renderer.setPixelRatio(window.devicePixelRatio || 1);
+        renderer.setClearColor(0x050b14, 1);
+        renderer.domElement.className = "absolute inset-0 h-full w-full";
+        root.appendChild(renderer.domElement);
+        rendererRef.current = renderer;
         const viewer = new GS.Viewer({
-          rootElement: containerRef.current!,
+          rootElement: root,
+          renderer,
           // mkellogg's documented bonsai demo settings — without these the
           // scene renders far off-camera and looks blank.
           cameraUp: isDemo ? [0, -1, -0.17] : [0, -1, -0.6],
-          initialCameraPosition: isDemo ? [-1.93, -2.5, 8.4] : [-1, -4, 6],
-          initialCameraLookAt: isDemo ? [0.07, 0.46, 0.18] : [0, 1, 0],
+          initialCameraPosition: isDemo ? [-1.93, -3.16, -3.07] : [-1, -4, 6],
+          initialCameraLookAt: isDemo ? [0, 0, 0] : [0, 1, 0],
           sharedMemoryForWorkers: false,
-          gpuAcceleratedSort: true,
+          gpuAcceleratedSort: false,
+          integerBasedSort: false,
           sphericalHarmonicsDegree: isDemo ? 0 : (sphericalHarmonics ? 2 : 0),
         });
+        resizeRenderer();
+        resizeObserverRef.current = new ResizeObserver(resizeRenderer);
+        resizeObserverRef.current.observe(root);
         viewerRef.current = viewer;
 
         await viewer.addSplatScene(selected.url, {
@@ -177,8 +208,9 @@ export default function GaussianSplats() {
           // Built-in loading UI is fixed-positioned and misaligns with our
           // aspect-ratio container — use our own overlay instead.
           showLoadingUI: false,
-          progressiveLoad: true,
+          progressiveLoad: false,
           scale: [splatScale[0], splatScale[0], splatScale[0]],
+          onProgress: (percent: number) => setLoadProgress(Math.max(0, Math.min(100, Math.round(percent)))),
         });
         if (cancelled) { cleanup(); return; }
         viewer.start();
@@ -355,8 +387,16 @@ export default function GaussianSplats() {
               <div ref={containerRef} className="absolute inset-0" />
               {viewerStatus === "loading" && (
                 <div className="absolute inset-0 flex items-center justify-center bg-background/40 backdrop-blur-sm pointer-events-none">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="w-4 h-4 animate-spin" /> Decoding splats…
+                  <div className="w-64 space-y-3 rounded-xl border border-border bg-card/95 p-4 shadow-lg">
+                    <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
+                      <span className="inline-flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" /> Decoding splats…
+                      </span>
+                      <span className="font-mono text-xs text-foreground">{loadProgress}%</span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-secondary">
+                      <div className="h-full rounded-full bg-primary transition-[width] duration-200" style={{ width: `${loadProgress}%` }} />
+                    </div>
                   </div>
                 </div>
               )}
