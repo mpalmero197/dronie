@@ -190,7 +190,7 @@ export default function GaussianSplats() {
           // mkellogg's documented bonsai demo settings — without these the
           // scene renders far off-camera and looks blank.
           cameraUp: isDemo ? [0, -1, -0.17] : [0, -1, -0.6],
-          initialCameraPosition: isDemo ? [-0.7, -1.15, -1.12] : [-1, -4, 6],
+          initialCameraPosition: isDemo ? [-1.93, -3.16, -3.07] : [-1, -4, 6],
           initialCameraLookAt: isDemo ? [0, 0, 0] : [0, 1, 0],
           sharedMemoryForWorkers: false,
           gpuAcceleratedSort: false,
