@@ -160,9 +160,11 @@ export default function GaussianSplats() {
         const isDemo = selected.url === DEMO_SCENE.url;
         const viewer = new GS.Viewer({
           rootElement: containerRef.current!,
+          // mkellogg's documented bonsai demo settings — without these the
+          // scene renders far off-camera and looks blank.
           cameraUp: isDemo ? [0, -1, -0.17] : [0, -1, -0.6],
-          initialCameraPosition: isDemo ? [-1, -4, 6] : [-1, -4, 6],
-          initialCameraLookAt: isDemo ? [0, 4, 0] : [0, 1, 0],
+          initialCameraPosition: isDemo ? [-1.93, -2.5, 8.4] : [-1, -4, 6],
+          initialCameraLookAt: isDemo ? [0.07, 0.46, 0.18] : [0, 1, 0],
           sharedMemoryForWorkers: false,
           gpuAcceleratedSort: true,
           sphericalHarmonicsDegree: isDemo ? 0 : (sphericalHarmonics ? 2 : 0),
@@ -172,7 +174,9 @@ export default function GaussianSplats() {
         await viewer.addSplatScene(selected.url, {
           format: formatEnum,
           splatAlphaRemovalThreshold: alphaThreshold[0],
-          showLoadingUI: true,
+          // Built-in loading UI is fixed-positioned and misaligns with our
+          // aspect-ratio container — use our own overlay instead.
+          showLoadingUI: false,
           progressiveLoad: true,
           scale: [splatScale[0], splatScale[0], splatScale[0]],
         });
