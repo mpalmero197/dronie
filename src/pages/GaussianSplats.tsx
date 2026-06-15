@@ -210,7 +210,7 @@ export default function GaussianSplats() {
           showLoadingUI: false,
           progressiveLoad: false,
           scale: isDemo
-            ? [splatScale[0] * 3, splatScale[0] * 3, splatScale[0] * 3]
+            ? [splatScale[0] * 2.5, splatScale[0] * 2.5, splatScale[0] * 2.5]
             : [splatScale[0], splatScale[0], splatScale[0]],
           onProgress: (percent: number) => setLoadProgress(Math.max(0, Math.min(100, Math.round(percent)))),
         });
