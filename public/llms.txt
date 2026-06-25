@@ -17,6 +17,14 @@
 - [Privacy Policy](https://dronieapp.com/privacy)
 - [Terms of Service](https://dronieapp.com/terms)
 
+## Guides (long-form, citable reference)
+- [Drone photogrammetry guides hub](https://dronieapp.com/guides)
+- [The complete guide to drone photogrammetry](https://dronieapp.com/guides/drone-photogrammetry) — pipeline, sensors, GSD, GCPs, deliverables, QA.
+- [Orthomosaic vs DSM vs DTM vs point cloud](https://dronieapp.com/guides/orthomosaic-dsm-dtm) — what each deliverable is and when to use it.
+- [Gaussian splatting for drone capture](https://dronieapp.com/guides/gaussian-splatting) — 3DGS vs photogrammetry vs NeRF, capture pattern, embed workflow.
+- [Ground sample distance (GSD) explained](https://dronieapp.com/guides/gsd-ground-sample-distance) — GSD formula, worked examples, altitude/accuracy trade-offs.
+- [Part 107 & LAANC: a working pilot's checklist](https://dronieapp.com/guides/part-107-laanc) — U.S. commercial drone rules, airspace classes, LAANC workflow.
+
 ## Product Surfaces
 - [Flight Planning](https://dronieapp.com/plan) — terrain-following waypoint planner with LAANC airspace overlays; exports to DJI Fly KMZ, Litchi CSV, UgCS.
 - [Map Viewer](https://dronieapp.com/viewer) — Leaflet-based map with LAANC, weather, and project overlays.

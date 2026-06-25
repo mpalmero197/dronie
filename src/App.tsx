@@ -53,6 +53,12 @@ import Demo from "./pages/Demo.tsx";
 import About from "./pages/About.tsx";
 import Contact from "./pages/Contact.tsx";
 import FieldGuides from "./pages/FieldGuides.tsx";
+import GuidesIndex from "./pages/guides/GuidesIndex.tsx";
+import DronePhotogrammetryGuide from "./pages/guides/DronePhotogrammetryGuide.tsx";
+import OrthoDsmDtmGuide from "./pages/guides/OrthoDsmDtmGuide.tsx";
+import GaussianSplattingGuide from "./pages/guides/GaussianSplattingGuide.tsx";
+import GsdGuide from "./pages/guides/GsdGuide.tsx";
+import Part107LaancGuide from "./pages/guides/Part107LaancGuide.tsx";
 import Community from "./pages/Community.tsx";
 import CommunityCategory from "./pages/CommunityCategory.tsx";
 import CommunityThread from "./pages/CommunityThread.tsx";
@@ -133,6 +139,12 @@ const App = () => (
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/field-guides" element={<FieldGuides />} />
+            <Route path="/guides" element={<GuidesIndex />} />
+            <Route path="/guides/drone-photogrammetry" element={<DronePhotogrammetryGuide />} />
+            <Route path="/guides/orthomosaic-dsm-dtm" element={<OrthoDsmDtmGuide />} />
+            <Route path="/guides/gaussian-splatting" element={<GaussianSplattingGuide />} />
+            <Route path="/guides/gsd-ground-sample-distance" element={<GsdGuide />} />
+            <Route path="/guides/part-107-laanc" element={<Part107LaancGuide />} />
             <Route path="/community" element={<Community />} />
             <Route path="/community/new" element={<CommunityNewThread />} />
             <Route path="/community/c/:slug" element={<CommunityCategory />} />
