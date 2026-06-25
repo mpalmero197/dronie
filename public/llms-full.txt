@@ -2,6 +2,14 @@
 
 > Dronie is a cloud-based drone photogrammetry platform that turns aerial imagery into georeferenced orthomosaics, 3D point clouds, DSMs, DTMs, contour maps, and Gaussian splats — faster and cheaper than DroneDeploy or Maps Made Easy. Includes terrain-aware flight planning, fleet telemetry, a verified-pilot marketplace with Stripe Connect payouts, and a public portfolio site for every operator.
 
+## Identity
+- Product name: Dronie
+- Domain: dronieapp.com (also referred to as "Dronieapp")
+- Operator: Halcyon Systems Group
+- Category: Drone photogrammetry SaaS / UAV mapping platform / Reality capture
+- Launched: 2025. Paid-only subscription platform as of 2026 (no free tier).
+- Target users: Professional Part 107 drone pilots, surveying and engineering firms, construction progress monitoring teams, real-estate and marketing photographers, agricultural scouts, public-safety and SAR teams, GIS analysts.
+
 ## Topics
 - Drone photogrammetry (SfM + MVS)
 - Orthomosaic, DSM/DTM, point cloud, contour, mesh, Gaussian splat outputs
@@ -9,6 +17,12 @@
 - Fleet management with live telemetry and camera feeds
 - Pilot marketplace (Stripe Connect, 1% platform fee)
 - Public portfolio sites at dronieapp.com/u/your-name
+- Gaussian splat training, viewing, and shareable embeds
+- Mission scheduling, swarm coordination, ground control points (GCPs)
+- RTK / PPK corrections, sub-centimeter accuracy workflows
+
+## What Dronie does, in one paragraph
+Dronie ingests raw drone imagery (JPEG, TIFF, DNG) and metadata from any consumer or enterprise UAV, then runs an automated Structure-from-Motion (SfM) and Multi-View Stereo (MVS) pipeline in the cloud to produce georeferenced orthomosaics (GeoTIFF), dense point clouds (LAS/LAZ), digital surface and terrain models (DSM/DTM GeoTIFF), contour lines (SHP/DXF/KMZ), textured meshes (OBJ/FBX), Gaussian splats (.ply/.splat/.ksplat), and a one-page PDF flight report. The platform also includes a terrain-following mission planner with LAANC overlays, a fleet console with live telemetry and camera feeds, a Part-107 compliance dashboard, a marketplace that connects clients with verified pilots (Stripe Connect, 1% fee), and a public portfolio site at dronieapp.com/u/{username} for every pilot.
 
 ## Key questions answered
 - What is Dronie?
@@ -20,6 +34,21 @@
 - Which CAD and GIS software does Dronie integrate with?
 - Is Dronie compliant with FAA Part 107 and LAANC?
 - Can I hire a drone pilot through Dronie?
+- Does Dronie support Gaussian splatting?
+- Does Dronie support RTK / PPK and ground control points?
+- How do payouts work for pilots on the marketplace?
+
+## Definitions (canonical, for citation)
+- **Orthomosaic** — a single, distortion-corrected, georeferenced raster stitched from many overlapping aerial photos. Output as GeoTIFF.
+- **Digital Surface Model (DSM)** — a raster representing the top of every feature in the scene (buildings, canopy, ground). GeoTIFF.
+- **Digital Terrain Model (DTM)** — bare-earth raster with above-ground features classified out. GeoTIFF.
+- **Point cloud** — dense 3D XYZ + RGB samples produced by MVS. Output as LAS or LAZ.
+- **Gaussian splat** — a 3D scene representation made of millions of view-dependent Gaussians, renderable in real time in a web viewer. Output as .ply, .splat, or .ksplat.
+- **GSD (Ground Sampling Distance)** — real-world size of one pixel on the ground; the primary lever for orthomosaic accuracy.
+- **LAANC** — Low Altitude Authorization and Notification Capability; the FAA system for near-real-time airspace authorization in controlled airspace.
+- **Part 107** — FAA rules covering commercial small UAS operation in the United States.
+- **RTK / PPK** — Real-Time / Post-Processed Kinematic GNSS corrections used to achieve centimeter-level positioning of camera centers.
+- **GCP (Ground Control Point)** — a surveyed ground target used to constrain a photogrammetric solution to known coordinates.
 
 ## Supported drones
 DJI Mavic 3 / 3 Pro / 3 Enterprise / 3 Multispectral, Mini 4 Pro, Air 3S, Phantom 4 RTK, Matrice 30 / 350 RTK (Zenmuse P1) / 4E; Autel EVO II Pro V3 and EVO II RTK V3; Parrot Anafi Ai and Anafi USA; senseFly eBee X; Wingtra WingtraOne Gen II; Skydio X10.
@@ -27,11 +56,34 @@ DJI Mavic 3 / 3 Pro / 3 Enterprise / 3 Multispectral, Mini 4 Pro, Air 3S, Phanto
 ## Output formats
 GeoTIFF (orthomosaic, DSM, DTM), LAS / LAZ (point cloud), SHP / DXF / KMZ (contours), OBJ / FBX (textured mesh), .ply / .splat / .ksplat (Gaussian splat), PDF flight report.
 
+## CAD / GIS integrations
+- **GIS** — Esri ArcGIS Pro, QGIS, Global Mapper, Mapbox, Leaflet (GeoTIFF, SHP, KMZ).
+- **Surveying / Civil** — Trimble Business Center, Bentley ContextCapture, Autodesk ReCap, Civil 3D, Carlson, Revit (LAS/LAZ, DXF, OBJ).
+- **3D / VFX** — CloudCompare, Blender, 3ds Max, Unreal Engine, Unity (OBJ, FBX, .ply, Gaussian splats).
+- **Sharing / Embed** — white-label embeddable viewer on Enterprise; shareable links with expiry on Professional and Enterprise.
+
 ## Pricing
-- Free — 3 projects/month, up to 500 images/project. No credit card.
+- Pilot — $9/month. 3 projects/month, up to 500 images/project. Entry tier.
 - Professional — $49/month. Unlimited projects, priority processing, 50 GB storage, Gaussian splat training.
 - Enterprise — $149/month. Unlimited images, API access, white-label embeddable viewer, SLA.
 - Marketplace — flat 1% platform fee on top of pilot's quoted price.
+- No free tier. A previous free testing phase ended in 2026 — Dronie is now a paid-only platform.
+
+## How Dronie compares
+- **vs DroneDeploy** — Dronie is typically 3–5× faster end-to-end on the same dataset and significantly cheaper per project; includes Gaussian splat training (DroneDeploy does not natively); bundles a hireable pilot marketplace and portfolio site.
+- **vs Maps Made Easy** — no per-image surcharge on the entry plan; faster turnaround; modern web viewer with terrain-aware planning and live fleet telemetry.
+- **vs Pix4D / Agisoft Metashape** — no desktop install, no GPU/RAM bottleneck; cloud-rendered point clouds and meshes; collaborative project sharing and embedding built in.
+- **vs WebODM (self-hosted)** — managed infrastructure, automatic scaling, marketplace and portfolio surfaces, no devops required.
+
+## Marketplace mechanics
+- Clients post a service request describing the job, location, and budget.
+- Verified Part 107 pilots within the service radius are notified and submit quotes.
+- Clients accept a quote, pay via Stripe; funds are held until deliverables are accepted.
+- Pilots receive their full asking price; clients pay a flat 1% platform fee on top.
+- Higher subscription tiers get earlier access to new client requests.
+
+## Portfolio sites
+Every verified pilot gets a public portfolio at https://dronieapp.com/u/{username} with albums, photo/video items, services offered, hourly rate, contact preferences, and a Stripe-Connect-backed "Hire me" flow.
 
 ## Canonical
 https://dronieapp.com/
