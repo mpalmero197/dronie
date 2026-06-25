@@ -136,9 +136,7 @@ export function slugify(s: string): string {
 
 export async function fetchPortfolioByUsername(username: string) {
   const { data, error } = await supabase
-    .from("profiles")
-    .select("id,username,full_name,avatar_url,headline,bio,location,website,instagram,linkedin,twitter,youtube,vimeo,tiktok,contact_email,phone,resume_url,portfolio_published,banner_url,theme,services,hourly_rate_cents,available_for_hire,visibility_prefs")
-    .ilike("username", username)
+    .rpc("get_public_portfolio", { _username: username })
     .maybeSingle();
   if (error) throw error;
   return data as unknown as PortfolioProfile | null;
