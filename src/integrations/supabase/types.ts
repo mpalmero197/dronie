@@ -2503,6 +2503,35 @@ export type Database = {
           years_experience: number
         }[]
       }
+      get_public_portfolio: {
+        Args: { _username: string }
+        Returns: {
+          available_for_hire: boolean
+          avatar_url: string
+          banner_url: string
+          bio: string
+          contact_email: string
+          full_name: string
+          headline: string
+          hourly_rate_cents: number
+          id: string
+          instagram: string
+          linkedin: string
+          location: string
+          phone: string
+          portfolio_published: boolean
+          resume_url: string
+          services: string[]
+          theme: string
+          tiktok: string
+          twitter: string
+          username: string
+          vimeo: string
+          visibility_prefs: Json
+          website: string
+          youtube: string
+        }[]
+      }
       get_share_payload: {
         Args: { _token: string }
         Returns: {
