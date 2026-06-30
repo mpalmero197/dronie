@@ -694,7 +694,7 @@ export default function Dashboard() {
                         className="group bg-card border border-border rounded-xl p-3.5 text-left hover:border-primary/40 hover:shadow-sm hover:-translate-y-0.5 transition-all"
                       >
                         <div className={`w-9 h-9 rounded-lg flex items-center justify-center mb-2.5 ${m.tone}`}>
-                          <Icon className="w-4.5 h-4.5" strokeWidth={2} />
+                          <Icon className="w-4 h-4" strokeWidth={2} />
                         </div>
                         <p className="font-display font-700 text-sm leading-tight text-foreground">{m.title}</p>
                         <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">{m.desc}</p>
