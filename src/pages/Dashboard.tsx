@@ -584,103 +584,125 @@ export default function Dashboard() {
 
           {sidebarView === "projects" && (
             <>
+              {/* Welcome hero — sets the visual tone */}
+              <section className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-primary via-primary to-primary/85 text-primary-foreground p-5 sm:p-6">
+                <div className="absolute inset-0 opacity-[0.08] pointer-events-none" aria-hidden>
+                  <div className="absolute -right-16 -top-16 w-64 h-64 rounded-full bg-primary-foreground blur-3xl" />
+                  <div className="absolute -left-10 bottom-0 w-48 h-48 rounded-full bg-accent blur-3xl" />
+                </div>
+                <div className="relative flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] uppercase tracking-[0.18em] font-semibold text-primary-foreground/70">
+                      Welcome back
+                    </p>
+                    <h2 className="font-display font-700 text-xl sm:text-2xl leading-tight mt-1 truncate">
+                      {user?.user_metadata?.full_name?.split(" ")[0] || "Pilot"} · ready to fly
+                    </h2>
+                    <p className="text-xs sm:text-sm text-primary-foreground/80 mt-1.5 max-w-xl">
+                      Plan a mission, monitor live drones, or process new imagery — all from one cockpit.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <button
+                      onClick={() => navigate(latestComplete ? `/plan?project=${latestComplete.id}` : '/plan')}
+                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary-foreground text-primary font-display font-700 text-sm shadow-sm hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all"
+                    >
+                      <Plane className="w-4 h-4" /> Plan a flight
+                    </button>
+                    <button
+                      onClick={handleNewProject}
+                      className="hidden sm:inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary-foreground/15 hover:bg-primary-foreground/25 backdrop-blur text-primary-foreground font-display font-700 text-sm transition-colors"
+                    >
+                      <Plus className="w-4 h-4" /> New project
+                    </button>
+                  </div>
+                </div>
+              </section>
+
               {/* Quick stats */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 {[
-                  { label: "Total Projects", value: projects.length.toString(), icon: FolderOpen, color: "text-primary", bg: "bg-secondary" },
-                  { label: "In Progress", value: processingCount.toString(), icon: Loader2, color: "text-accent", bg: "bg-accent/10" },
-                  { label: "Images Uploaded", value: totalImages.toLocaleString() || "0", icon: BarChart3, color: "text-highlight", bg: "bg-highlight/10" },
-                  { label: "Total Area", value: totalArea > 0 ? `${totalArea.toFixed(1)} ha` : "—", icon: Map, color: "text-primary", bg: "bg-secondary" },
+                  { label: "Total Projects", value: projects.length.toString(), icon: FolderOpen, color: "text-primary", bg: "bg-primary/10" },
+                  { label: "In Progress", value: processingCount.toString(), icon: Loader2, color: "text-accent", bg: "bg-accent/10", spin: processingCount > 0 },
+                  { label: "Images Uploaded", value: totalImages.toLocaleString() || "0", icon: ImageIcon, color: "text-highlight", bg: "bg-highlight/10" },
+                  { label: "Total Area", value: totalArea > 0 ? `${totalArea.toFixed(1)} ha` : "—", icon: Map, color: "text-primary", bg: "bg-primary/10" },
                 ].map((stat) => {
                   const Icon = stat.icon;
                   return (
-                    <div key={stat.label} className="bg-card rounded-xl p-4 border border-border flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-xl ${stat.bg} flex items-center justify-center flex-shrink-0`}>
-                        <Icon className={`w-5 h-5 ${stat.color}`} />
+                    <div key={stat.label} className="group bg-card rounded-xl p-4 border border-border hover:border-primary/30 hover:shadow-sm transition-all">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className={`w-9 h-9 rounded-lg ${stat.bg} flex items-center justify-center`}>
+                          <Icon className={`w-4 h-4 ${stat.color} ${stat.spin ? "animate-spin" : ""}`} />
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-xl font-display font-700 text-foreground">{stat.value}</p>
-                        <p className="text-xs text-muted-foreground">{stat.label}</p>
-                      </div>
+                      <p className="text-2xl font-display font-700 text-foreground leading-none tracking-tight">{stat.value}</p>
+                      <p className="text-[11px] text-muted-foreground mt-1.5 uppercase tracking-wide">{stat.label}</p>
                     </div>
                   );
                 })}
               </div>
 
-              {/* Quick actions: Plan a Flight */}
-              <button
-                onClick={() => navigate(latestComplete ? `/plan?project=${latestComplete.id}` : '/plan')}
-                className="w-full bg-gradient-to-br from-primary via-primary to-primary/80 text-primary-foreground rounded-2xl p-5 flex items-center gap-4 hover:shadow-lg hover:shadow-primary/30 hover:scale-[1.005] active:scale-[0.99] transition-all text-left"
-              >
-                <div className="w-12 h-12 rounded-xl bg-primary-foreground/15 backdrop-blur flex items-center justify-center flex-shrink-0">
-                  <Plane className="w-6 h-6" />
+              {/* Quick actions row */}
+              <section className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h2 className="font-display font-700 text-foreground text-sm uppercase tracking-wide text-muted-foreground/80">Quick actions</h2>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-display font-700 text-base">Plan a Flight</h3>
-                  <p className="text-xs text-primary-foreground/80 mt-0.5">
-                    Step-by-step wizard: search address → outline area → export KMZ for DJI Fly and a PDF briefing.
-                  </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {[
+                    { to: "/missions", title: "Saved Missions", desc: "Browse, re-export, or edit flight plans.", Icon: Bookmark, tone: "bg-primary/10 text-primary" },
+                    { to: "/workflow", title: "Workflow Pipeline", desc: "Plan → capture → process → analyze.", Icon: Workflow, tone: "bg-accent/15 text-accent-foreground" },
+                  ].map(({ to, title, desc, Icon, tone }) => (
+                    <button
+                      key={to}
+                      onClick={() => navigate(to)}
+                      className="group w-full bg-card border border-border rounded-xl p-4 flex items-center gap-3 hover:border-primary/40 hover:shadow-sm transition-all text-left"
+                    >
+                      <div className={`w-10 h-10 rounded-xl ${tone} flex items-center justify-center flex-shrink-0`}>
+                        <Icon className="w-5 h-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-display font-700 text-sm text-foreground">{title}</h3>
+                        <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{desc}</p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-muted-foreground/50 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                    </button>
+                  ))}
                 </div>
-                <svg className="w-5 h-5 flex-shrink-0 opacity-70" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
-              </button>
-
-              {/* Saved missions shortcut */}
-              <button
-                onClick={() => navigate('/missions')}
-                className="w-full bg-card border border-border text-foreground rounded-2xl p-4 flex items-center gap-3 hover:border-primary/40 hover:bg-secondary/40 transition-all text-left"
-              >
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <svg className="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-display font-700 text-sm">Saved Missions</h3>
-                  <p className="text-xs text-muted-foreground mt-0.5">Browse, re-export, or edit your flight plans.</p>
-                </div>
-                <svg className="w-4 h-4 flex-shrink-0 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
-              </button>
-
-              {/* Workflow pipeline shortcut */}
-              <button
-                onClick={() => navigate('/workflow')}
-                className="w-full bg-card border border-border text-foreground rounded-2xl p-4 flex items-center gap-3 hover:border-primary/40 hover:bg-secondary/40 transition-all text-left"
-              >
-                <div className="w-10 h-10 rounded-xl bg-accent/15 flex items-center justify-center flex-shrink-0">
-                  <svg className="w-5 h-5 text-accent-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12h4l3-9 4 18 3-9h4"/></svg>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-display font-700 text-sm">Workflow Pipeline</h3>
-                  <p className="text-xs text-muted-foreground mt-0.5">Plan → capture → process → analyze in one guided flow.</p>
-                </div>
-                <svg className="w-4 h-4 flex-shrink-0 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
-              </button>
+              </section>
 
               {/* Live drone telemetry — read-only, RLS-scoped */}
               <MyDronesPanel />
 
               {/* Advanced modules grid */}
-              <div className="grid grid-cols-2 gap-2.5">
-                {[
-                  { to: "/swarm",      title: "Swarm Ops",     desc: "Multi-drone autonomy",  emoji: "🛰️", tone: "bg-primary/10 text-primary" },
-                  { to: "/reality",    title: "Reality Capture", desc: "Live 3D mesh + AR",   emoji: "🎯", tone: "bg-highlight/15 text-highlight" },
-                  { to: "/rtk",        title: "RTK / GCP",     desc: "Smart alignment",        emoji: "📡", tone: "bg-accent/15 text-accent-foreground" },
-                  { to: "/insights",   title: "AI Insights",   desc: "Auto metrics + PDF",     emoji: "🧠", tone: "bg-primary/10 text-primary" },
-                  { to: "/compliance", title: "Compliance",    desc: "Part 107 + LAANC",       emoji: "🛡️", tone: "bg-secondary text-foreground" },
-                  { to: "/splats",     title: "Gaussian Splats", desc: "Photoreal 3D scenes",  emoji: "✨", tone: "bg-primary/10 text-primary" },
-                  { to: "/portfolio",  title: "Portfolio",     desc: "Public photo + video site", emoji: "📸", tone: "bg-accent/15 text-accent-foreground" },
-                ].map((m) => (
-                  <button
-                    key={m.to}
-                    onClick={() => navigate(m.to)}
-                    className="bg-card border border-border rounded-xl p-3 text-left hover:border-primary/40 hover:bg-secondary/40 transition-all"
-                  >
-                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-base mb-2 ${m.tone}`}>
-                      <span aria-hidden>{m.emoji}</span>
-                    </div>
-                    <p className="font-display font-700 text-sm leading-tight">{m.title}</p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5 leading-tight">{m.desc}</p>
-                  </button>
-                ))}
-              </div>
+              <section className="space-y-3">
+                <h2 className="font-display font-700 text-foreground text-sm uppercase tracking-wide text-muted-foreground/80">Modules</h2>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
+                  {[
+                    { to: "/swarm",      title: "Swarm Ops",       desc: "Multi-drone autonomy",      Icon: Boxes,       tone: "bg-primary/10 text-primary" },
+                    { to: "/reality",    title: "Reality Capture", desc: "Live 3D mesh + AR",         Icon: Radar,       tone: "bg-highlight/15 text-highlight" },
+                    { to: "/rtk",        title: "RTK / GCP",       desc: "Smart alignment",            Icon: Satellite,   tone: "bg-accent/15 text-accent-foreground" },
+                    { to: "/insights",   title: "AI Insights",     desc: "Auto metrics + PDF",         Icon: Brain,       tone: "bg-primary/10 text-primary" },
+                    { to: "/compliance", title: "Compliance",      desc: "Part 107 + LAANC",           Icon: ShieldCheck, tone: "bg-secondary text-foreground" },
+                    { to: "/splats",     title: "Gaussian Splats", desc: "Photoreal 3D scenes",        Icon: Sparkles,    tone: "bg-primary/10 text-primary" },
+                    { to: "/portfolio",  title: "Portfolio",       desc: "Public photo + video site",  Icon: Camera,      tone: "bg-accent/15 text-accent-foreground" },
+                  ].map((m) => {
+                    const Icon = m.Icon;
+                    return (
+                      <button
+                        key={m.to}
+                        onClick={() => navigate(m.to)}
+                        className="group bg-card border border-border rounded-xl p-3.5 text-left hover:border-primary/40 hover:shadow-sm hover:-translate-y-0.5 transition-all"
+                      >
+                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center mb-2.5 ${m.tone}`}>
+                          <Icon className="w-4.5 h-4.5" strokeWidth={2} />
+                        </div>
+                        <p className="font-display font-700 text-sm leading-tight text-foreground">{m.title}</p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">{m.desc}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
 
               {/* Upload drop zone */}
               <div
@@ -691,25 +713,32 @@ export default function Dashboard() {
                   setDragging(false);
                   handleNewProject();
                 }}
-                className={`border-2 border-dashed rounded-2xl p-8 text-center transition-all cursor-pointer ${
-                  dragging ? "border-accent bg-accent/5" : "border-border hover:border-primary/40 hover:bg-secondary/50"
+                className={`relative border-2 border-dashed rounded-2xl p-7 text-center transition-all cursor-pointer ${
+                  dragging ? "border-accent bg-accent/5 scale-[1.005]" : "border-border hover:border-primary/40 hover:bg-secondary/40"
                 }`}
                 onClick={handleNewProject}
               >
-                <UploadCloud className={`w-10 h-10 mx-auto mb-3 transition-colors ${dragging ? "text-accent" : "text-muted-foreground"}`} />
-                <p className="font-semibold text-foreground text-sm">
-                  {dragging ? "Drop images to create a project" : "Drop drone images here to start a new project"}
+                <div className={`w-12 h-12 mx-auto mb-3 rounded-2xl flex items-center justify-center transition-colors ${dragging ? "bg-accent/15 text-accent" : "bg-primary/10 text-primary"}`}>
+                  <UploadCloud className="w-6 h-6" />
+                </div>
+                <p className="font-display font-700 text-foreground text-sm">
+                  {dragging ? "Drop images to create a project" : "Drop drone images to start a new project"}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  JPEG, TIFF, DNG accepted · Up to {tierLimits.imagesPerProject === Infinity ? "∞" : tierLimits.imagesPerProject.toLocaleString()} images
+                  JPEG, TIFF, DNG · Up to {tierLimits.imagesPerProject === Infinity ? "∞" : tierLimits.imagesPerProject.toLocaleString()} images
                 </p>
               </div>
 
               {/* Project list */}
               <div className="space-y-3">
-                <h2 className="font-display font-600 text-foreground text-sm">
-                  {isAdmin ? 'All Projects' : 'Your Projects'}
-                </h2>
+                <div className="flex items-center justify-between">
+                  <h2 className="font-display font-700 text-foreground text-sm uppercase tracking-wide text-muted-foreground/80">
+                    {isAdmin ? 'All Projects' : 'Your Projects'}
+                  </h2>
+                  {projects.length > 0 && (
+                    <span className="text-[11px] text-muted-foreground">{projects.length} total</span>
+                  )}
+                </div>
 
                 {loadingProjects ? (
                   <div className="flex items-center justify-center py-16">
