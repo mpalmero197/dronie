@@ -6,6 +6,8 @@ import {
   Eye, Trash2, BarChart3, HardDrive,
   ArrowLeft, LogOut, Shield, User as UserIcon, FileArchive, ImageIcon,
   Play, Share2, Zap, Lock, CreditCard, Plane, Briefcase, Menu,
+  Bookmark, Workflow, Radar, Boxes, Satellite, Brain, ShieldCheck, Sparkles, Camera,
+  ChevronRight,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import ProjectDetailDialog from "@/components/ProjectDetailDialog";
