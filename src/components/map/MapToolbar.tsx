@@ -1,8 +1,9 @@
 import { useState } from "react";
 import {
-  MapPin, Ruler, Pentagon, Minus, Circle, Square,
-  Layers, Code2, Camera, Leaf, Mountain, MousePointerClick, Plane, ShieldAlert,
-  ChevronDown, ChevronUp, Undo2, Redo2, Maximize, Bookmark, Compass,
+  MapPin, Ruler, Pentagon, Spline, Circle, Square,
+  Code2, Camera, Leaf, Mountain, MousePointerClick, Plane, ShieldAlert,
+  ChevronDown, ChevronUp, Undo2, Redo2, Maximize, Minimize, Bookmark, Compass,
+  PencilRuler, MountainSnow, Sparkles,
 } from "lucide-react";
 import {
   Tooltip, TooltipContent, TooltipTrigger,
@@ -42,7 +43,7 @@ export const KEYBOARD_SHORTCUT_MAP: Record<string, DrawTool> = {
 
 const DRAW_TOOLS: ToolDef[] = [
   { id: "marker", icon: MapPin, label: "Drop Pin", shortcut: "M" },
-  { id: "polyline", icon: Minus, label: "Draw Line", shortcut: "L" },
+  { id: "polyline", icon: Spline, label: "Draw Line", shortcut: "L" },
   { id: "polygon", icon: Pentagon, label: "Draw Polygon", shortcut: "P" },
   { id: "rectangle", icon: Square, label: "Draw Rectangle", shortcut: "R" },
   { id: "circle", icon: Circle, label: "Draw Circle", shortcut: "C" },
@@ -66,7 +67,7 @@ const SPECIAL_TOOLS: ToolDef[] = [
   { id: "laanc-check", icon: ShieldAlert, label: "LAANC Check" },
 ];
 
-function ToolButton({ tool, isActive, onClick, activeClass = "bg-primary text-primary-foreground" }: {
+function ToolButton({ tool, isActive, onClick, activeClass = "bg-primary text-primary-foreground shadow-sm" }: {
   tool: ToolDef;
   isActive: boolean;
   onClick: () => void;
@@ -78,17 +79,35 @@ function ToolButton({ tool, isActive, onClick, activeClass = "bg-primary text-pr
       <TooltipTrigger asChild>
         <button
           onClick={onClick}
-          className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
-            isActive ? activeClass : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+          aria-pressed={isActive}
+          className={`relative w-9 h-9 rounded-lg flex items-center justify-center transition-all duration-150 ${
+            isActive
+              ? `${activeClass} scale-[1.03]`
+              : "text-muted-foreground hover:bg-secondary hover:text-foreground active:scale-95"
           }`}
         >
-          <Icon className="w-3.5 h-3.5" />
+          <Icon className="w-4 h-4" strokeWidth={isActive ? 2.4 : 2} />
         </button>
       </TooltipTrigger>
-      <TooltipContent side="right" className="text-xs">
-        {tool.label}{tool.shortcut && <kbd className="ml-1.5 px-1 py-0.5 rounded bg-muted text-[10px] font-mono">{tool.shortcut}</kbd>}
+      <TooltipContent side="right" sideOffset={8} className="text-xs font-medium flex items-center gap-1.5">
+        {tool.label}
+        {tool.shortcut && (
+          <kbd className="px-1.5 py-0.5 rounded bg-muted text-[10px] font-mono text-muted-foreground border border-border/60">
+            {tool.shortcut}
+          </kbd>
+        )}
       </TooltipContent>
     </Tooltip>
+  );
+}
+
+function SectionLabel({ children, accent }: { children: React.ReactNode; accent?: string }) {
+  return (
+    <div className="px-1.5 pt-1.5 pb-0.5 flex items-center gap-1">
+      <span className={`text-[9px] font-bold uppercase tracking-[0.12em] ${accent ?? "text-muted-foreground/70"}`}>
+        {children}
+      </span>
+    </div>
   );
 }
 
@@ -101,118 +120,140 @@ export default function MapToolbar({
 
   const hasActiveDrawTool = DRAW_TOOLS.some(t => t.id === activeTool);
   const hasActiveSpecial = SPECIAL_TOOLS.some(t => t.id === activeTool);
+  const hasActiveMeasure = MEASURE_TOOLS.some(t => t.id === activeTool);
 
   return (
-    <div className="absolute top-3 left-3 z-[900] flex flex-col gap-0.5 bg-card/95 backdrop-blur rounded-xl border border-border shadow-xl p-1 max-h-[calc(100vh-10rem)] sm:max-h-[calc(100vh-7rem)] overflow-y-auto scrollbar-none">
-      {/* Undo / Redo */}
+    <div className="absolute top-3 left-3 z-[900] flex flex-col bg-card/95 backdrop-blur-md rounded-2xl border border-border shadow-[0_8px_24px_-8px_rgba(0,0,0,0.18)] ring-1 ring-black/[0.03] p-1.5 max-h-[calc(100vh-10rem)] sm:max-h-[calc(100vh-7rem)] overflow-y-auto scrollbar-none w-12">
+      {/* History */}
       <div className="flex gap-0.5">
         <Tooltip>
           <TooltipTrigger asChild>
             <button
               onClick={onUndo}
               disabled={!canUndo}
-              className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${canUndo ? "text-muted-foreground hover:bg-secondary hover:text-foreground" : "text-muted-foreground/30 cursor-not-allowed"}`}
+              className={`w-[18px] h-9 flex-1 rounded-lg flex items-center justify-center transition-all ${canUndo ? "text-muted-foreground hover:bg-secondary hover:text-foreground active:scale-95" : "text-muted-foreground/25 cursor-not-allowed"}`}
+              aria-label="Undo"
             >
               <Undo2 className="w-3.5 h-3.5" />
             </button>
           </TooltipTrigger>
-          <TooltipContent side="right" className="text-xs">Undo (Ctrl+Z)</TooltipContent>
+          <TooltipContent side="right" sideOffset={8} className="text-xs">Undo · ⌘Z</TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
             <button
               onClick={onRedo}
               disabled={!canRedo}
-              className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${canRedo ? "text-muted-foreground hover:bg-secondary hover:text-foreground" : "text-muted-foreground/30 cursor-not-allowed"}`}
+              className={`w-[18px] h-9 flex-1 rounded-lg flex items-center justify-center transition-all ${canRedo ? "text-muted-foreground hover:bg-secondary hover:text-foreground active:scale-95" : "text-muted-foreground/25 cursor-not-allowed"}`}
+              aria-label="Redo"
             >
               <Redo2 className="w-3.5 h-3.5" />
             </button>
           </TooltipTrigger>
-          <TooltipContent side="right" className="text-xs">Redo (Ctrl+Shift+Z)</TooltipContent>
+          <TooltipContent side="right" sideOffset={8} className="text-xs">Redo · ⇧⌘Z</TooltipContent>
         </Tooltip>
       </div>
 
-      <div className="h-px bg-border mx-1" />
+      <div className="h-px bg-border/70 my-1.5" />
 
-      {/* Draw tools — collapsible */}
+      {/* Draw tools — collapsible group */}
       <button
         onClick={() => setDrawExpanded(v => !v)}
         aria-label={drawExpanded ? "Collapse draw tools" : "Expand draw tools"}
         aria-expanded={drawExpanded}
-        className={`w-8 h-5 rounded flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors ${hasActiveDrawTool ? "text-primary" : ""}`}
+        className={`w-9 h-6 rounded-md flex items-center justify-between px-1.5 transition-colors ${hasActiveDrawTool ? "text-primary" : "text-muted-foreground/60 hover:text-foreground"}`}
       >
+        <PencilRuler className="w-3 h-3" />
         {drawExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
       </button>
 
-      {drawExpanded && DRAW_TOOLS.map((tool) => (
-        <ToolButton
-          key={tool.id}
-          tool={tool}
-          isActive={activeTool === tool.id}
-          onClick={() => onToolChange(activeTool === tool.id ? null : tool.id)}
-        />
-      ))}
+      {drawExpanded && (
+        <div className="flex flex-col gap-0.5 mt-0.5">
+          {DRAW_TOOLS.map((tool) => (
+            <ToolButton
+              key={tool.id}
+              tool={tool}
+              isActive={activeTool === tool.id}
+              onClick={() => onToolChange(activeTool === tool.id ? null : tool.id)}
+            />
+          ))}
+        </div>
+      )}
 
-      <div className="h-px bg-border mx-1" />
+      <div className="h-px bg-border/70 my-1.5" />
 
       {/* Measure */}
-      {MEASURE_TOOLS.map((tool) => (
-        <ToolButton
-          key={tool.id}
-          tool={tool}
-          isActive={activeTool === tool.id}
-          onClick={() => onToolChange(activeTool === tool.id ? null : tool.id)}
-          activeClass="bg-accent text-accent-foreground"
-        />
-      ))}
+      <div className={`w-9 h-6 rounded-md flex items-center justify-center transition-colors ${hasActiveMeasure ? "text-accent" : "text-muted-foreground/60"}`}>
+        <Ruler className="w-3 h-3" />
+      </div>
+      <div className="flex flex-col gap-0.5 mt-0.5">
+        {MEASURE_TOOLS.map((tool) => (
+          <ToolButton
+            key={tool.id}
+            tool={tool}
+            isActive={activeTool === tool.id}
+            onClick={() => onToolChange(activeTool === tool.id ? null : tool.id)}
+            activeClass="bg-accent text-accent-foreground shadow-sm"
+          />
+        ))}
+      </div>
 
-      <div className="h-px bg-border mx-1" />
+      <div className="h-px bg-border/70 my-1.5" />
 
       {/* Overlays */}
-      {OVERLAYS.map((ov) => {
-        const Icon = ov.icon;
-        const isActive = activeOverlay === ov.id;
-        return (
-          <Tooltip key={ov.id}>
-            <TooltipTrigger asChild>
-              <button
-                onClick={() => onOverlayChange(isActive ? null : ov.id)}
-                className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
-                  isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-                }`}
-              >
-                <Icon className="w-3.5 h-3.5" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="right" className="text-xs">{ov.label}</TooltipContent>
-          </Tooltip>
-        );
-      })}
+      <div className="w-9 h-6 rounded-md flex items-center justify-center text-muted-foreground/60">
+        <MountainSnow className="w-3 h-3" />
+      </div>
+      <div className="flex flex-col gap-0.5 mt-0.5">
+        {OVERLAYS.map((ov) => {
+          const Icon = ov.icon;
+          const isActive = activeOverlay === ov.id;
+          return (
+            <Tooltip key={ov.id}>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => onOverlayChange(isActive ? null : ov.id)}
+                  aria-pressed={isActive}
+                  className={`relative w-9 h-9 rounded-lg flex items-center justify-center transition-all duration-150 ${
+                    isActive
+                      ? "bg-primary text-primary-foreground shadow-sm scale-[1.03]"
+                      : "text-muted-foreground hover:bg-secondary hover:text-foreground active:scale-95"
+                  }`}
+                >
+                  <Icon className="w-4 h-4" strokeWidth={isActive ? 2.4 : 2} />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right" sideOffset={8} className="text-xs font-medium">{ov.label}</TooltipContent>
+            </Tooltip>
+          );
+        })}
+      </div>
 
-      <div className="h-px bg-border mx-1" />
+      <div className="h-px bg-border/70 my-1.5" />
 
-      {/* More tools — collapsible */}
+      {/* Pro tools — collapsible */}
       <button
         onClick={() => setMoreExpanded(v => !v)}
-        aria-label={moreExpanded ? "Collapse more tools" : "Expand more tools"}
+        aria-label={moreExpanded ? "Collapse pro tools" : "Expand pro tools"}
         aria-expanded={moreExpanded}
-        className={`w-8 h-5 rounded flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors ${hasActiveSpecial ? "text-primary" : ""}`}
+        className={`w-9 h-6 rounded-md flex items-center justify-between px-1.5 transition-colors ${hasActiveSpecial ? "text-primary" : "text-muted-foreground/60 hover:text-foreground"}`}
       >
+        <Sparkles className="w-3 h-3" />
         {moreExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
       </button>
 
       {moreExpanded && (
-        <>
+        <div className="flex flex-col gap-0.5 mt-0.5">
           {SPECIAL_TOOLS.map((tool) => (
             <ToolButton
               key={tool.id}
               tool={tool}
               isActive={activeTool === tool.id}
               onClick={() => onToolChange(activeTool === tool.id ? null : tool.id)}
-              activeClass={tool.id === "laanc-check" ? "bg-amber-500 text-white" : "bg-primary text-primary-foreground"}
+              activeClass={tool.id === "laanc-check" ? "bg-amber-500 text-white shadow-sm" : "bg-primary text-primary-foreground shadow-sm"}
             />
           ))}
-        </>
+        </div>
       )}
 
       {/* Bookmarks */}
@@ -220,44 +261,45 @@ export default function MapToolbar({
         <TooltipTrigger asChild>
           <button
             onClick={onToggleBookmarks}
-            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${bookmarksOpen ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-secondary hover:text-foreground"}`}
+            aria-pressed={!!bookmarksOpen}
+            className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all mt-0.5 ${bookmarksOpen ? "bg-accent text-accent-foreground shadow-sm scale-[1.03]" : "text-muted-foreground hover:bg-secondary hover:text-foreground active:scale-95"}`}
           >
-            <Bookmark className="w-3.5 h-3.5" />
+            <Bookmark className="w-4 h-4" strokeWidth={bookmarksOpen ? 2.4 : 2} />
           </button>
         </TooltipTrigger>
-        <TooltipContent side="right" className="text-xs">
-          Bookmarks <kbd className="ml-1.5 px-1 py-0.5 rounded bg-muted text-[10px] font-mono">B</kbd>
+        <TooltipContent side="right" sideOffset={8} className="text-xs font-medium flex items-center gap-1.5">
+          Bookmarks
+          <kbd className="px-1.5 py-0.5 rounded bg-muted text-[10px] font-mono text-muted-foreground border border-border/60">B</kbd>
         </TooltipContent>
       </Tooltip>
 
-      <div className="h-px bg-border mx-1" />
+      <div className="h-px bg-border/70 my-1.5" />
 
-      {/* Fullscreen */}
+      {/* View / Export */}
       <Tooltip>
         <TooltipTrigger asChild>
-          <button onClick={onFullscreen} className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground transition-all">
-            <Maximize className="w-3.5 h-3.5" />
+          <button onClick={onFullscreen} className="w-9 h-9 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground transition-all active:scale-95">
+            {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
           </button>
         </TooltipTrigger>
-        <TooltipContent side="right" className="text-xs">{isFullscreen ? "Exit Fullscreen" : "Fullscreen"}</TooltipContent>
+        <TooltipContent side="right" sideOffset={8} className="text-xs">{isFullscreen ? "Exit fullscreen" : "Fullscreen"}</TooltipContent>
       </Tooltip>
 
-      {/* Export / Embed */}
       <Tooltip>
         <TooltipTrigger asChild>
-          <button onClick={onExportPng} className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground transition-all">
-            <Camera className="w-3.5 h-3.5" />
+          <button onClick={onExportPng} className="w-9 h-9 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground transition-all active:scale-95">
+            <Camera className="w-4 h-4" />
           </button>
         </TooltipTrigger>
-        <TooltipContent side="right" className="text-xs">Export PNG</TooltipContent>
+        <TooltipContent side="right" sideOffset={8} className="text-xs">Export PNG</TooltipContent>
       </Tooltip>
       <Tooltip>
         <TooltipTrigger asChild>
-          <button onClick={onEmbedCode} className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground transition-all">
-            <Code2 className="w-3.5 h-3.5" />
+          <button onClick={onEmbedCode} className="w-9 h-9 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground transition-all active:scale-95">
+            <Code2 className="w-4 h-4" />
           </button>
         </TooltipTrigger>
-        <TooltipContent side="right" className="text-xs">Embed Code</TooltipContent>
+        <TooltipContent side="right" sideOffset={8} className="text-xs">Embed code</TooltipContent>
       </Tooltip>
     </div>
   );
