@@ -101,15 +101,7 @@ function ToolButton({ tool, isActive, onClick, activeClass = "bg-primary text-pr
   );
 }
 
-function SectionLabel({ children, accent }: { children: React.ReactNode; accent?: string }) {
-  return (
-    <div className="px-1.5 pt-1.5 pb-0.5 flex items-center gap-1">
-      <span className={`text-[9px] font-bold uppercase tracking-[0.12em] ${accent ?? "text-muted-foreground/70"}`}>
-        {children}
-      </span>
-    </div>
-  );
-}
+
 
 export default function MapToolbar({
   activeTool, onToolChange, onExportPng, onEmbedCode, activeOverlay, onOverlayChange,
