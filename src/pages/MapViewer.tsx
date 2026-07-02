@@ -369,8 +369,30 @@ export default function MapViewer() {
         </div>
       </header>
 
-      {/* Map */}
-      <div className="flex-1 relative overflow-hidden" ref={mapContainerRef}>
+      {/* Illustrator-style workspace: tool rail | canvas | properties panel */}
+      <div className="flex-1 flex min-h-0 overflow-hidden bg-muted/30">
+        {/* Left tool rail (docked) */}
+        <MapToolbar
+          variant="docked"
+          activeTool={activeTool}
+          onToolChange={gatedToolActivate}
+          onExportPng={exportPng}
+          onEmbedCode={() => setShowEmbed(true)}
+          activeOverlay={activeOverlay}
+          onOverlayChange={setActiveOverlay}
+          onUndo={handleUndo}
+          onRedo={handleRedo}
+          canUndo={drawingLayerRef.current?.canUndo ?? false}
+          canRedo={drawingLayerRef.current?.canRedo ?? false}
+          onFullscreen={toggleFullscreen}
+          isFullscreen={isFullscreen}
+          onToggleBookmarks={() => setBookmarksOpen(v => !v)}
+          bookmarksOpen={bookmarksOpen}
+        />
+
+        {/* Canvas — the map itself, inset with a subtle frame */}
+        <div className="flex-1 relative overflow-hidden p-2 min-w-0">
+          <div className="w-full h-full relative rounded-lg overflow-hidden border border-border shadow-inner" ref={mapContainerRef}>
         <MapContainer center={center} zoom={12} className="w-full h-full" zoomControl={true}>
           <TileLayer attribution={tile.attribution} url={tile.url} />
           {baseLayer === "hybrid" && (
@@ -418,24 +440,6 @@ export default function MapViewer() {
           <BookmarksPanel projectId={projectId} open={bookmarksOpen} onClose={() => setBookmarksOpen(false)} />
         </MapContainer>
 
-        {/* Toolbar */}
-        <MapToolbar
-          activeTool={activeTool}
-          onToolChange={gatedToolActivate}
-          onExportPng={exportPng}
-          onEmbedCode={() => setShowEmbed(true)}
-          activeOverlay={activeOverlay}
-          onOverlayChange={setActiveOverlay}
-          onUndo={handleUndo}
-          onRedo={handleRedo}
-          canUndo={drawingLayerRef.current?.canUndo ?? false}
-          canRedo={drawingLayerRef.current?.canRedo ?? false}
-          onFullscreen={toggleFullscreen}
-          isFullscreen={isFullscreen}
-          onToggleBookmarks={() => setBookmarksOpen(v => !v)}
-          bookmarksOpen={bookmarksOpen}
-        />
-
         {/* Upgrade Prompt */}
         <UpgradePrompt
           open={!!upgradePrompt}
@@ -445,37 +449,14 @@ export default function MapViewer() {
           requiredTier="professional"
         />
 
-        {/* Layer Switcher */}
-        <LayerSwitcher activeLayer={baseLayer} onChange={setBaseLayer} />
-
-        {/* Info Panel */}
-        {showInfo && project && <MapInfoPanel project={project} pinCount={0} measurement={measurement} />}
-
         {/* Overlay Legend */}
         {activeOverlay && <OverlayLegend type={activeOverlay as "elevation" | "ndvi" | "airspace"} />}
-
-        {/* Hint */}
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-[900] pointer-events-none">
-          <div className="bg-card/90 backdrop-blur rounded-full px-3 py-1.5 border border-border shadow text-[11px] text-muted-foreground flex items-center gap-2">
-            {activeTool
-              ? `${activeTool === "measure-distance" ? "Click to measure distance, double-click to finish" :
-                  activeTool === "measure-area" ? "Click to draw area, double-click to finish" :
-                  activeTool === "polyline" ? "Click to draw line, double-click to finish" :
-                  activeTool === "polygon" ? (flightPlannerOpen ? "Draw survey area polygon, double-click to finish" : "Click to draw polygon, double-click to finish") :
-                  activeTool === "rectangle" ? "Click two corners" :
-                  activeTool === "circle" ? "Click center, then edge" :
-                  activeTool === "fetch-parcels" ? "Click on the map to fetch parcel boundaries" :
-                  activeTool === "laanc-check" ? "Click anywhere to check LAANC authorization status" :
-                  "Click on the map to place a pin"}`
-              : "Select a tool or right-click for quick actions"}
-          </div>
-        </div>
 
         {/* Sticky Plan Mission FAB — always visible */}
         {!flightPlannerOpen && (
           <button
             onClick={launchPlanner}
-            className="absolute bottom-16 right-3 z-[950] bg-primary text-primary-foreground rounded-full pl-4 pr-5 py-3 shadow-2xl hover:shadow-primary/40 hover:scale-[1.03] active:scale-95 transition-all flex items-center gap-2 font-semibold text-sm border-2 border-primary-foreground/10"
+            className="absolute bottom-3 right-3 z-[950] bg-primary text-primary-foreground rounded-full pl-4 pr-5 py-3 shadow-2xl hover:shadow-primary/40 hover:scale-[1.03] active:scale-95 transition-all flex items-center gap-2 font-semibold text-sm border-2 border-primary-foreground/10"
             aria-label="Plan a drone mission"
           >
             <Plane className="w-4 h-4" />
@@ -516,7 +497,61 @@ export default function MapViewer() {
             </div>
           </div>
         )}
+          </div>
+        </div>
+
+        {/* Right properties panel (docked) */}
+        {showInfo && (
+          <aside className="hidden md:flex w-64 flex-col bg-card border-l border-border overflow-y-auto">
+            <div className="px-3 py-2 border-b border-border flex items-center justify-between">
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Properties</p>
+            </div>
+            <div className="p-3 space-y-4">
+              {project && <MapInfoPanel variant="docked" project={project} pinCount={0} measurement={measurement} />}
+              <div className="h-px bg-border/60" />
+              <LayerSwitcher variant="docked" activeLayer={baseLayer} onChange={setBaseLayer} />
+              {activeOverlay && (
+                <>
+                  <div className="h-px bg-border/60" />
+                  <div>
+                    <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70 pb-1.5">Active overlay</p>
+                    <p className="text-xs font-semibold text-foreground capitalize">{activeOverlay}</p>
+                  </div>
+                </>
+              )}
+            </div>
+          </aside>
+        )}
       </div>
-    </div>
+
+      {/* Bottom status bar — Illustrator-style */}
+      <div className="flex-shrink-0 h-7 bg-card border-t border-border px-3 flex items-center justify-between text-[11px] text-muted-foreground font-mono">
+        <div className="flex items-center gap-4">
+          <span className="flex items-center gap-1.5">
+            <span className={`w-1.5 h-1.5 rounded-full ${activeTool ? "bg-primary animate-pulse" : "bg-muted-foreground/40"}`} />
+            {activeTool
+              ? (activeTool === "measure-distance" ? "Measure distance · click, dbl-click to finish" :
+                 activeTool === "measure-area" ? "Measure area · click, dbl-click to finish" :
+                 activeTool === "polyline" ? "Line · click, dbl-click to finish" :
+                 activeTool === "polygon" ? "Polygon · click, dbl-click to finish" :
+                 activeTool === "rectangle" ? "Rectangle · click two corners" :
+                 activeTool === "circle" ? "Circle · click center then edge" :
+                 activeTool === "fetch-parcels" ? "Fetch parcels · click a location" :
+                 activeTool === "laanc-check" ? "LAANC · click to check authorization" :
+                 activeTool === "marker" ? "Pin · click to place" :
+                 activeTool === "bearing" ? "Bearing · click two points" :
+                 "Ready")
+              : "Ready — select a tool or right-click the canvas"}
+          </span>
+        </div>
+        <div className="flex items-center gap-4">
+          {measurement && <span className="text-accent font-semibold">{measurement}</span>}
+          <span>Base: <span className="text-foreground">{baseLayer}</span></span>
+          <button onClick={() => setShowInfo(v => !v)} className="hover:text-foreground transition-colors">
+            {showInfo ? "Hide panel" : "Show panel"}
+          </button>
+        </div>
+      </div>
+      </div>
   );
 }

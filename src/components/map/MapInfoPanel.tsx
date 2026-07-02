@@ -7,18 +7,19 @@ interface MapInfoPanelProps {
   project: Project;
   pinCount: number;
   measurement: string | null;
+  variant?: "floating" | "docked";
 }
 
-export default function MapInfoPanel({ project, pinCount, measurement }: MapInfoPanelProps) {
+export default function MapInfoPanel({ project, pinCount, measurement, variant = "floating" }: MapInfoPanelProps) {
   const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState(false);
 
   // Auto-collapse on mobile to avoid overlapping weather/sun widgets
   useEffect(() => {
-    if (isMobile) setCollapsed(true);
+    if (isMobile && variant === "floating") setCollapsed(true);
   }, [isMobile]);
 
-  if (collapsed) {
+  if (collapsed && variant === "floating") {
     return (
       <button
         onClick={() => setCollapsed(false)}
@@ -29,16 +30,22 @@ export default function MapInfoPanel({ project, pinCount, measurement }: MapInfo
     );
   }
 
+  const containerClass = variant === "docked"
+    ? "w-full space-y-2.5"
+    : "absolute top-3 right-3 z-[900] w-52 bg-card/95 backdrop-blur rounded-xl border border-border shadow-xl p-3 space-y-2.5";
+
   return (
-    <div className="absolute top-3 right-3 z-[900] w-52 bg-card/95 backdrop-blur rounded-xl border border-border shadow-xl p-3 space-y-2.5">
+    <div className={containerClass}>
       <div className="flex items-start justify-between gap-1">
         <h3 className="font-display font-700 text-foreground text-xs truncate flex-1">{project.name}</h3>
-        <button
-          onClick={() => setCollapsed(true)}
-          className="p-0.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
-        >
-          <ChevronRight className="w-3 h-3" />
-        </button>
+        {variant === "floating" && (
+          <button
+            onClick={() => setCollapsed(true)}
+            className="p-0.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
+          >
+            <ChevronRight className="w-3 h-3" />
+          </button>
+        )}
       </div>
       <div className="space-y-1.5 text-xs">
         {project.area_ha && (
