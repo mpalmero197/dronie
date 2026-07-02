@@ -26,6 +26,7 @@ interface MapToolbarProps {
   isFullscreen?: boolean;
   onToggleBookmarks?: () => void;
   bookmarksOpen?: boolean;
+  variant?: "floating" | "docked";
 }
 
 type ToolDef = { id: DrawTool; icon: typeof MapPin; label: string; shortcut?: string };
@@ -106,6 +107,7 @@ function ToolButton({ tool, isActive, onClick, activeClass = "bg-primary text-pr
 export default function MapToolbar({
   activeTool, onToolChange, onExportPng, onEmbedCode, activeOverlay, onOverlayChange,
   onUndo, onRedo, canUndo, canRedo, onFullscreen, isFullscreen, onToggleBookmarks, bookmarksOpen,
+  variant = "floating",
 }: MapToolbarProps) {
   const [drawExpanded, setDrawExpanded] = useState(true);
   const [moreExpanded, setMoreExpanded] = useState(false);
@@ -114,8 +116,12 @@ export default function MapToolbar({
   const hasActiveSpecial = SPECIAL_TOOLS.some(t => t.id === activeTool);
   const hasActiveMeasure = MEASURE_TOOLS.some(t => t.id === activeTool);
 
+  const rootClass = variant === "docked"
+    ? "relative z-[10] flex flex-col bg-card border-r border-border p-1.5 h-full w-12 overflow-y-auto scrollbar-none"
+    : "absolute top-3 left-3 z-[900] flex flex-col bg-card/95 backdrop-blur-md rounded-2xl border border-border shadow-[0_8px_24px_-8px_rgba(0,0,0,0.18)] ring-1 ring-black/[0.03] p-1.5 max-h-[calc(100vh-10rem)] sm:max-h-[calc(100vh-7rem)] overflow-y-auto scrollbar-none w-12";
+
   return (
-    <div className="absolute top-3 left-3 z-[900] flex flex-col bg-card/95 backdrop-blur-md rounded-2xl border border-border shadow-[0_8px_24px_-8px_rgba(0,0,0,0.18)] ring-1 ring-black/[0.03] p-1.5 max-h-[calc(100vh-10rem)] sm:max-h-[calc(100vh-7rem)] overflow-y-auto scrollbar-none w-12">
+    <div className={rootClass}>
       {/* History */}
       <div className="flex gap-0.5">
         <Tooltip>

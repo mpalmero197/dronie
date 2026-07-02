@@ -13,11 +13,49 @@ const LAYERS: { id: BaseLayer; label: string; Icon: typeof Satellite; tone: stri
 interface LayerSwitcherProps {
   activeLayer: BaseLayer;
   onChange: (layer: BaseLayer) => void;
+  variant?: "floating" | "docked";
 }
 
-export default function LayerSwitcher({ activeLayer, onChange }: LayerSwitcherProps) {
+export default function LayerSwitcher({ activeLayer, onChange, variant = "floating" }: LayerSwitcherProps) {
   const [open, setOpen] = useState(false);
   const active = LAYERS.find((l) => l.id === activeLayer);
+
+  if (variant === "docked") {
+    return (
+      <div>
+        <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70 px-1 pb-2 flex items-center gap-1.5">
+          <Layers className="w-3 h-3" /> Base map
+        </p>
+        <div className="grid grid-cols-2 gap-1.5">
+          {LAYERS.map((layer) => {
+            const Icon = layer.Icon;
+            const isActive = activeLayer === layer.id;
+            return (
+              <button
+                key={layer.id}
+                onClick={() => onChange(layer.id)}
+                className={`group relative flex flex-col items-start gap-1.5 p-2 rounded-lg text-[11px] font-semibold transition-all overflow-hidden border ${
+                  isActive
+                    ? "border-primary/50 bg-primary/5 text-foreground shadow-sm"
+                    : "border-border/60 text-muted-foreground hover:text-foreground hover:border-border hover:bg-secondary/50"
+                }`}
+              >
+                <div className={`w-7 h-7 rounded-md bg-gradient-to-br ${layer.tone} flex items-center justify-center`}>
+                  <Icon className="w-3.5 h-3.5" strokeWidth={2.2} />
+                </div>
+                <span className="leading-none">{layer.label}</span>
+                {isActive && (
+                  <span className="absolute top-1.5 right-1.5 w-3.5 h-3.5 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+                    <Check className="w-2 h-2" strokeWidth={3} />
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="absolute bottom-14 right-3 z-[900]">
