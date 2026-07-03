@@ -3,24 +3,24 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Map, Plus, UploadCloud, MoreVertical, Clock,
   CheckCircle2, AlertCircle, Loader2, FolderOpen,
-  Eye, Trash2, BarChart3, HardDrive,
-  ArrowLeft, LogOut, Shield, User as UserIcon, FileArchive, ImageIcon,
-  Play, Share2, Zap, Lock, CreditCard, Plane, Briefcase, Menu,
+  Eye, Trash2, BarChart3, HardDrive, FileArchive, ImageIcon,
+  Play, Share2, Lock, Plane, Plus as PlusIcon,
   Bookmark, Workflow, Radar, Boxes, Satellite, Brain, ShieldCheck, Sparkles, Camera,
   ChevronRight,
 } from "lucide-react";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import ProjectDetailDialog from "@/components/ProjectDetailDialog";
 import PilotVerificationBanner from "@/components/PilotVerificationBanner";
 import Part107Prompt from "@/components/Part107Prompt";
 import MyDronesPanel from "@/components/fleet/MyDronesPanel";
 import { Button } from "@/components/ui/button";
+import AppShell from "@/components/shell/AppShell";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
@@ -351,508 +351,340 @@ export default function Dashboard() {
 
   const latestComplete = projects.find((p) => p.status === "complete");
 
-  const navItems = [
-    { id: "projects" as SidebarView, icon: FolderOpen, label: "Projects" },
-    { id: "analytics" as SidebarView, icon: BarChart3, label: "Analytics" },
-    { id: "storage" as SidebarView, icon: HardDrive, label: "Storage" },
-  ];
 
+  const subview = (searchParams.get("view") as SidebarView) || sidebarView;
+  const viewTitle = subview === "projects" ? "Overview" : subview === "analytics" ? "Analytics" : "Storage";
+  const viewSubtitle = subview === "projects"
+    ? `${completeCount} complete · ${processingCount} in queue`
+    : subview === "analytics"
+    ? "Overview of your processing activity"
+    : "Your storage usage and quotas";
 
-  const closeMobileNav = () => setMobileNavOpen(false);
-
-  const sidebarContent = (
-    <div className="flex flex-col h-full bg-sidebar">
-      <div className="p-5 border-b border-sidebar-border">
-        <Link to="/" className="flex items-center gap-2.5 group" onClick={closeMobileNav}>
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shadow">
-            <Map className="w-4 h-4 text-primary-foreground" />
-          </div>
-          <span className="font-display font-700 text-sidebar-foreground">Dronie</span>
-        </Link>
-      </div>
-
-      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = sidebarView === item.id;
-          return (
-            <button key={item.id}
-              onClick={() => { setSidebarView(item.id); closeMobileNav(); }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                isActive
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                  : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
-              }`}
-            >
-              <Icon className="w-4 h-4 flex-shrink-0" />
-              {item.label}
-            </button>
-          );
-        })}
-
-        <button
-          onClick={() => { closeMobileNav(); navigate(latestComplete ? `/viewer/${latestComplete.id}` : '/map'); }}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
-        >
-          <Eye className="w-4 h-4 flex-shrink-0" />
-          Map Viewer
-        </button>
-
-        <button
-          onClick={() => { closeMobileNav(); navigate('/fleet'); }}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
-        >
-          <Plane className="w-4 h-4 flex-shrink-0" />
-          Fleet
-        </button>
-
-        <button
-          onClick={() => { closeMobileNav(); navigate('/jobs'); }}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
-        >
-          <Briefcase className="w-4 h-4 flex-shrink-0" />
-          Active Jobs
-        </button>
-
-        <button
-          onClick={() => { closeMobileNav(); navigate('/subscription'); }}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
-        >
-          <CreditCard className="w-4 h-4 flex-shrink-0" />
-          Subscription
-        </button>
-
-        {isAdmin && (
-          <button
-            onClick={() => { closeMobileNav(); navigate('/admin'); }}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
-          >
-            <Shield className="w-4 h-4 flex-shrink-0" />
-            User Management
-          </button>
-        )}
-      </nav>
-
-      <div className="p-4 border-t border-sidebar-border space-y-3">
-        <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${isSubscribed ? "bg-accent/15 border border-accent/20" : "bg-secondary border border-border"}`}>
-          <Zap className={`w-3.5 h-3.5 flex-shrink-0 ${isSubscribed ? "text-accent" : "text-muted-foreground"}`} />
-          <span className={`text-xs font-semibold ${isSubscribed ? "text-accent" : "text-muted-foreground"}`}>
-            {tierLimits.tierLabel}
-          </span>
-          {tierLimits.priorityProcessing && (
-            <span className="ml-auto text-[9px] px-1.5 py-0.5 rounded-full bg-accent/20 text-accent font-bold uppercase">Priority</span>
-          )}
-        </div>
-        {isSubscribed && (
-          <button
-            onClick={async () => {
-              closeMobileNav();
-              try {
-                const { data, error } = await supabase.functions.invoke('customer-portal');
-                if (error) throw error;
-                if (data?.url) window.open(data.url, '_blank');
-              } catch {
-                toast({ title: 'Unable to open subscription portal', variant: 'destructive' });
-              }
-            }}
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
-          >
-            <CreditCard className="w-3.5 h-3.5" />
-            Manage Subscription
-          </button>
-        )}
-        {isAdmin && (
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-accent/15 border border-accent/20">
-            <Shield className="w-3.5 h-3.5 text-accent flex-shrink-0" />
-            <span className="text-xs font-semibold text-accent">Admin</span>
-          </div>
-        )}
-        <Link
-          to="/portfolio"
-          onClick={closeMobileNav}
-          title="Edit your profile"
-          className="flex items-center gap-2.5 px-2 py-1.5 -mx-1 rounded-lg hover:bg-sidebar-accent/60 transition-colors group"
-        >
-          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0 overflow-hidden ring-2 ring-transparent group-hover:ring-sidebar-primary/50 transition">
-            {user?.user_metadata?.avatar_url ? (
-              <img src={user.user_metadata.avatar_url} alt="" className="w-full h-full object-cover" />
-            ) : (
-              <UserIcon className="w-4 h-4 text-primary-foreground" />
-            )}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-sidebar-foreground truncate group-hover:text-sidebar-primary transition-colors">
-              {user?.user_metadata?.full_name || 'Pilot'}
-            </p>
-            <p className="text-xs text-sidebar-foreground/50 truncate">{user?.email}</p>
-          </div>
-          <UserIcon className="w-3.5 h-3.5 text-sidebar-foreground/30 group-hover:text-sidebar-primary flex-shrink-0 transition-colors" />
-        </Link>
-        <button
-          onClick={() => { closeMobileNav(); handleSignOut(); }}
-          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
-        >
-          <LogOut className="w-3.5 h-3.5" />
-          Sign out
-        </button>
-      </div>
-    </div>
+  const headerActions = (
+    <>
+      <Tabs
+        value={subview}
+        onValueChange={(v) => setSidebarView(v as SidebarView)}
+        className="hidden md:block"
+      >
+        <TabsList className="h-8">
+          <TabsTrigger value="projects" className="text-xs">Projects</TabsTrigger>
+          <TabsTrigger value="analytics" className="text-xs">Analytics</TabsTrigger>
+          <TabsTrigger value="storage" className="text-xs">Storage</TabsTrigger>
+        </TabsList>
+      </Tabs>
+      <Button
+        onClick={handleNewProject}
+        size="sm"
+        className="bg-primary text-primary-foreground hover:bg-primary/90 gap-2 shadow-sm"
+      >
+        <Plus className="w-3.5 h-3.5" />
+        <span className="hidden sm:inline">New Project</span>
+      </Button>
+    </>
   );
 
   return (
-    <div className="min-h-screen bg-background flex">
-      {/* Desktop sidebar */}
-      <aside className="hidden lg:flex flex-col w-64 border-r border-sidebar-border min-h-screen sticky top-0">
-        {sidebarContent}
-      </aside>
+    <AppShell title={viewTitle} subtitle={viewSubtitle} actions={headerActions}>
+      {/* Mobile subview switcher */}
+      <Tabs
+        value={subview}
+        onValueChange={(v) => setSidebarView(v as SidebarView)}
+        className="md:hidden"
+      >
+        <TabsList className="w-full grid grid-cols-3">
+          <TabsTrigger value="projects">Projects</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="storage">Storage</TabsTrigger>
+        </TabsList>
+      </Tabs>
 
-      {/* Mobile nav drawer */}
-      <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
-        <SheetContent side="left" className="p-0 w-72 bg-sidebar border-sidebar-border">
-          {sidebarContent}
-        </SheetContent>
-      </Sheet>
+      <Part107Prompt />
+      <PilotVerificationBanner hideWhenUnverified />
 
-      {/* Main */}
-      <main className="flex-1 flex flex-col min-h-screen">
-        {/* Top bar */}
-        <header className="sticky top-0 z-10 bg-card/95 backdrop-blur-md border-b border-border px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-2 min-w-0">
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-            <button
-              onClick={() => setMobileNavOpen(true)}
-              className="lg:hidden p-2 -ml-1 rounded-lg hover:bg-secondary transition-colors flex-shrink-0"
-              aria-label="Open menu"
-            >
-              <Menu className="w-5 h-5 text-muted-foreground" />
-            </button>
-            {/* Mobile tier badge */}
-            <div className={`hidden sm:flex lg:hidden items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold flex-shrink-0 ${isSubscribed ? "bg-accent/15 text-accent border border-accent/20" : "bg-secondary text-muted-foreground border border-border"}`}>
-              <Zap className="w-3 h-3" />
-              {tierLimits.tierLabel}
+      {subview === "analytics" && <AnalyticsPanel projects={projects} />}
+      {subview === "storage" && <StoragePanel projects={projects} tierLimits={tierLimits} />}
+
+      {subview === "projects" && (
+        <>
+          {/* Welcome hero */}
+          <section className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-primary via-primary to-primary/85 text-primary-foreground p-6 sm:p-7">
+            <div className="absolute inset-0 opacity-[0.08] pointer-events-none" aria-hidden>
+              <div className="absolute -right-16 -top-16 w-64 h-64 rounded-full bg-primary-foreground blur-3xl" />
+              <div className="absolute -left-10 bottom-0 w-48 h-48 rounded-full bg-accent blur-3xl" />
             </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 min-w-0">
-                <h1 className="font-display font-700 text-foreground text-base sm:text-lg truncate">
-                  {sidebarView === "projects" ? "Projects" : sidebarView === "analytics" ? "Analytics" : "Storage"}
-                </h1>
-                {isAdmin && (
-                  <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-accent text-accent-foreground flex-shrink-0">
-                    <Shield className="w-2.5 h-2.5" />
-                    Admin
-                  </span>
+            <div className="relative flex flex-col lg:flex-row lg:items-center gap-5 lg:gap-8">
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] uppercase tracking-[0.2em] font-semibold text-primary-foreground/70">
+                  Welcome back
+                </p>
+                <h2 className="font-display font-700 text-2xl sm:text-3xl leading-tight mt-1.5">
+                  {user?.user_metadata?.full_name?.split(" ")[0] || "Pilot"}, ready to fly
+                </h2>
+                <p className="text-sm text-primary-foreground/80 mt-2 max-w-xl">
+                  Plan a mission, review live drones, or process new imagery — all from one cockpit.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => navigate(latestComplete ? `/plan?project=${latestComplete.id}` : "/plan")}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary-foreground text-primary font-display font-700 text-sm shadow-sm hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all"
+                >
+                  <Plane className="w-4 h-4" /> Plan a flight
+                </button>
+                <button
+                  onClick={() => navigate("/map")}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary-foreground/15 hover:bg-primary-foreground/25 backdrop-blur text-primary-foreground font-display font-700 text-sm transition-colors"
+                >
+                  <Map className="w-4 h-4" /> Open map
+                </button>
+                <button
+                  onClick={handleNewProject}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary-foreground/15 hover:bg-primary-foreground/25 backdrop-blur text-primary-foreground font-display font-700 text-sm transition-colors"
+                >
+                  <Plus className="w-4 h-4" /> New project
+                </button>
+              </div>
+            </div>
+          </section>
+
+          {/* Metric row */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            {[
+              { label: "Total Projects", value: projects.length.toString(), icon: FolderOpen, color: "text-primary", bg: "bg-primary/10" },
+              { label: "In Progress", value: processingCount.toString(), icon: Loader2, color: "text-accent", bg: "bg-accent/10", spin: processingCount > 0 },
+              { label: "Images Uploaded", value: totalImages.toLocaleString() || "0", icon: ImageIcon, color: "text-highlight", bg: "bg-highlight/10" },
+              { label: "Total Area", value: totalArea > 0 ? `${totalArea.toFixed(1)} ha` : "—", icon: Map, color: "text-primary", bg: "bg-primary/10" },
+            ].map((stat) => {
+              const Icon = stat.icon;
+              return (
+                <div key={stat.label} className="group bg-card rounded-xl p-4 border border-border hover:border-primary/30 hover:shadow-sm transition-all">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className={`w-9 h-9 rounded-lg ${stat.bg} flex items-center justify-center`}>
+                      <Icon className={`w-4 h-4 ${stat.color} ${stat.spin ? "animate-spin" : ""}`} />
+                    </div>
+                  </div>
+                  <p className="text-2xl font-display font-700 text-foreground leading-none tracking-tight">{stat.value}</p>
+                  <p className="text-[11px] text-muted-foreground mt-1.5 uppercase tracking-wide">{stat.label}</p>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Workspace grid: projects (2/3) + activity/quick actions (1/3) */}
+          <div className="grid lg:grid-cols-3 gap-6">
+            <section className="lg:col-span-2 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground/80 font-semibold">Workspace</p>
+                  <h2 className="font-display font-700 text-foreground text-lg">
+                    {isAdmin ? "All projects" : "Recent projects"}
+                  </h2>
+                </div>
+                {projects.length > 0 && (
+                  <span className="text-xs text-muted-foreground">{projects.length} total</span>
                 )}
               </div>
-              {sidebarView === "projects" && (
-                <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                  {completeCount} complete · {processingCount} in queue
-                </p>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {sidebarView === "projects" && (
-              <>
-                {/* Compact icon-only button on mobile */}
-                <Button
-                  onClick={handleNewProject}
-                  size="icon"
-                  className="sm:hidden bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm active:scale-[0.97]"
-                  aria-label="New project"
-                >
-                  <Plus className="w-5 h-5" />
-                </Button>
-                <Button
-                  onClick={handleNewProject}
-                  className="hidden sm:inline-flex bg-primary text-primary-foreground hover:bg-primary/90 gap-2 shadow-sm hover:shadow-md transition-all active:scale-[0.97]"
-                >
-                  <Plus className="w-4 h-4" />
-                  New Project
-                  {projectsRemaining !== Infinity && (
-                    <span className="ml-1 text-[10px] opacity-70">({projectsRemaining} left)</span>
-                  )}
-                </Button>
-              </>
-            )}
-          </div>
-        </header>
 
-        <div className="flex-1 p-4 sm:p-6 space-y-6 min-w-0">
-          <Part107Prompt />
-          <PilotVerificationBanner hideWhenUnverified />
-          {sidebarView === "analytics" && <AnalyticsPanel projects={projects} />}
-          {sidebarView === "storage" && <StoragePanel projects={projects} tierLimits={tierLimits} />}
-
-          {sidebarView === "projects" && (
-            <>
-              {/* Welcome hero — sets the visual tone */}
-              <section className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-primary via-primary to-primary/85 text-primary-foreground p-5 sm:p-6">
-                <div className="absolute inset-0 opacity-[0.08] pointer-events-none" aria-hidden>
-                  <div className="absolute -right-16 -top-16 w-64 h-64 rounded-full bg-primary-foreground blur-3xl" />
-                  <div className="absolute -left-10 bottom-0 w-48 h-48 rounded-full bg-accent blur-3xl" />
+              {loadingProjects ? (
+                <div className="flex items-center justify-center py-16 bg-card rounded-2xl border border-border">
+                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
                 </div>
-                <div className="relative flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[11px] uppercase tracking-[0.18em] font-semibold text-primary-foreground/70">
-                      Welcome back
-                    </p>
-                    <h2 className="font-display font-700 text-xl sm:text-2xl leading-tight mt-1 truncate">
-                      {user?.user_metadata?.full_name?.split(" ")[0] || "Pilot"} · ready to fly
-                    </h2>
-                    <p className="text-xs sm:text-sm text-primary-foreground/80 mt-1.5 max-w-xl">
-                      Plan a mission, monitor live drones, or process new imagery — all from one cockpit.
-                    </p>
+              ) : projects.length === 0 ? (
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+                  onDragLeave={() => setDragging(false)}
+                  onDrop={(e) => { e.preventDefault(); setDragging(false); handleNewProject(); }}
+                  onClick={handleNewProject}
+                  className={`text-center py-16 rounded-2xl border-2 border-dashed cursor-pointer transition-all ${
+                    dragging ? "border-accent bg-accent/5" : "border-border bg-card hover:border-primary/40 hover:bg-secondary/40"
+                  }`}
+                >
+                  <div className={`w-14 h-14 mx-auto mb-4 rounded-2xl flex items-center justify-center ${dragging ? "bg-accent/15 text-accent" : "bg-primary/10 text-primary"}`}>
+                    <UploadCloud className="w-7 h-7" />
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <button
-                      onClick={() => navigate(latestComplete ? `/plan?project=${latestComplete.id}` : '/plan')}
-                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary-foreground text-primary font-display font-700 text-sm shadow-sm hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all"
-                    >
-                      <Plane className="w-4 h-4" /> Plan a flight
-                    </button>
-                    <button
-                      onClick={handleNewProject}
-                      className="hidden sm:inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary-foreground/15 hover:bg-primary-foreground/25 backdrop-blur text-primary-foreground font-display font-700 text-sm transition-colors"
-                    >
-                      <Plus className="w-4 h-4" /> New project
-                    </button>
-                  </div>
+                  <p className="font-display font-700 text-foreground">
+                    {dragging ? "Drop images to create a project" : "Start your first project"}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1 mb-4">
+                    Drop JPEG, TIFF, or DNG imagery to process — up to {tierLimits.imagesPerProject === Infinity ? "∞" : tierLimits.imagesPerProject.toLocaleString()} images per project
+                  </p>
+                  <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 gap-2">
+                    <Plus className="w-3.5 h-3.5" /> New Project
+                  </Button>
                 </div>
-              </section>
-
-              {/* Quick stats */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                {[
-                  { label: "Total Projects", value: projects.length.toString(), icon: FolderOpen, color: "text-primary", bg: "bg-primary/10" },
-                  { label: "In Progress", value: processingCount.toString(), icon: Loader2, color: "text-accent", bg: "bg-accent/10", spin: processingCount > 0 },
-                  { label: "Images Uploaded", value: totalImages.toLocaleString() || "0", icon: ImageIcon, color: "text-highlight", bg: "bg-highlight/10" },
-                  { label: "Total Area", value: totalArea > 0 ? `${totalArea.toFixed(1)} ha` : "—", icon: Map, color: "text-primary", bg: "bg-primary/10" },
-                ].map((stat) => {
-                  const Icon = stat.icon;
-                  return (
-                    <div key={stat.label} className="group bg-card rounded-xl p-4 border border-border hover:border-primary/30 hover:shadow-sm transition-all">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className={`w-9 h-9 rounded-lg ${stat.bg} flex items-center justify-center`}>
-                          <Icon className={`w-4 h-4 ${stat.color} ${stat.spin ? "animate-spin" : ""}`} />
+              ) : (
+                <div className="bg-card border border-border rounded-2xl divide-y divide-border overflow-hidden">
+                  {projects.slice(0, 8).map((project) => (
+                    <div
+                      key={project.id}
+                      className="p-4 hover:bg-secondary/40 transition-colors group cursor-pointer"
+                      onClick={() => navigate(`/project/${project.id}`)}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-11 h-11 rounded-xl bg-secondary flex items-center justify-center flex-shrink-0 group-hover:bg-primary/10 transition-colors">
+                          <Map className="w-5 h-5 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <h3 className="font-semibold text-foreground text-sm truncate">{project.name}</h3>
+                            <StatusBadge status={project.status as Status} />
+                          </div>
+                          <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+                            <span>{new Date(project.created_at).toLocaleDateString()}</span>
+                            {project.image_count > 0 && (
+                              <span className="flex items-center gap-1">
+                                <ImageIcon className="w-3 h-3" />{project.image_count.toLocaleString()} images
+                              </span>
+                            )}
+                            {project.area_ha && <span>{project.area_ha} ha</span>}
+                            {project.outputs && project.outputs.length > 0 && (
+                              <span className="text-primary font-medium">{project.outputs.length} outputs</span>
+                            )}
+                          </div>
+                          {project.status === "processing" && (
+                            <div className="mt-2 flex items-center gap-2">
+                              <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden">
+                                <div className="h-full rounded-full bg-accent transition-all duration-700" style={{ width: `${project.progress ?? 0}%` }} />
+                              </div>
+                              <span className="text-xs text-muted-foreground">{project.progress}%</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                          {project.status === "complete" && (
+                            <Button variant="ghost" size="sm" className="hidden sm:flex gap-1.5 text-xs" onClick={() => navigate(`/viewer/${project.id}`)}>
+                              <Eye className="w-3.5 h-3.5" /> View
+                            </Button>
+                          )}
+                          {project.status === "queued" && (
+                            <Button variant="ghost" size="sm" className="hidden sm:flex gap-1.5 text-xs" onClick={() => setDetailProject(project)}>
+                              <Play className="w-3.5 h-3.5" /> Process
+                            </Button>
+                          )}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="w-8 h-8 p-0">
+                                <MoreVertical className="w-4 h-4 text-muted-foreground" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-44">
+                              <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => setDetailProject(project)}>
+                                <FileArchive className="w-3.5 h-3.5" /> Manage Files
+                              </DropdownMenuItem>
+                              {project.status === "complete" && (
+                                <>
+                                  <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => navigate(`/viewer/${project.id}`)}>
+                                    <Eye className="w-3.5 h-3.5" /> View Map
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => handleShareProject(project)}>
+                                    <Share2 className="w-3.5 h-3.5" /> Copy Share Link {!tierLimits.shareLinks && <Lock className="w-3 h-3 text-muted-foreground ml-auto" />}
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="gap-2 cursor-pointer text-destructive focus:text-destructive"
+                                onClick={() => deleteProject(project.id)}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" /> Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </div>
-                      <p className="text-2xl font-display font-700 text-foreground leading-none tracking-tight">{stat.value}</p>
-                      <p className="text-[11px] text-muted-foreground mt-1.5 uppercase tracking-wide">{stat.label}</p>
                     </div>
-                  );
-                })}
-              </div>
-
-              {/* Quick actions row */}
-              <section className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h2 className="font-display font-700 text-foreground text-sm uppercase tracking-wide text-muted-foreground/80">Quick actions</h2>
+                  ))}
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              )}
+            </section>
+
+            <aside className="space-y-4">
+              <div className="bg-card border border-border rounded-2xl p-5">
+                <p className="text-[11px] uppercase tracking-wider text-muted-foreground/80 font-semibold">Quick actions</p>
+                <div className="mt-3 space-y-2">
                   {[
-                    { to: "/missions", title: "Saved Missions", desc: "Browse, re-export, or edit flight plans.", Icon: Bookmark, tone: "bg-primary/10 text-primary" },
-                    { to: "/workflow", title: "Workflow Pipeline", desc: "Plan → capture → process → analyze.", Icon: Workflow, tone: "bg-accent/15 text-accent-foreground" },
+                    { to: "/missions", title: "Saved Missions", desc: "Re-export flight plans", Icon: Bookmark, tone: "bg-primary/10 text-primary" },
+                    { to: "/workflow", title: "Workflow Pipeline", desc: "Plan → capture → process", Icon: Workflow, tone: "bg-accent/15 text-accent-foreground" },
+                    { to: "/fleet", title: "Fleet & Telemetry", desc: "Live drone status", Icon: Plane, tone: "bg-highlight/15 text-highlight" },
                   ].map(({ to, title, desc, Icon, tone }) => (
                     <button
                       key={to}
                       onClick={() => navigate(to)}
-                      className="group w-full bg-card border border-border rounded-xl p-4 flex items-center gap-3 hover:border-primary/40 hover:shadow-sm transition-all text-left"
+                      className="group w-full flex items-center gap-3 rounded-xl p-2.5 hover:bg-secondary/60 transition-colors text-left"
                     >
-                      <div className={`w-10 h-10 rounded-xl ${tone} flex items-center justify-center flex-shrink-0`}>
-                        <Icon className="w-5 h-5" />
+                      <div className={`w-9 h-9 rounded-lg ${tone} flex items-center justify-center flex-shrink-0`}>
+                        <Icon className="w-4 h-4" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-display font-700 text-sm text-foreground">{title}</h3>
-                        <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{desc}</p>
+                        <p className="font-semibold text-sm text-foreground truncate">{title}</p>
+                        <p className="text-[11px] text-muted-foreground truncate">{desc}</p>
                       </div>
-                      <ChevronRight className="w-4 h-4 text-muted-foreground/50 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                      <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
                     </button>
                   ))}
                 </div>
-              </section>
+              </div>
 
-              {/* Live drone telemetry — read-only, RLS-scoped */}
-              <MyDronesPanel />
-
-              {/* Advanced modules grid */}
-              <section className="space-y-3">
-                <h2 className="font-display font-700 text-foreground text-sm uppercase tracking-wide text-muted-foreground/80">Modules</h2>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
-                  {[
-                    { to: "/swarm",      title: "Swarm Ops",       desc: "Multi-drone autonomy",      Icon: Boxes,       tone: "bg-primary/10 text-primary" },
-                    { to: "/reality",    title: "Reality Capture", desc: "Live 3D mesh + AR",         Icon: Radar,       tone: "bg-highlight/15 text-highlight" },
-                    { to: "/rtk",        title: "RTK / GCP",       desc: "Smart alignment",            Icon: Satellite,   tone: "bg-accent/15 text-accent-foreground" },
-                    { to: "/insights",   title: "AI Insights",     desc: "Auto metrics + PDF",         Icon: Brain,       tone: "bg-primary/10 text-primary" },
-                    { to: "/compliance", title: "Compliance",      desc: "Part 107 + LAANC",           Icon: ShieldCheck, tone: "bg-secondary text-foreground" },
-                    { to: "/splats",     title: "Gaussian Splats", desc: "Photoreal 3D scenes",        Icon: Sparkles,    tone: "bg-primary/10 text-primary" },
-                    { to: "/portfolio",  title: "Portfolio",       desc: "Public photo + video site",  Icon: Camera,      tone: "bg-accent/15 text-accent-foreground" },
-                  ].map((m) => {
-                    const Icon = m.Icon;
-                    return (
-                      <button
-                        key={m.to}
-                        onClick={() => navigate(m.to)}
-                        className="group bg-card border border-border rounded-xl p-3.5 text-left hover:border-primary/40 hover:shadow-sm hover:-translate-y-0.5 transition-all"
-                      >
-                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center mb-2.5 ${m.tone}`}>
-                          <Icon className="w-4 h-4" strokeWidth={2} />
-                        </div>
-                        <p className="font-display font-700 text-sm leading-tight text-foreground">{m.title}</p>
-                        <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">{m.desc}</p>
-                      </button>
-                    );
-                  })}
+              <div className="bg-card border border-border rounded-2xl p-5">
+                <p className="text-[11px] uppercase tracking-wider text-muted-foreground/80 font-semibold">Plan usage</p>
+                <div className="mt-3 flex items-baseline gap-2">
+                  <span className="text-2xl font-display font-700 text-foreground">
+                    {monthlyProjectCount}
+                  </span>
+                  <span className="text-sm text-muted-foreground">
+                    / {tierLimits.projectsPerMonth === Infinity ? "∞" : tierLimits.projectsPerMonth} projects
+                  </span>
                 </div>
-              </section>
-
-              {/* Upload drop zone */}
-              <div
-                onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-                onDragLeave={() => setDragging(false)}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  setDragging(false);
-                  handleNewProject();
-                }}
-                className={`relative border-2 border-dashed rounded-2xl p-7 text-center transition-all cursor-pointer ${
-                  dragging ? "border-accent bg-accent/5 scale-[1.005]" : "border-border hover:border-primary/40 hover:bg-secondary/40"
-                }`}
-                onClick={handleNewProject}
-              >
-                <div className={`w-12 h-12 mx-auto mb-3 rounded-2xl flex items-center justify-center transition-colors ${dragging ? "bg-accent/15 text-accent" : "bg-primary/10 text-primary"}`}>
-                  <UploadCloud className="w-6 h-6" />
-                </div>
-                <p className="font-display font-700 text-foreground text-sm">
-                  {dragging ? "Drop images to create a project" : "Drop drone images to start a new project"}
-                </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  JPEG, TIFF, DNG · Up to {tierLimits.imagesPerProject === Infinity ? "∞" : tierLimits.imagesPerProject.toLocaleString()} images
+                  {tierLimits.tierLabel} plan · resets monthly
                 </p>
+                <Button asChild variant="outline" size="sm" className="w-full mt-4 gap-2">
+                  <Link to="/subscription">Manage plan</Link>
+                </Button>
               </div>
+            </aside>
+          </div>
 
-              {/* Project list */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h2 className="font-display font-700 text-foreground text-sm uppercase tracking-wide text-muted-foreground/80">
-                    {isAdmin ? 'All Projects' : 'Your Projects'}
-                  </h2>
-                  {projects.length > 0 && (
-                    <span className="text-[11px] text-muted-foreground">{projects.length} total</span>
-                  )}
-                </div>
+          {/* Live drone telemetry */}
+          <MyDronesPanel />
 
-                {loadingProjects ? (
-                  <div className="flex items-center justify-center py-16">
-                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                  </div>
-                ) : projects.length === 0 ? (
-                  <div className="text-center py-16 bg-card rounded-2xl border border-dashed border-border">
-                    <Map className="w-10 h-10 mx-auto mb-3 text-muted-foreground/40" />
-                    <p className="font-semibold text-foreground text-sm">No projects yet</p>
-                    <p className="text-xs text-muted-foreground mt-1 mb-4">Create your first project to start processing drone imagery</p>
-                    <Button size="sm" onClick={handleNewProject} className="bg-primary text-primary-foreground hover:bg-primary/90 gap-2">
-                      <Plus className="w-3.5 h-3.5" /> New Project
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {projects.map((project) => (
-                      <div
-                        key={project.id}
-                        className="bg-card border border-border rounded-xl p-4 hover:border-primary/20 hover:shadow-md transition-all duration-200 group cursor-pointer"
-                        onClick={() => navigate(`/project/${project.id}`)}
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center flex-shrink-0 group-hover:bg-primary/10 transition-colors">
-                            <Map className="w-5 h-5 text-primary" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1 flex-wrap">
-                              <h3 className="font-semibold text-foreground text-sm truncate">{project.name}</h3>
-                              <StatusBadge status={project.status as Status} />
-                            </div>
-                            <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                              <span>{new Date(project.created_at).toLocaleDateString()}</span>
-                              {project.image_count > 0 && (
-                                <span className="flex items-center gap-1">
-                                  <ImageIcon className="w-3 h-3" />{project.image_count.toLocaleString()} images
-                                </span>
-                              )}
-                              {project.area_ha && <span>{project.area_ha} ha</span>}
-                              {project.outputs && project.outputs.length > 0 && (
-                                <span className="text-primary font-medium">{project.outputs.length} outputs ready</span>
-                              )}
-                            </div>
-                            {(project.status === "processing") && (
-                              <div className="mt-2 flex items-center gap-2">
-                                <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden">
-                                  <div
-                                    className="h-full rounded-full transition-all duration-700 bg-accent"
-                                    style={{ width: `${project.progress ?? 0}%` }}
-                                  />
-                                </div>
-                                <span className="text-xs text-muted-foreground">{project.progress}%</span>
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                            {project.status === "complete" && (
-                              <Button
-                                variant="ghost" size="sm"
-                                className="hidden sm:flex gap-1.5 text-xs hover:text-primary transition-colors active:scale-[0.97]"
-                                onClick={() => navigate(`/viewer/${project.id}`)}
-                              >
-                                <Eye className="w-3.5 h-3.5" /> View Map
-                              </Button>
-                            )}
-                            {project.status === "queued" && (
-                              <Button
-                                variant="ghost" size="sm"
-                                className="hidden sm:flex gap-1.5 text-xs hover:text-accent transition-colors active:scale-[0.97]"
-                                onClick={() => setDetailProject(project)}
-                              >
-                                <Play className="w-3.5 h-3.5" /> Process
-                              </Button>
-                            )}
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm" className="w-8 h-8 p-0 hover:bg-muted transition-colors">
-                                  <MoreVertical className="w-4 h-4 text-muted-foreground" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="w-44">
-                                <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => setDetailProject(project)}>
-                                  <FileArchive className="w-3.5 h-3.5" /> Manage Files
-                                </DropdownMenuItem>
-                                {project.status === "complete" && (
-                                  <>
-                                    <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => navigate(`/viewer/${project.id}`)}>
-                                      <Eye className="w-3.5 h-3.5" /> View Map
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => handleShareProject(project)}>
-                                      <Share2 className="w-3.5 h-3.5" /> Copy Share Link {!tierLimits.shareLinks && <Lock className="w-3 h-3 text-muted-foreground ml-auto" />}
-                                    </DropdownMenuItem>
-                                  </>
-                                )}
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  className="gap-2 cursor-pointer text-destructive focus:text-destructive"
-                                  onClick={() => deleteProject(project.id)}
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" /> Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-        </div>
-      </main>
+          {/* Modules bento */}
+          <section className="space-y-3">
+            <div>
+              <p className="text-[11px] uppercase tracking-wider text-muted-foreground/80 font-semibold">Advanced</p>
+              <h2 className="font-display font-700 text-foreground text-lg">Modules</h2>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
+              {[
+                { to: "/swarm",      title: "Swarm Ops",       desc: "Multi-drone autonomy",      Icon: Boxes,       tone: "bg-primary/10 text-primary" },
+                { to: "/reality",    title: "Reality Capture", desc: "Live 3D mesh + AR",         Icon: Radar,       tone: "bg-highlight/15 text-highlight" },
+                { to: "/rtk",        title: "RTK / GCP",       desc: "Smart alignment",            Icon: Satellite,   tone: "bg-accent/15 text-accent-foreground" },
+                { to: "/insights",   title: "AI Insights",     desc: "Auto metrics + PDF",         Icon: Brain,       tone: "bg-primary/10 text-primary" },
+                { to: "/compliance", title: "Compliance",      desc: "Part 107 + LAANC",           Icon: ShieldCheck, tone: "bg-secondary text-foreground" },
+                { to: "/splats",     title: "Gaussian Splats", desc: "Photoreal 3D scenes",        Icon: Sparkles,    tone: "bg-primary/10 text-primary" },
+                { to: "/portfolio",  title: "Portfolio",       desc: "Public photo + video site",  Icon: Camera,      tone: "bg-accent/15 text-accent-foreground" },
+                { to: "/portfolio/edit", title: "Video Editor",desc: "Cinematic reels + captions", Icon: Sparkles,    tone: "bg-highlight/15 text-highlight" },
+              ].map((m) => {
+                const Icon = m.Icon;
+                return (
+                  <button
+                    key={m.to}
+                    onClick={() => navigate(m.to)}
+                    className="group bg-card border border-border rounded-xl p-3.5 text-left hover:border-primary/40 hover:shadow-sm hover:-translate-y-0.5 transition-all"
+                  >
+                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center mb-2.5 ${m.tone}`}>
+                      <Icon className="w-4 h-4" strokeWidth={2} />
+                    </div>
+                    <p className="font-display font-700 text-sm leading-tight text-foreground">{m.title}</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">{m.desc}</p>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        </>
+      )}
 
       {/* Project Detail Dialog */}
       <ProjectDetailDialog
@@ -879,7 +711,7 @@ export default function Dashboard() {
                 placeholder="e.g. Farm Survey Block 4"
                 value={newProjectName}
                 onChange={(e) => setNewProjectName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && createProject()}
+                onKeyDown={(e) => e.key === "Enter" && createProject()}
                 autoFocus
               />
             </div>
@@ -900,13 +732,12 @@ export default function Dashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Upgrade Prompt */}
       <UpgradePrompt
         open={upgradeOpen}
         onClose={() => setUpgradeOpen(false)}
         feature={upgradeFeature.feature}
         description={upgradeFeature.description}
       />
-    </div>
+    </AppShell>
   );
 }
