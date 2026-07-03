@@ -186,20 +186,18 @@ export default function PilotDashboard() {
 
   if (loading || authLoading) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navbar />
-        <div className="flex items-center justify-center pt-40 text-muted-foreground">
+      <AppShell title="Pilot Dashboard">
+        <div className="flex items-center justify-center py-24 text-muted-foreground">
           <Loader2 className="w-5 h-5 animate-spin mr-2" /> Loading dashboard…
         </div>
-      </div>
+      </AppShell>
     );
   }
 
   if (!profile) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navbar />
-        <div className="container mx-auto px-4 sm:px-6 pt-24 pb-16 max-w-2xl text-center">
+      <AppShell title="Pilot Dashboard">
+        <div className="max-w-2xl mx-auto text-center py-16">
           <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
             <Plane className="w-7 h-7 text-primary" />
           </div>
@@ -213,74 +211,93 @@ export default function PilotDashboard() {
             </Link>
           </Button>
         </div>
-      </div>
+      </AppShell>
     );
   }
 
+  const headerActions = (
+    <>
+      <Button asChild variant="outline" size="sm" className="gap-2 hidden sm:inline-flex">
+        <Link to="/pilots/join">
+          <UserCog className="w-3.5 h-3.5" /> Edit
+        </Link>
+      </Button>
+      <Button asChild size="sm" className="gap-2">
+        <Link to="/marketplace">
+          <Briefcase className="w-3.5 h-3.5" /> Marketplace
+        </Link>
+      </Button>
+    </>
+  );
+
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      <div className="container mx-auto px-4 sm:px-6 pt-24 pb-16 max-w-6xl">
-        {/* Header */}
-        <div className="flex flex-wrap items-start justify-between gap-4 mb-8">
-          <div className="flex items-start gap-4 min-w-0">
-            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <Plane className="w-6 h-6 text-primary" />
-            </div>
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-2xl sm:text-3xl font-display font-700 text-foreground truncate">
-                  {profile.display_name}
-                </h1>
-                <VerificationPill status={verificationStatus} />
-              </div>
-              <p className="text-muted-foreground text-sm mt-1 inline-flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5" />
-                {profile.service_area_label || "No service area set"}
-                <span className="text-muted-foreground/50">·</span>
-                {profile.service_radius_km} km radius
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button asChild variant="outline" size="sm" className="gap-2">
-              <Link to="/pilots/join">
-                <UserCog className="w-3.5 h-3.5" /> Edit profile
-              </Link>
-            </Button>
-            <Button asChild size="sm" className="gap-2">
-              <Link to="/marketplace">
-                <Briefcase className="w-3.5 h-3.5" /> Browse marketplace
-              </Link>
-            </Button>
-          </div>
+    <AppShell
+      title={profile.display_name}
+      subtitle={`${profile.service_area_label || "No service area set"} · ${profile.service_radius_km} km radius`}
+      actions={headerActions}
+    >
+      {/* Hero strip */}
+      <section className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-primary via-primary to-primary/85 text-primary-foreground p-5 sm:p-6">
+        <div className="absolute inset-0 opacity-[0.08] pointer-events-none" aria-hidden>
+          <div className="absolute -right-16 -top-16 w-64 h-64 rounded-full bg-primary-foreground blur-3xl" />
+          <div className="absolute -left-10 bottom-0 w-48 h-48 rounded-full bg-accent blur-3xl" />
         </div>
+        <div className="relative flex flex-wrap items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-primary-foreground/15 flex items-center justify-center flex-shrink-0">
+            <Plane className="w-6 h-6" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-[11px] uppercase tracking-[0.18em] font-semibold text-primary-foreground/70">Pilot</p>
+              <VerificationPill status={verificationStatus} />
+            </div>
+            <h2 className="font-display font-700 text-xl sm:text-2xl leading-tight mt-1 truncate">
+              {profile.display_name}
+            </h2>
+            <p className="text-xs sm:text-sm text-primary-foreground/80 mt-1 inline-flex items-center gap-1.5">
+              <MapPin className="w-3.5 h-3.5" />
+              {profile.service_area_label || "No service area set"} · {profile.service_radius_km} km
+            </p>
+          </div>
+          <label className="flex items-center gap-3 rounded-xl bg-primary-foreground/15 px-4 py-2.5">
+            <div className="text-right">
+              <p className="text-xs uppercase tracking-wider text-primary-foreground/70 font-semibold">Availability</p>
+              <p className="text-sm font-display font-700">{profile.available ? "Accepting jobs" : "Paused"}</p>
+            </div>
+            <Switch
+              checked={profile.available}
+              disabled={savingAvailability}
+              onCheckedChange={toggleAvailability}
+            />
+          </label>
+        </div>
+      </section>
 
-        {/* Verification CTA — live updates via Realtime */}
-        <Part107Prompt className="mb-4" />
-        <PilotVerificationBanner className="mb-6" />
+      {/* Verification CTA */}
+      <Part107Prompt />
+      <PilotVerificationBanner />
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+      {/* Metric row */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {[
             { label: "Active jobs", value: activeAssignments.length, Icon: Briefcase, bg: "bg-primary/10", color: "text-primary" },
             { label: "Quotes pending", value: pendingQuotes.length, Icon: Clock, bg: "bg-highlight/10", color: "text-highlight" },
             { label: "Quotes won", value: wonQuotes.length, Icon: CheckCircle2, bg: "bg-primary/10", color: "text-primary" },
             { label: "Completed", value: completedAssignments.length, Icon: Sparkles, bg: "bg-accent/10", color: "text-accent" },
           ].map((s) => (
-            <div key={s.label} className="bg-card rounded-xl p-4 border border-border flex items-center gap-3">
+          <div key={s.label} className="bg-card rounded-xl p-4 border border-border hover:border-primary/30 transition-colors flex items-center gap-3">
               <div className={`w-10 h-10 rounded-xl ${s.bg} flex items-center justify-center flex-shrink-0`}>
                 <s.Icon className={`w-5 h-5 ${s.color}`} />
               </div>
               <div className="min-w-0">
-                <p className="text-xl font-display font-700 text-foreground">{s.value}</p>
-                <p className="text-xs text-muted-foreground truncate">{s.label}</p>
+              <p className="text-2xl font-display font-700 text-foreground leading-none">{s.value}</p>
+              <p className="text-[11px] text-muted-foreground truncate uppercase tracking-wide mt-1">{s.label}</p>
               </div>
             </div>
           ))}
-        </div>
+      </div>
 
-        <div className="grid lg:grid-cols-3 gap-6">
+      <div className="grid lg:grid-cols-3 gap-6">
           {/* Left: requests + quotes */}
           <div className="lg:col-span-2 space-y-6">
             <Tabs defaultValue="active">
@@ -330,20 +347,8 @@ export default function PilotDashboard() {
           {/* Right: quick controls */}
           <div className="space-y-4">
             <div className="bg-card rounded-2xl border border-border p-5 space-y-4">
-              <h3 className="font-display font-700 text-foreground">Availability</h3>
+              <h3 className="font-display font-700 text-foreground">Visibility</h3>
               <label className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-foreground">Accepting jobs</p>
-                  <p className="text-xs text-muted-foreground">Pause to stop new matches without hiding your profile.</p>
-                </div>
-                <Switch
-                  checked={profile.available}
-                  disabled={savingAvailability}
-                  onCheckedChange={toggleAvailability}
-                />
-              </label>
-              <div className="border-t border-border pt-4">
-                <label className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-foreground">Show on pilot map</p>
                     <p className="text-xs text-muted-foreground">Let clients discover you at /pilots.</p>
@@ -354,7 +359,6 @@ export default function PilotDashboard() {
                     onCheckedChange={toggleShowOnMap}
                   />
                 </label>
-              </div>
             </div>
 
             <div className="bg-card rounded-2xl border border-border p-5 space-y-3">
@@ -418,9 +422,8 @@ export default function PilotDashboard() {
               </Button>
             </div>
           </div>
-        </div>
       </div>
-    </div>
+    </AppShell>
   );
 }
 
