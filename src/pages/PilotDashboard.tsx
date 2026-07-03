@@ -4,7 +4,7 @@ import {
   ArrowRight, BadgeCheck, Briefcase, CheckCircle2, Clock, ExternalLink,
   Loader2, MapPin, Plane, Shield, ShieldAlert, ShieldCheck, Sparkles, UserCog, Wallet,
 } from "lucide-react";
-import Navbar from "@/components/Navbar";
+import AppShell from "@/components/shell/AppShell";
 import PilotVerificationBanner from "@/components/PilotVerificationBanner";
 import Part107Prompt from "@/components/Part107Prompt";
 import { Button } from "@/components/ui/button";
