@@ -3,24 +3,24 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Map, Plus, UploadCloud, MoreVertical, Clock,
   CheckCircle2, AlertCircle, Loader2, FolderOpen,
-  Eye, Trash2, BarChart3, HardDrive,
-  ArrowLeft, LogOut, Shield, User as UserIcon, FileArchive, ImageIcon,
-  Play, Share2, Zap, Lock, CreditCard, Plane, Briefcase, Menu,
+  Eye, Trash2, BarChart3, HardDrive, FileArchive, ImageIcon,
+  Play, Share2, Lock, Plane, Plus as PlusIcon,
   Bookmark, Workflow, Radar, Boxes, Satellite, Brain, ShieldCheck, Sparkles, Camera,
   ChevronRight,
 } from "lucide-react";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import ProjectDetailDialog from "@/components/ProjectDetailDialog";
 import PilotVerificationBanner from "@/components/PilotVerificationBanner";
 import Part107Prompt from "@/components/Part107Prompt";
 import MyDronesPanel from "@/components/fleet/MyDronesPanel";
 import { Button } from "@/components/ui/button";
+import AppShell from "@/components/shell/AppShell";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
