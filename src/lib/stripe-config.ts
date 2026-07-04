@@ -11,9 +11,9 @@ export const SUBSCRIPTION_TIERS = {
     name: "Professional",
   },
   enterprise: {
-    product_id: "prod_UEHt0iMTlWzL9Z",
-    price_id: "price_1TFpJkQmZOh39j1DgEshSdyM",
-    name: "Enterprise",
+    product_id: "prod_UpBTCo0PQy0XsC",
+    price_id: "price_1TpX6pQmZOh39j1DuWi1Ltwn",
+    name: "Agency",
   },
 } as const;
 

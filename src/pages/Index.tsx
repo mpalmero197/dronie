@@ -5,6 +5,7 @@ import FeaturesSection from "@/components/FeaturesSection";
 import VerticalsSection from "@/components/VerticalsSection";
 import HowItWorksSection from "@/components/HowItWorksSection";
 import PricingSection from "@/components/PricingSection";
+import DoneForYouSection from "@/components/DoneForYouSection";
 import SplatHighlightSection from "@/components/SplatHighlightSection";
 import AboutContentSection from "@/components/AboutContentSection";
 import PhotogrammetryGuideSection from "@/components/PhotogrammetryGuideSection";
@@ -38,6 +39,7 @@ export default function Index() {
         <HowItWorksSection />
         <PhotogrammetryGuideSection />
         <SplatHighlightSection />
+        <DoneForYouSection />
         <PricingSection />
         <FaqSection />
       </main>
