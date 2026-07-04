@@ -43,7 +43,7 @@ const LIMITS: Record<string, TierLimits> = {
     multiSpectral: false,
     apiAccess: false,
     whiteLabel: false,
-    tierLabel: "Pilot",
+    tierLabel: "Starter",
   },
   professional: {
     projectsPerMonth: Infinity,
@@ -57,7 +57,7 @@ const LIMITS: Record<string, TierLimits> = {
     multiSpectral: false,
     apiAccess: false,
     whiteLabel: false,
-    tierLabel: "Professional",
+    tierLabel: "Pro",
   },
   enterprise: {
     projectsPerMonth: Infinity,
@@ -71,7 +71,7 @@ const LIMITS: Record<string, TierLimits> = {
     multiSpectral: true,
     apiAccess: true,
     whiteLabel: true,
-    tierLabel: "Enterprise",
+    tierLabel: "Agency",
   },
 };
 
