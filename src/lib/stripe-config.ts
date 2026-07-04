@@ -15,6 +15,11 @@ export const SUBSCRIPTION_TIERS = {
     price_id: "price_1TFpJkQmZOh39j1DgEshSdyM",
     name: "Enterprise",
   },
+  agency: {
+    product_id: "prod_UpBTCo0PQy0XsC",
+    price_id: "price_1TpX6pQmZOh39j1DuWi1Ltwn",
+    name: "Agency",
+  },
 } as const;
 
 export type SubscriptionTier = "pilot" | "professional" | "enterprise" | null;
