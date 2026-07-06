@@ -6,7 +6,7 @@ import FooterSection from "@/components/FooterSection";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { listCategories, listThreads, ForumCategory, ForumThread } from "@/lib/forum";
+import { listCategories, listThreads, getCategoryStats, ForumCategory, ForumThread, ForumCategoryStats } from "@/lib/forum";
 import { useAuth } from "@/contexts/AuthContext";
 import { MessageSquare, Plus, Pin, Lock, ArrowBigUp, Eye, Clock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
@@ -15,13 +15,18 @@ export default function Community() {
   const { user } = useAuth();
   const [cats, setCats] = useState<ForumCategory[]>([]);
   const [recent, setRecent] = useState<ForumThread[]>([]);
+  const [stats, setStats] = useState<Record<string, ForumCategoryStats>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
       try {
-        const [c, t] = await Promise.all([listCategories(), listThreads(undefined, 10)]);
-        setCats(c); setRecent(t);
+        const [c, t, s] = await Promise.all([
+          listCategories(),
+          listThreads(undefined, 10),
+          getCategoryStats(),
+        ]);
+        setCats(c); setRecent(t); setStats(s);
       } finally { setLoading(false); }
     })();
   }, []);
@@ -60,6 +65,14 @@ export default function Community() {
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold">{c.title}</div>
                       {c.description && <p className="text-sm text-muted-foreground mt-0.5">{c.description}</p>}
+                    </div>
+                    <div className="flex flex-col items-end shrink-0 text-right">
+                      <Badge variant="secondary" className="tabular-nums">
+                        {stats[c.id]?.post_count ?? 0} {(stats[c.id]?.post_count ?? 0) === 1 ? "post" : "posts"}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground mt-1 tabular-nums">
+                        {stats[c.id]?.thread_count ?? 0} {(stats[c.id]?.thread_count ?? 0) === 1 ? "thread" : "threads"}
+                      </span>
                     </div>
                   </div>
                 </Card>
