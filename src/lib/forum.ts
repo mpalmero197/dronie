@@ -105,13 +105,30 @@ export async function listPosts(threadId: string): Promise<ForumPost[]> {
 export async function getAuthors(ids: string[]): Promise<Record<string, AuthorMini>> {
   const uniq = Array.from(new Set(ids.filter(Boolean)));
   if (!uniq.length) return {};
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("id, full_name, username, avatar_url")
-    .in("id", uniq);
+  const { data, error } = await supabase.rpc("get_forum_authors", { _ids: uniq });
   if (error) throw error;
   const map: Record<string, AuthorMini> = {};
   (data ?? []).forEach((p: any) => { map[p.id] = p as AuthorMini; });
+  return map;
+}
+
+export interface ForumCategoryStats {
+  category_id: string;
+  thread_count: number;
+  post_count: number;
+}
+
+export async function getCategoryStats(): Promise<Record<string, ForumCategoryStats>> {
+  const { data, error } = await supabase.rpc("get_forum_category_stats");
+  if (error) throw error;
+  const map: Record<string, ForumCategoryStats> = {};
+  (data ?? []).forEach((r: any) => {
+    map[r.category_id] = {
+      category_id: r.category_id,
+      thread_count: Number(r.thread_count ?? 0),
+      post_count: Number(r.post_count ?? 0),
+    };
+  });
   return map;
 }
 
