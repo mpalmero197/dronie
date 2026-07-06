@@ -2351,6 +2351,23 @@ export type Database = {
           revoked_at: string
         }[]
       }
+      get_forum_authors: {
+        Args: { _ids: string[] }
+        Returns: {
+          avatar_url: string
+          full_name: string
+          id: string
+          username: string
+        }[]
+      }
+      get_forum_category_stats: {
+        Args: never
+        Returns: {
+          category_id: string
+          post_count: number
+          thread_count: number
+        }[]
+      }
       get_marketplace_requests: {
         Args: { _is_top_tier?: boolean }
         Returns: {
