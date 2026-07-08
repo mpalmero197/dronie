@@ -13,8 +13,16 @@ const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 const DEDUP_DAYS = Number(Deno.env.get("FORUM_BOT_DEDUP_DAYS") ?? "60");
 // FAA news category slug — Part 107 & Regulations is the closest fit.
 const FAA_CATEGORY_SLUG = "part-107";
-const FAA_NEWS_FEED =
-  "https://news.google.com/rss/search?q=FAA+drone+OR+UAS+when:14d&hl=en-US&gl=US&ceid=US:en";
+// Multiple feeds — try in order, first that returns items wins. Google News is
+// preferred (most FAA-centric) but often rate-limits edge egress, so we fall
+// back to established drone news sites and filter to FAA / regulation stories.
+const FAA_NEWS_FEEDS = [
+  "https://news.google.com/rss/search?q=FAA+drone+OR+UAS+when:14d&hl=en-US&gl=US&ceid=US:en",
+  "https://dronedj.com/feed/",
+  "https://www.suasnews.com/feed/",
+  "https://www.unmannedairspace.info/feed/",
+];
+const FAA_KEYWORDS = /\b(faa|part\s?107|remote\s?id|laanc|waiver|tfr|uas|unmanned|drone)\b/i;
 
 const admin = createClient(SUPABASE_URL, SERVICE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
@@ -202,12 +210,24 @@ function parseRssItems(xml: string): FaaItem[] {
 }
 
 async function fetchFaaNews(): Promise<FaaItem[]> {
-  const res = await fetch(FAA_NEWS_FEED, {
-    headers: { "User-Agent": "DronieBot/1.0 (+https://dronieapp.com)" },
-  });
-  if (!res.ok) throw new Error(`FAA news feed ${res.status}`);
-  const xml = await res.text();
-  return parseRssItems(xml);
+  const errors: string[] = [];
+  for (const url of FAA_NEWS_FEEDS) {
+    try {
+      const res = await fetch(url, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (compatible; DronieBot/1.0; +https://dronieapp.com)",
+          "Accept": "application/rss+xml, application/xml, text/xml, */*",
+        },
+      });
+      if (!res.ok) { errors.push(`${url} ${res.status}`); continue; }
+      const items = parseRssItems(await res.text())
+        .filter((it) => FAA_KEYWORDS.test(`${it.title} ${it.description}`));
+      if (items.length) { console.log("FAA feed used:", url, "items:", items.length); return items; }
+    } catch (e) {
+      errors.push(`${url} ${(e as Error).message}`);
+    }
+  }
+  throw new Error(`no FAA feed available: ${errors.join(" | ")}`);
 }
 
 async function summarizeFaaItem(item: FaaItem): Promise<{ title: string; body: string }> {
