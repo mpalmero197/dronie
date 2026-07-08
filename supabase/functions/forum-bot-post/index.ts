@@ -23,6 +23,36 @@ const FAA_NEWS_FEEDS = [
   "https://www.unmannedairspace.info/feed/",
 ];
 const FAA_KEYWORDS = /\b(faa|part\s?107|remote\s?id|laanc|waiver|tfr|uas|unmanned|drone)\b/i;
+// "Did You Know" facts — FAA rule trivia + notable drone legal cases. Posted
+// into Part 107 & Regulations. AI rewrites for freshness, seed rotates by cursor.
+const DYK_CATEGORY_SLUG = "part-107";
+const DYK_SEEDS: { topic: string; angle: "rule" | "case"; hint: string }[] = [
+  // FAA rule facts
+  { topic: "400 ft AGL ceiling under Part 107", angle: "rule", hint: "You may exceed 400 ft AGL only within 400 ft of a structure — 14 CFR §107.51(b)." },
+  { topic: "Night operations under Part 107", angle: "rule", hint: "Night flight allowed since April 2021 with anti-collision lighting visible for 3 statute miles — §107.29." },
+  { topic: "Operations over people (Categories 1–4)", angle: "rule", hint: "§107.39 & Subpart D — sustained flight over people requires an eligible drone and, in Cat 4, an airworthiness certificate." },
+  { topic: "Remote ID compliance deadline", angle: "rule", hint: "Standard or Broadcast Module Remote ID required for nearly all Part 107 ops since March 16, 2024." },
+  { topic: "Recreational TRUST test", angle: "rule", hint: "Free, one-time test required under §44809 — carry proof when flying recreationally." },
+  { topic: "LAANC vs. DroneZone waiver", angle: "rule", hint: "LAANC = near-real-time controlled-airspace auth up to grid ceiling; DroneZone = manual waivers/further authorizations." },
+  { topic: "Registration threshold", angle: "rule", hint: "Any drone > 0.55 lb (250 g) must be registered with the FAA — recreational or Part 107." },
+  { topic: "Part 107 recurrent training", angle: "rule", hint: "Every 24 calendar months — free online recurrent training instead of an in-person retest since 2021." },
+  { topic: "Visual line of sight (VLOS)", angle: "rule", hint: "§107.31 — VLOS is required with unaided vision; corrective lenses count, binoculars do not." },
+  { topic: "Careless or reckless operation", angle: "rule", hint: "§107.23 — FAA can issue civil penalties even without a specific rule violation." },
+  { topic: "Accident reporting under Part 107", angle: "rule", hint: "§107.9 — report to FAA within 10 calendar days if serious injury or > $500 property damage." },
+  { topic: "TFRs and stadium restrictions", angle: "rule", hint: "3-nm no-drone zone around MLB/NFL/NCAA D1/NASCAR events from 1 hr before to 1 hr after — under §352 of the 2018 FAA Reauthorization Act." },
+  { topic: "Preemption of state/local drone laws", angle: "rule", hint: "FAA claims exclusive control of navigable airspace; localities may regulate takeoff/landing on their property." },
+
+  // Notable drone legal cases
+  { topic: "Huerta v. Pirker (2014)", angle: "case", hint: "NTSB overturned the FAA's ALJ ruling — first case establishing FAA authority to regulate small UAS as 'aircraft.'" },
+  { topic: "Boggs v. Merideth (2017)", angle: "case", hint: "Kentucky 'drone slayer' case — federal court dismissed on jurisdiction, leaving airspace-vs-property rights unresolved." },
+  { topic: "Taylor v. FAA (2017)", angle: "case", hint: "D.C. Circuit struck down FAA recreational registration rule; Congress reinstated it via 2017 NDAA." },
+  { topic: "Singer v. City of Newton (2017)", angle: "case", hint: "U.S. District Court struck down most of Newton, MA's drone ordinance as preempted by federal law." },
+  { topic: "EPIC v. FAA (2017)", angle: "case", hint: "D.C. Circuit dismissed challenge to Part 107 privacy provisions — signaling FAA privacy standards are limited." },
+  { topic: "FAA v. SkyPan International (2015)", angle: "case", hint: "$1.9 M proposed civil penalty — largest single UAS enforcement action at the time; settled for $200 K." },
+  { topic: "RaceDayQuads v. FAA (2022)", angle: "case", hint: "D.C. Circuit upheld Remote ID rule against First Amendment challenge from hobbyist community." },
+  { topic: "Brennan v. Dickson (2022)", angle: "case", hint: "Companion Remote ID challenge — court held FAA followed proper rulemaking under APA." },
+  { topic: "Michael v. FAA (2018 enforcement)", angle: "case", hint: "Illustrates §107.23 'careless or reckless' penalties even when no other specific rule was violated." },
+];
 
 const admin = createClient(SUPABASE_URL, SERVICE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
@@ -308,6 +338,81 @@ async function postFaaUpdate(botId: string, recentTitles: Set<string>, recentBod
   return { source: "faa", thread_id: thread.id, category: cat.slug, title, link: pick.link };
 }
 
+// ── Did You Know facts (FAA rules + notable drone legal cases) ────────
+async function generateDidYouKnow(seed: { topic: string; angle: "rule" | "case"; hint: string }) {
+  const flavor = seed.angle === "rule"
+    ? `an FAA rule fact — cite the specific regulation number (e.g. 14 CFR §107.xx) when relevant and explain what it means in practice`
+    : `a notable drone-related lawsuit or enforcement action — name the parties, year, court/agency, and what pilots should take away from it`;
+  const system = `You are Dronie Bot writing a "Did You Know?" post for the Part 107 & Regulations section of a drone pilot forum. Focus on ${flavor}.
+
+Return STRICT JSON only, no code fences:
+{"title":"...", "body":"..."}
+
+Rules:
+- title MUST start with "Did you know: " followed by a concise, factual hook (total 20–100 chars). No emojis.
+- body: 300–800 chars, plain text. Start with the fact/case, then give practical context for working drone pilots. End with an open question inviting others to share their experience or interpretation.
+- Accuracy matters — do NOT invent regulation numbers or case citations. If unsure of a number, describe the rule without citing a number.
+- No hashtags, no "as an AI", no marketing fluff.`;
+  const user = `Seed topic: ${seed.topic}\nAngle: ${seed.angle}\nKey fact to build on (do not quote verbatim, rewrite in your own words): ${seed.hint}`;
+  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Lovable-API-Key": LOVABLE_API_KEY },
+    body: JSON.stringify({
+      model: "google/gemini-3-flash-preview",
+      messages: [{ role: "system", content: system }, { role: "user", content: user }],
+      response_format: { type: "json_object" },
+    }),
+  });
+  if (!res.ok) throw new Error(`AI gateway ${res.status}: ${await res.text()}`);
+  const json = await res.json();
+  const raw = String(json.choices?.[0]?.message?.content ?? "{}")
+    .replace(/^```json\s*|```$/g, "").trim();
+  const first = raw.indexOf("{"); const last = raw.lastIndexOf("}");
+  const jsonSlice = first >= 0 && last > first ? raw.slice(first, last + 1) : "{}";
+  let parsed: any;
+  try { parsed = JSON.parse(jsonSlice); }
+  catch { parsed = { title: `Did you know: ${seed.topic}`, body: seed.hint }; }
+  let title = String(parsed.title ?? "").trim();
+  if (!/^did you know[:\-]/i.test(title)) title = `Did you know: ${title || seed.topic}`;
+  if (title.length > 200) title = title.slice(0, 197) + "...";
+  let body = String(parsed.body ?? "").trim();
+  if (body.length < 40) body = seed.hint;
+  return { title, body };
+}
+
+async function postDidYouKnow(botId: string, recentTitles: Set<string>) {
+  const { data: cat, error: cErr } = await admin
+    .from("forum_categories").select("id, slug, title").eq("slug", DYK_CATEGORY_SLUG).maybeSingle();
+  if (cErr) throw cErr;
+  if (!cat) return { skipped: true, reason: "dyk_category_missing" };
+
+  // Rotate seed cursor across DYK_SEEDS
+  const { data: state } = await admin
+    .from("bot_state").select("value").eq("key", "forum_bot_dyk_cursor").maybeSingle();
+  let cursor = Number(state?.value ?? 0);
+
+  // Try up to seed-list length to find one that isn't a duplicate
+  let generated: { title: string; body: string } | null = null;
+  let used: { topic: string; angle: string } | null = null;
+  for (let i = 0; i < DYK_SEEDS.length; i++) {
+    const seed = DYK_SEEDS[(cursor + i) % DYK_SEEDS.length];
+    const g = await generateDidYouKnow(seed);
+    if (!isDuplicate(g.title, recentTitles)) { generated = g; used = seed; cursor = (cursor + i + 1) % DYK_SEEDS.length; break; }
+    console.log("dyk duplicate, trying next seed", seed.topic);
+  }
+  await admin.from("bot_state").upsert({ key: "forum_bot_dyk_cursor", value: String(cursor) });
+
+  if (!generated) return { skipped: true, reason: "dyk_all_duplicates" };
+  const slug = `dyk-${slugify(generated.title)}-${Date.now().toString(36)}`;
+  const { data: thread, error } = await admin
+    .from("forum_threads")
+    .insert({ category_id: cat.id, author_id: botId, title: generated.title, slug, body: generated.body })
+    .select("id, slug").single();
+  if (error) throw error;
+  recentTitles.add(normalizeTitle(generated.title));
+  return { source: "dyk", thread_id: thread.id, category: cat.slug, title: generated.title, seed: used };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -321,13 +426,17 @@ Deno.serve(async (req) => {
     const { titles: recentTitles, bodies: recentBodies } = await getRecentBotTitles(botId);
 
     const results: any[] = [];
-    if (source === "ai" || source === "both") {
+    if (source === "ai" || source === "both" || source === "all") {
       try { results.push(await postAiTopic(botId, recentTitles)); }
       catch (e) { results.push({ source: "ai", error: String((e as Error).message ?? e) }); }
     }
-    if (source === "faa" || source === "both") {
+    if (source === "faa" || source === "both" || source === "all") {
       try { results.push(await postFaaUpdate(botId, recentTitles, recentBodies)); }
       catch (e) { results.push({ source: "faa", error: String((e as Error).message ?? e) }); }
+    }
+    if (source === "dyk" || source === "both" || source === "all") {
+      try { results.push(await postDidYouKnow(botId, recentTitles)); }
+      catch (e) { results.push({ source: "dyk", error: String((e as Error).message ?? e) }); }
     }
 
     return new Response(
