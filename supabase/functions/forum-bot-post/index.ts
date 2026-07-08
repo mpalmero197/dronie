@@ -250,8 +250,14 @@ Rules:
   });
   if (!res.ok) throw new Error(`AI gateway ${res.status}: ${await res.text()}`);
   const json = await res.json();
-  const raw = json.choices?.[0]?.message?.content ?? "{}";
-  const parsed = JSON.parse(raw.replace(/^```json\s*|```$/g, "").trim());
+  const raw = String(json.choices?.[0]?.message?.content ?? "{}")
+    .replace(/^```json\s*|```$/g, "").trim();
+  const first = raw.indexOf("{");
+  const last = raw.lastIndexOf("}");
+  const jsonSlice = first >= 0 && last > first ? raw.slice(first, last + 1) : "{}";
+  let parsed: any;
+  try { parsed = JSON.parse(jsonSlice); }
+  catch { parsed = { title: item.title, body: item.description }; }
   let title = String(parsed.title ?? item.title).trim().slice(0, 200);
   let body = String(parsed.body ?? "").trim();
   if (!body.includes(item.link)) body += `\n\nSource: ${item.link}`;
