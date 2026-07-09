@@ -6,9 +6,9 @@ import FooterSection from "@/components/FooterSection";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { listCategories, listThreads, getCategoryStats, ForumCategory, ForumThread, ForumCategoryStats } from "@/lib/forum";
+import { listCategories, listThreads, getCategoryStats, getDidYouKnowStats, ForumCategory, ForumThread, ForumCategoryStats, DidYouKnowStats } from "@/lib/forum";
 import { useAuth } from "@/contexts/AuthContext";
-import { MessageSquare, Plus, Pin, Lock, ArrowBigUp, Eye, Clock } from "lucide-react";
+import { MessageSquare, Plus, Pin, Lock, ArrowBigUp, Eye, Clock, Lightbulb } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 export default function Community() {
@@ -16,17 +16,19 @@ export default function Community() {
   const [cats, setCats] = useState<ForumCategory[]>([]);
   const [recent, setRecent] = useState<ForumThread[]>([]);
   const [stats, setStats] = useState<Record<string, ForumCategoryStats>>({});
+  const [dyk, setDyk] = useState<DidYouKnowStats>({ thread_count: 0, post_count: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
       try {
-        const [c, t, s] = await Promise.all([
+        const [c, t, s, d] = await Promise.all([
           listCategories(),
           listThreads(undefined, 10),
           getCategoryStats(),
+          getDidYouKnowStats(),
         ]);
-        setCats(c); setRecent(t); setStats(s);
+        setCats(c); setRecent(t); setStats(s); setDyk(d);
       } finally { setLoading(false); }
     })();
   }, []);
@@ -78,6 +80,31 @@ export default function Community() {
                 </Card>
               </Link>
             ))}
+            {!loading && (
+              <Link to="/community/c/part-107?filter=dyk">
+                <Card className="p-4 hover:border-primary/60 transition-colors border-dashed">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                      <Lightbulb className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold">Did You Know</div>
+                      <p className="text-sm text-muted-foreground mt-0.5">
+                        Daily FAA rule facts and notable drone legal cases, curated by Dronie Bot.
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-end shrink-0 text-right">
+                      <Badge variant="secondary" className="tabular-nums">
+                        {dyk.post_count} {dyk.post_count === 1 ? "post" : "posts"}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground mt-1 tabular-nums">
+                        {dyk.thread_count} {dyk.thread_count === 1 ? "thread" : "threads"}
+                      </span>
+                    </div>
+                  </div>
+                </Card>
+              </Link>
+            )}
           </section>
 
           <aside>

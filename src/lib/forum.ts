@@ -132,6 +132,20 @@ export async function getCategoryStats(): Promise<Record<string, ForumCategorySt
   return map;
 }
 
+export interface DidYouKnowStats { thread_count: number; post_count: number; }
+
+// "Did You Know" threads are tagged by slug prefix `dyk-` (posted by Dronie Bot).
+export async function getDidYouKnowStats(): Promise<DidYouKnowStats> {
+  const { data: threads, error: tErr } = await supabase
+    .from("forum_threads")
+    .select("id, reply_count")
+    .like("slug", "dyk-%");
+  if (tErr) throw tErr;
+  const thread_count = threads?.length ?? 0;
+  const replies = (threads ?? []).reduce((s: number, r: any) => s + Number(r.reply_count ?? 0), 0);
+  return { thread_count, post_count: thread_count + replies };
+}
+
 export async function createThread(input: {
   category_id: string; title: string; body: string; author_id: string;
 }): Promise<ForumThread> {
