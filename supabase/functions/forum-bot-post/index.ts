@@ -26,32 +26,32 @@ const FAA_KEYWORDS = /\b(faa|part\s?107|remote\s?id|laanc|waiver|tfr|uas|unmanne
 // "Did You Know" facts — FAA rule trivia + notable drone legal cases. Posted
 // into Part 107 & Regulations. AI rewrites for freshness, seed rotates by cursor.
 const DYK_CATEGORY_SLUG = "part-107";
-const DYK_SEEDS: { topic: string; angle: "rule" | "case"; hint: string }[] = [
+const DYK_SEEDS: { topic: string; angle: "rule" | "case"; hint: string; citation: string; url: string }[] = [
   // FAA rule facts
-  { topic: "400 ft AGL ceiling under Part 107", angle: "rule", hint: "You may exceed 400 ft AGL only within 400 ft of a structure — 14 CFR §107.51(b)." },
-  { topic: "Night operations under Part 107", angle: "rule", hint: "Night flight allowed since April 2021 with anti-collision lighting visible for 3 statute miles — §107.29." },
-  { topic: "Operations over people (Categories 1–4)", angle: "rule", hint: "§107.39 & Subpart D — sustained flight over people requires an eligible drone and, in Cat 4, an airworthiness certificate." },
-  { topic: "Remote ID compliance deadline", angle: "rule", hint: "Standard or Broadcast Module Remote ID required for nearly all Part 107 ops since March 16, 2024." },
-  { topic: "Recreational TRUST test", angle: "rule", hint: "Free, one-time test required under §44809 — carry proof when flying recreationally." },
-  { topic: "LAANC vs. DroneZone waiver", angle: "rule", hint: "LAANC = near-real-time controlled-airspace auth up to grid ceiling; DroneZone = manual waivers/further authorizations." },
-  { topic: "Registration threshold", angle: "rule", hint: "Any drone > 0.55 lb (250 g) must be registered with the FAA — recreational or Part 107." },
-  { topic: "Part 107 recurrent training", angle: "rule", hint: "Every 24 calendar months — free online recurrent training instead of an in-person retest since 2021." },
-  { topic: "Visual line of sight (VLOS)", angle: "rule", hint: "§107.31 — VLOS is required with unaided vision; corrective lenses count, binoculars do not." },
-  { topic: "Careless or reckless operation", angle: "rule", hint: "§107.23 — FAA can issue civil penalties even without a specific rule violation." },
-  { topic: "Accident reporting under Part 107", angle: "rule", hint: "§107.9 — report to FAA within 10 calendar days if serious injury or > $500 property damage." },
-  { topic: "TFRs and stadium restrictions", angle: "rule", hint: "3-nm no-drone zone around MLB/NFL/NCAA D1/NASCAR events from 1 hr before to 1 hr after — under §352 of the 2018 FAA Reauthorization Act." },
-  { topic: "Preemption of state/local drone laws", angle: "rule", hint: "FAA claims exclusive control of navigable airspace; localities may regulate takeoff/landing on their property." },
+  { topic: "400 ft AGL ceiling under Part 107", angle: "rule", hint: "You may exceed 400 ft AGL only within 400 ft of a structure — 14 CFR §107.51(b).", citation: "14 CFR §107.51", url: "https://www.ecfr.gov/current/title-14/chapter-I/subchapter-F/part-107/subpart-B/section-107.51" },
+  { topic: "Night operations under Part 107", angle: "rule", hint: "Night flight allowed since April 2021 with anti-collision lighting visible for 3 statute miles — §107.29.", citation: "14 CFR §107.29", url: "https://www.ecfr.gov/current/title-14/chapter-I/subchapter-F/part-107/subpart-B/section-107.29" },
+  { topic: "Operations over people (Categories 1–4)", angle: "rule", hint: "§107.39 & Subpart D — sustained flight over people requires an eligible drone and, in Cat 4, an airworthiness certificate.", citation: "14 CFR §107.39 & Subpart D", url: "https://www.ecfr.gov/current/title-14/chapter-I/subchapter-F/part-107/subpart-D" },
+  { topic: "Remote ID compliance deadline", angle: "rule", hint: "Standard or Broadcast Module Remote ID required for nearly all Part 107 ops since March 16, 2024.", citation: "14 CFR Part 89 (Remote ID)", url: "https://www.faa.gov/uas/getting_started/remote_id" },
+  { topic: "Recreational TRUST test", angle: "rule", hint: "Free, one-time test required under §44809 — carry proof when flying recreationally.", citation: "49 U.S.C. §44809 / TRUST", url: "https://www.faa.gov/uas/recreational_flyers/knowledge_test_updates" },
+  { topic: "LAANC vs. DroneZone waiver", angle: "rule", hint: "LAANC = near-real-time controlled-airspace auth up to grid ceiling; DroneZone = manual waivers/further authorizations.", citation: "FAA LAANC & DroneZone", url: "https://www.faa.gov/uas/programs_partnerships/data_exchange" },
+  { topic: "Registration threshold", angle: "rule", hint: "Any drone > 0.55 lb (250 g) must be registered with the FAA — recreational or Part 107.", citation: "14 CFR Part 48", url: "https://www.ecfr.gov/current/title-14/chapter-I/subchapter-F/part-48" },
+  { topic: "Part 107 recurrent training", angle: "rule", hint: "Every 24 calendar months — free online recurrent training instead of an in-person retest since 2021.", citation: "14 CFR §107.65", url: "https://www.ecfr.gov/current/title-14/chapter-I/subchapter-F/part-107/subpart-C/section-107.65" },
+  { topic: "Visual line of sight (VLOS)", angle: "rule", hint: "§107.31 — VLOS is required with unaided vision; corrective lenses count, binoculars do not.", citation: "14 CFR §107.31", url: "https://www.ecfr.gov/current/title-14/chapter-I/subchapter-F/part-107/subpart-B/section-107.31" },
+  { topic: "Careless or reckless operation", angle: "rule", hint: "§107.23 — FAA can issue civil penalties even without a specific rule violation.", citation: "14 CFR §107.23", url: "https://www.ecfr.gov/current/title-14/chapter-I/subchapter-F/part-107/subpart-A/section-107.23" },
+  { topic: "Accident reporting under Part 107", angle: "rule", hint: "§107.9 — report to FAA within 10 calendar days if serious injury or > $500 property damage.", citation: "14 CFR §107.9", url: "https://www.ecfr.gov/current/title-14/chapter-I/subchapter-F/part-107/subpart-A/section-107.9" },
+  { topic: "TFRs and stadium restrictions", angle: "rule", hint: "3-nm no-drone zone around MLB/NFL/NCAA D1/NASCAR events from 1 hr before to 1 hr after — under §352 of the 2018 FAA Reauthorization Act.", citation: "FDC NOTAM 4/3621 (Stadium TFR)", url: "https://www.faa.gov/uas/getting_started/where_can_i_fly/airspace_restrictions/stadiums_sporting_events" },
+  { topic: "Preemption of state/local drone laws", angle: "rule", hint: "FAA claims exclusive control of navigable airspace; localities may regulate takeoff/landing on their property.", citation: "FAA State & Local Fact Sheet (2015)", url: "https://www.faa.gov/uas/resources/policy_library/media/UAS_Fact_Sheet_Final.pdf" },
 
   // Notable drone legal cases
-  { topic: "Huerta v. Pirker (2014)", angle: "case", hint: "NTSB overturned the FAA's ALJ ruling — first case establishing FAA authority to regulate small UAS as 'aircraft.'" },
-  { topic: "Boggs v. Merideth (2017)", angle: "case", hint: "Kentucky 'drone slayer' case — federal court dismissed on jurisdiction, leaving airspace-vs-property rights unresolved." },
-  { topic: "Taylor v. FAA (2017)", angle: "case", hint: "D.C. Circuit struck down FAA recreational registration rule; Congress reinstated it via 2017 NDAA." },
-  { topic: "Singer v. City of Newton (2017)", angle: "case", hint: "U.S. District Court struck down most of Newton, MA's drone ordinance as preempted by federal law." },
-  { topic: "EPIC v. FAA (2017)", angle: "case", hint: "D.C. Circuit dismissed challenge to Part 107 privacy provisions — signaling FAA privacy standards are limited." },
-  { topic: "FAA v. SkyPan International (2015)", angle: "case", hint: "$1.9 M proposed civil penalty — largest single UAS enforcement action at the time; settled for $200 K." },
-  { topic: "RaceDayQuads v. FAA (2022)", angle: "case", hint: "D.C. Circuit upheld Remote ID rule against First Amendment challenge from hobbyist community." },
-  { topic: "Brennan v. Dickson (2022)", angle: "case", hint: "Companion Remote ID challenge — court held FAA followed proper rulemaking under APA." },
-  { topic: "Michael v. FAA (2018 enforcement)", angle: "case", hint: "Illustrates §107.23 'careless or reckless' penalties even when no other specific rule was violated." },
+  { topic: "Huerta v. Pirker (2014)", angle: "case", hint: "NTSB overturned the FAA's ALJ ruling — first case establishing FAA authority to regulate small UAS as 'aircraft.'", citation: "Huerta v. Pirker, NTSB Order EA-5730 (2014)", url: "https://www.ntsb.gov/legal/alj/OnODocuments/Aviation/5730.pdf" },
+  { topic: "Boggs v. Merideth (2017)", angle: "case", hint: "Kentucky 'drone slayer' case — federal court dismissed on jurisdiction, leaving airspace-vs-property rights unresolved.", citation: "Boggs v. Merideth, No. 3:16-cv-6-DJH (W.D. Ky. 2017)", url: "https://casetext.com/case/boggs-v-merideth" },
+  { topic: "Taylor v. FAA (2017)", angle: "case", hint: "D.C. Circuit struck down FAA recreational registration rule; Congress reinstated it via 2017 NDAA.", citation: "Taylor v. Huerta, 856 F.3d 1089 (D.C. Cir. 2017)", url: "https://www.cadc.uscourts.gov/internet/opinions.nsf/FA6F27FFAA83E20585258125004FE314/$file/15-1495-1675918.pdf" },
+  { topic: "Singer v. City of Newton (2017)", angle: "case", hint: "U.S. District Court struck down most of Newton, MA's drone ordinance as preempted by federal law.", citation: "Singer v. City of Newton, 284 F. Supp. 3d 125 (D. Mass. 2017)", url: "https://casetext.com/case/singer-v-city-of-newton" },
+  { topic: "EPIC v. FAA (2017)", angle: "case", hint: "D.C. Circuit dismissed challenge to Part 107 privacy provisions — signaling FAA privacy standards are limited.", citation: "EPIC v. FAA, 892 F.3d 1249 (D.C. Cir. 2018)", url: "https://epic.org/documents/epic-v-faa-drones-2/" },
+  { topic: "FAA v. SkyPan International (2015)", angle: "case", hint: "$1.9 M proposed civil penalty — largest single UAS enforcement action at the time; settled for $200 K.", citation: "FAA Press Release, SkyPan Enforcement (2015/2017)", url: "https://www.faa.gov/newsroom/faa-reaches-agreement-skypan-international-inc" },
+  { topic: "RaceDayQuads v. FAA (2022)", angle: "case", hint: "D.C. Circuit upheld Remote ID rule against First Amendment challenge from hobbyist community.", citation: "RaceDayQuads LLC v. FAA, No. 21-1087 (D.C. Cir. 2022)", url: "https://www.cadc.uscourts.gov/internet/opinions.nsf/85D3B45B4E4E7B7C852588860052A46F/$file/21-1087-1957287.pdf" },
+  { topic: "Brennan v. Dickson (2022)", angle: "case", hint: "Companion Remote ID challenge — court held FAA followed proper rulemaking under APA.", citation: "Brennan v. Dickson, 45 F.4th 48 (D.C. Cir. 2022)", url: "https://www.cadc.uscourts.gov/internet/opinions.nsf/85D3B45B4E4E7B7C852588860052A46F/$file/21-1087-1957287.pdf" },
+  { topic: "Michael v. FAA (2018 enforcement)", angle: "case", hint: "Illustrates §107.23 'careless or reckless' penalties even when no other specific rule was violated.", citation: "In re: Michael, FAA Enforcement (2018)", url: "https://www.faa.gov/uas/resources/uas_regulations/part_107" },
 ];
 
 const admin = createClient(SUPABASE_URL, SERVICE_KEY, {
@@ -339,7 +339,7 @@ async function postFaaUpdate(botId: string, recentTitles: Set<string>, recentBod
 }
 
 // ── Did You Know facts (FAA rules + notable drone legal cases) ────────
-async function generateDidYouKnow(seed: { topic: string; angle: "rule" | "case"; hint: string }) {
+async function generateDidYouKnow(seed: { topic: string; angle: "rule" | "case"; hint: string; citation: string; url: string }) {
   const flavor = seed.angle === "rule"
     ? `an FAA rule fact — cite the specific regulation number (e.g. 14 CFR §107.xx) when relevant and explain what it means in practice`
     : `a notable drone-related lawsuit or enforcement action — name the parties, year, court/agency, and what pilots should take away from it`;
@@ -351,9 +351,10 @@ Return STRICT JSON only, no code fences:
 Rules:
 - title MUST start with "Did you know: " followed by a concise, factual hook (total 20–100 chars). No emojis.
 - body: 300–800 chars, plain text. Start with the fact/case, then give practical context for working drone pilots. End with an open question inviting others to share their experience or interpretation.
+- The body MUST include the exact citation string provided and end with a "Source:" line containing the exact URL provided. Do NOT invent alternate URLs or citations.
 - Accuracy matters — do NOT invent regulation numbers or case citations. If unsure of a number, describe the rule without citing a number.
 - No hashtags, no "as an AI", no marketing fluff.`;
-  const user = `Seed topic: ${seed.topic}\nAngle: ${seed.angle}\nKey fact to build on (do not quote verbatim, rewrite in your own words): ${seed.hint}`;
+  const user = `Seed topic: ${seed.topic}\nAngle: ${seed.angle}\nKey fact to build on (do not quote verbatim, rewrite in your own words): ${seed.hint}\nCitation (include verbatim in body): ${seed.citation}\nSource URL (include verbatim on final "Source:" line): ${seed.url}`;
   const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", "Lovable-API-Key": LOVABLE_API_KEY },
@@ -377,6 +378,9 @@ Rules:
   if (title.length > 200) title = title.slice(0, 197) + "...";
   let body = String(parsed.body ?? "").trim();
   if (body.length < 40) body = seed.hint;
+  // Guarantee the citation + source URL are present even if the model omitted them.
+  if (!body.includes(seed.citation)) body += `\n\nCitation: ${seed.citation}`;
+  if (!body.includes(seed.url)) body += `\nSource: ${seed.url}`;
   return { title, body };
 }
 
