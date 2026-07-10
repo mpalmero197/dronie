@@ -2634,6 +2634,10 @@ export type Database = {
         | "insurance"
         | "government"
         | "other"
+        | "power_washing"
+        | "pest_control"
+        | "film_events"
+        | "telecom"
       job_status: "active" | "completed" | "aborted"
       pilot_verification_status:
         | "unverified"
@@ -2788,6 +2792,10 @@ export const Constants = {
         "insurance",
         "government",
         "other",
+        "power_washing",
+        "pest_control",
+        "film_events",
+        "telecom",
       ],
       job_status: ["active", "completed", "aborted"],
       pilot_verification_status: [
