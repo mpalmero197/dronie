@@ -6,6 +6,10 @@ import {
   Mountain,
   ShieldCheck,
   Siren,
+  Droplets,
+  Bug,
+  Clapperboard,
+  RadioTower,
   type LucideIcon,
 } from "lucide-react";
 import type { IndustryVertical } from "@/lib/marketplace";
@@ -149,6 +153,78 @@ export const VERTICALS: Record<string, VerticalConfig> = {
     ],
     deliverables: ["Orthomosaic", "Thermal map", "3D scene", "Incident report"],
     exampleClients: "Cities, counties, fire/police, emergency management",
+  },
+  power_washing: {
+    slug: "power_washing" as any,
+    name: "Power Washing & Exterior Cleaning",
+    tagline: "Soft-wash from the sky, no ladders required",
+    headline: "Drone-delivered exterior cleaning",
+    intro:
+      "Tethered spray drones and aerial inspection for roofs, façades, and solar arrays — no boom lifts, no ladder days lost to weather.",
+    icon: Droplets,
+    accent: "from-cyan-500/20 to-cyan-500/5",
+    valueProps: [
+      { title: "Roof soft-wash missions", desc: "Low-pressure biocide application that lifts algae and moss without damaging shingles." },
+      { title: "Solar panel rinse", desc: "Restore lost yield with deionized-water washes flown on a repeatable grid pattern." },
+      { title: "Multi-story façade cleaning", desc: "Reach 200+ ft on commercial buildings without scaffolding or lift permits." },
+      { title: "Before/after proof reports", desc: "Aerial photo pairs and coverage maps clients can share with owners and HOAs." },
+    ],
+    deliverables: ["Before/after photos", "Coverage map", "3D façade scan", "Cleaning report PDF"],
+    exampleClients: "Roofing contractors, solar O&M, HOAs, commercial property managers",
+  },
+  pest_control: {
+    slug: "pest_control" as any,
+    name: "Pest Control & Spraying",
+    tagline: "Targeted spraying without the tractor",
+    headline: "Precision pest and vegetation control from the air",
+    intro:
+      "Spray drones apply herbicide, insecticide, and mosquito adulticide exactly where needed — using NDVI and thermal data to skip healthy zones and cut chemical use.",
+    icon: Bug,
+    accent: "from-lime-500/20 to-lime-500/5",
+    valueProps: [
+      { title: "Spot-spray by prescription", desc: "Fly variable-rate zones from an NDVI map instead of blanket spraying the whole field." },
+      { title: "Mosquito & vector control", desc: "Cover wetlands and standing water that ground crews can't safely access." },
+      { title: "Invasive species knockdown", desc: "Target kudzu, phragmites, and hemlock on steep terrain and utility corridors." },
+      { title: "Application records", desc: "Auto-logged flight paths, chemical used, and gallons per acre for regulator sign-off." },
+    ],
+    deliverables: ["Prescription map", "As-applied log", "NDVI baseline", "Compliance PDF"],
+    exampleClients: "Ag co-ops, vector control districts, foresters, utility ROW managers",
+  },
+  film_events: {
+    slug: "film_events" as any,
+    name: "Film, Events & Weddings",
+    tagline: "Cinematic aerials, delivered same-day",
+    headline: "Broadcast-grade drone cinematography",
+    intro:
+      "FPV chase shots, sweeping establishing pulls, and multi-cam event coverage from Part 107 pilots insured for crowds and closed sets.",
+    icon: Clapperboard,
+    accent: "from-rose-500/20 to-rose-500/5",
+    valueProps: [
+      { title: "Cinema-grade capture", desc: "Inspire 3, Mavic 3 Cine, and custom FPV rigs shooting 5.1K ProRes." },
+      { title: "Crowd-rated insurance", desc: "$5M+ liability and OOP waivers for weddings, festivals, and stadium events." },
+      { title: "Same-day highlight reel", desc: "60-second social cut delivered within 24 hours, full edit within a week." },
+      { title: "Multi-cam sync", desc: "Timecode-locked with ground cameras so aerials cut seamlessly into your edit." },
+    ],
+    deliverables: ["Highlight reel", "Raw 5.1K footage", "Aerial stills", "Vertical social cut"],
+    exampleClients: "Wedding planners, film production, sports broadcasters, event agencies",
+  },
+  telecom: {
+    slug: "telecom" as any,
+    name: "Telecom & Tower Inspection",
+    tagline: "Tower climbs, replaced by drones",
+    headline: "Cell tower and antenna inspection without a climb",
+    intro:
+      "Close-visual and thermal inspections of monopoles, lattice towers, and rooftop sites — faster, safer, and OSHA-friendly.",
+    icon: RadioTower,
+    accent: "from-violet-500/20 to-violet-500/5",
+    valueProps: [
+      { title: "No-climb close visual", desc: "Sub-centimetre imagery of connectors, mounts, and antenna azimuths." },
+      { title: "3D digital twin", desc: "Photogrammetric model of the full structure for engineering and colocation studies." },
+      { title: "Thermal & RF hotspots", desc: "Spot failing amplifiers, loose connectors, and heat anomalies mid-flight." },
+      { title: "Turnkey reports", desc: "Standardized carrier-ready PDFs with defect grading and photo evidence." },
+    ],
+    deliverables: ["Inspection PDF", "3D tower model", "Thermal imagery", "Azimuth report"],
+    exampleClients: "Carriers, tower cos, NOC teams, colocation engineers",
   },
 };
 

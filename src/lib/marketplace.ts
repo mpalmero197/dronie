@@ -8,6 +8,10 @@ export type IndustryVertical =
   | "mining"
   | "insurance"
   | "government"
+  | "power_washing"
+  | "pest_control"
+  | "film_events"
+  | "telecom"
   | "other";
 
 export type RequestStatus =
@@ -28,6 +32,10 @@ export const VERTICAL_LABELS: Record<IndustryVertical, string> = {
   mining: "Mining",
   insurance: "Insurance",
   government: "Government & Public Safety",
+  power_washing: "Power Washing & Exterior Cleaning",
+  pest_control: "Pest Control & Spraying",
+  film_events: "Film, Events & Weddings",
+  telecom: "Telecom & Tower Inspection",
   other: "Other",
 };
 

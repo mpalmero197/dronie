@@ -1,62 +1,62 @@
-## Goal
-Restyle and reorganize both dashboards (`/dashboard` client, `/pilot/dashboard`) inside a consistent Illustrator-style app shell — same chrome as the map viewer — so navigation feels grounded and content has a clear hierarchy.
+# Add four new drone-job verticals
 
-## App shell (shared)
-Create `src/components/shell/AppShell.tsx` and `AppSidebar.tsx` using shadcn `Sidebar` (`collapsible="icon"`).
+Adds **Power Washing**, **Pest Control & Spraying**, **Film, Events & Weddings**, and **Telecom & Tower Inspection** everywhere existing verticals appear (landing pages, marketplace filter, pilot signup, Verticals section).
 
-- **Left rail** (collapsible, icons + labels): Overview, Projects, Missions, Map, Fleet, Splats, Video Editor, Marketplace, Portfolio, Community, Settings. Pilot-only extras (Active Jobs, Payouts, Verification) appear when the user has a pilot profile.
-- **Header bar**: `SidebarTrigger`, breadcrumb, global search (opens existing `CommandPalette`), `NotificationBell`, subscription pill, avatar menu.
-- **Main region**: page workspace with consistent max-width, gutters, and section rhythm.
-- **Right insight rail** (optional, per page): contextual cards (verification status, tips, activity).
-- Sidebar remembers active route via `NavLink`; mini-collapse keeps icons visible.
-- Wired at the route level so `Dashboard` and `PilotDashboard` render inside `<AppShell>`. Non-dashboard pages remain untouched this pass.
+## 1. Database (migration)
 
-## `/dashboard` (client) reorganization
-Rewrite `src/pages/Dashboard.tsx` inside the shell:
+Extend the `public.industry_vertical` enum with four new values so pilots can opt into them and clients can post requests:
 
-1. **Hero strip** — compact greeting, plan badge, primary CTAs (New Project, Plan Mission, Open Map). Replaces the current gradient block; less vertical weight.
-2. **Metric row** — 4 KPI tiles (Active projects, Processing, Completed, Storage used) with sparkline placeholder area and hover affordance.
-3. **Workspace grid (2 columns on lg)**:
-   - Left (2/3): **Recent projects** table with status pills, thumbnail, last-updated, quick-open — replaces the current card list; empty state promotes "Start a project".
-   - Right (1/3): **Activity feed** (recent renders, deliverables, mission events) + **Quick actions** stack.
-4. **Modules bento** — Swarm, Splats, RTK, Video Editor, Portfolio, Fleet as a 3×2 tile grid with icon, one-line value prop, and CTA. Groups advanced features and removes them from the main flow.
-5. **Footer strip** — subscription usage bar + link to `/subscription`.
+- `power_washing`
+- `pest_control`
+- `film_events`
+- `telecom`
 
-Remove the ad-hoc emoji/heading mix; standardize section headers (small caps label + h2).
+Postgres `ALTER TYPE ... ADD VALUE IF NOT EXISTS` — no data backfill needed; existing rows unaffected.
 
-## `/pilot/dashboard` reorganization
-Rewrite `src/pages/PilotDashboard.tsx` inside the shell:
+## 2. `src/lib/marketplace.ts`
 
-1. **Hero strip** — pilot name, verification pill, service area, availability toggle promoted here (was buried in right column).
-2. **Metric row** — Active jobs, Quotes pending, Quotes won, Completed (keep existing counts, restyled to match client dashboard).
-3. **Workspace grid**:
-   - Left (2/3): existing `Tabs` (Active / My quotes / Completed) restyled with consistent row cards, better empty states, deadline highlighting.
-   - Right (1/3): **Profile snapshot** (rate, experience, Part 107, insured, verticals, equipment) + **Availability & map visibility** toggles + **Verification CTA** (`Part107Prompt` + `PilotVerificationBanner`) consolidated.
-4. **Suggested work** — small "Open marketplace requests near you" strip beneath the tabs (uses existing marketplace list; capped at 3, links to `/marketplace`).
+Extend `IndustryVertical` union and `VERTICAL_LABELS`:
 
-## Visual/style rules
-- Reuse existing tokens (forest green primary, amber highlight, sky accent, `bg-card`, `border-border`, `bg-secondary`). No new color literals.
-- Space Grotesk display for hero + section headers, Inter body. Consistent `rounded-2xl` cards, `border-border`, subtle `shadow-sm`; hover states use `border-primary/30`.
-- Lucide icons throughout. No emoji.
-- Motion: light `framer-motion` fade/slide on hero + metric row only.
-- Responsive: sidebar auto-collapses under `lg`; grids collapse to single column on `md`.
+- `power_washing` → "Power Washing & Exterior Cleaning"
+- `pest_control` → "Pest Control & Spraying"
+- `film_events` → "Film, Events & Weddings"
+- `telecom` → "Telecom & Tower Inspection"
 
-## Files
-**New**
-- `src/components/shell/AppShell.tsx`
-- `src/components/shell/AppSidebar.tsx`
-- `src/components/shell/DashboardHeader.tsx`
-- `src/components/dashboard/MetricTile.tsx`
-- `src/components/dashboard/ActivityFeed.tsx`
-- `src/components/dashboard/ModuleTile.tsx`
+Also add a few new deliverable options where relevant (e.g. `soft_wash_report`, `spray_map`, `event_highlight_reel`, `tower_inspection_report`) so posted requests can select them.
 
-**Edited**
-- `src/pages/Dashboard.tsx` — full rewrite around shell + new sections
-- `src/pages/PilotDashboard.tsx` — full rewrite around shell + reorganized right rail
-- `src/App.tsx` — wrap the two dashboard routes in `<AppShell>` (other routes untouched)
+## 3. `src/pages/solutions/verticals.config.ts`
 
-**Not touched**: map viewer, marketplace, project detail, portfolio, and all other pages. Business logic, data fetching, Supabase calls, subscription gating, and Realtime channels are preserved verbatim — this is a UI restructure only.
+Add four `VerticalConfig` entries with realistic drafted copy — headline, intro, four value props each, deliverable chips, example clients, and an appropriate `lucide-react` icon + accent gradient:
 
-## Verification
-- Typecheck + build must pass.
-- Run Playwright against `http://localhost:8080/dashboard` and `/pilot/dashboard`, screenshot each at 1280×1800 and at mobile 448×830 to confirm layout, collapsed sidebar, and no overlapping chrome.
+| Slug | Icon | Accent |
+|---|---|---|
+| power_washing | Droplets | sky→cyan |
+| pest_control | Bug | lime→emerald |
+| film_events | Clapperboard (or Film) | rose→fuchsia |
+| telecom | RadioTower | violet→indigo |
+
+Each entry mirrors the shape of existing verticals (Construction, Real Estate, etc.) with 4 value props, ~4 deliverables, and an `exampleClients` line.
+
+Sample draft (Power Washing):
+- Tagline: "Soft-wash from the sky, no ladders required"
+- Value props: Roof soft-wash missions · Solar panel rinse & yield boost · Multi-story façade cleaning · Before/after aerial proof reports
+- Deliverables: Soft-wash plan · Before/after photos · 3D façade scan · Cleaning coverage map
+- Clients: Roofing contractors, solar O&M, HOAs, commercial property managers
+
+Similar drafted copy for the other three (spraying with NDVI targeting, cinematic multi-cam event reels, tower defect capture with no climb).
+
+They automatically flow into `VERTICAL_LIST`, driving `VerticalsSection`, `MarketplaceNew`, `PilotSignup`, `PilotsMap`, and `VerticalPilotsSection`.
+
+## 4. Sitemaps
+
+Regenerate `public/sitemap-solutions.xml` (and refresh the solutions section in `public/sitemap.xml` / `sitemap-static.xml`) so the four new `/solutions/<slug>` URLs are indexed.
+
+## 5. Verification
+
+- `tsgo` typecheck (union changes ripple).
+- Load `/solutions/power_washing`, `/solutions/pest_control`, `/solutions/film_events`, `/solutions/telecom` in the preview and confirm they render with the drafted copy and correct icon.
+- Confirm the new verticals appear in the `VerticalsSection` grid on the home page and in the marketplace vertical filter.
+
+## Out of scope
+
+No changes to pricing, routing structure, or bot content. No new pages beyond what `VerticalLanding` already renders per slug.
