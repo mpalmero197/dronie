@@ -16,6 +16,7 @@ import ApiKeysManager from "@/components/admin/ApiKeysManager";
 import AdminRevenuePanel from "@/components/admin/AdminRevenuePanel";
 import AdminRequestsPanel from "@/components/admin/AdminRequestsPanel";
 import AdminGrowthPanel from "@/components/admin/AdminGrowthPanel";
+import AdminUserDirectory from "@/components/admin/AdminUserDirectory";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface AdminUser {
@@ -308,9 +309,10 @@ export default function AdminPanel() {
         )}
 
         <Tabs defaultValue="revenue" className="w-full">
-          <TabsList className="grid w-full grid-cols-5 max-w-3xl">
+          <TabsList className="grid w-full grid-cols-6 max-w-4xl">
             <TabsTrigger value="revenue">Revenue</TabsTrigger>
             <TabsTrigger value="requests">Requests</TabsTrigger>
+            <TabsTrigger value="directory">Directory</TabsTrigger>
             <TabsTrigger value="growth">Growth</TabsTrigger>
             <TabsTrigger value="verifications">Verifications</TabsTrigger>
             <TabsTrigger value="api">API Keys</TabsTrigger>
@@ -320,6 +322,9 @@ export default function AdminPanel() {
           </TabsContent>
           <TabsContent value="requests" className="mt-4">
             <AdminRequestsPanel />
+          </TabsContent>
+          <TabsContent value="directory" className="mt-4">
+            <AdminUserDirectory />
           </TabsContent>
           <TabsContent value="growth" className="mt-4">
             <AdminGrowthPanel />
