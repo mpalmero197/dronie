@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
 
       const { data: allProfiles } = await adminClient
         .from("profiles")
-        .select("id, full_name, avatar_url");
+        .select("id, full_name, avatar_url, username, headline, portfolio_published, account_type, available_for_hire");
 
       const { data: projectCounts } = await adminClient
         .from("projects")
@@ -67,14 +67,50 @@ Deno.serve(async (req) => {
         profilesMap[p.id] = p;
       });
 
+      // Subscription lookup via Stripe (one paginated scan)
+      const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+      const subMap: Record<string, { product_id: string | null; status: string; current_period_end: string | null }> = {};
+      if (stripeKey) {
+        try {
+          const Stripe = (await import("https://esm.sh/stripe@18.5.0")).default;
+          const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
+          const subs = await stripe.subscriptions.list({
+            status: "active",
+            limit: 100,
+            expand: ["data.customer"],
+          });
+          for (const sub of subs.data) {
+            const customer: any = sub.customer;
+            const email = customer?.email;
+            if (!email) continue;
+            subMap[email.toLowerCase()] = {
+              product_id: (sub.items.data[0]?.price.product as string) ?? null,
+              status: sub.status,
+              current_period_end: sub.current_period_end
+                ? new Date(sub.current_period_end * 1000).toISOString()
+                : null,
+            };
+          }
+        } catch (e) {
+          console.error("[admin-users] stripe fetch failed", e);
+        }
+      }
+
       const result = users.map((u: any) => ({
         id: u.id,
         email: u.email,
         full_name: profilesMap[u.id]?.full_name || null,
+        avatar_url: profilesMap[u.id]?.avatar_url || null,
+        username: profilesMap[u.id]?.username || null,
+        headline: profilesMap[u.id]?.headline || null,
+        portfolio_published: profilesMap[u.id]?.portfolio_published || false,
+        account_type: profilesMap[u.id]?.account_type || null,
+        available_for_hire: profilesMap[u.id]?.available_for_hire ?? null,
         created_at: u.created_at,
         last_sign_in_at: u.last_sign_in_at,
         roles: rolesMap[u.id] || [],
         project_count: projectCountMap[u.id] || 0,
+        subscription: u.email ? subMap[u.email.toLowerCase()] || null : null,
       }));
 
       return new Response(JSON.stringify(result), {
