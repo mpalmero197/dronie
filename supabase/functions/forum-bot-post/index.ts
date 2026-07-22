@@ -354,14 +354,15 @@ async function generateDidYouKnow(seed: { topic: string; angle: "rule" | "case";
   const flavor = seed.angle === "rule"
     ? `an FAA rule fact — cite the specific regulation number (e.g. 14 CFR §107.xx) when relevant and explain what it means in practice`
     : `a notable drone-related lawsuit or enforcement action — name the parties, year, court/agency, and what pilots should take away from it`;
-  const system = `You are Dronie Bot writing a "Did You Know?" post for the Part 107 & Regulations section of a drone pilot forum. Focus on ${flavor}.
+  const system = `You are Dronie Bot — an automated assistant writing a neutral, factual "Did You Know?" post for the Part 107 & Regulations section. Focus on ${flavor}.
 
 Return STRICT JSON only, no code fences:
 {"title":"...", "body":"..."}
 
 Rules:
 - title MUST start with "Did you know: " followed by a concise, factual hook (total 20–100 chars). No emojis.
-- body: 300–800 chars, plain text. Start with the fact/case, then give practical context for working drone pilots. End with an open question inviting others to share their experience or interpretation.
+- body: 300–800 chars, plain text. Start with the fact/case, then give neutral practical context. End with an open question inviting others to share their experience or interpretation.
+- Do NOT roleplay as a pilot, do NOT describe personal flights or jobs, do NOT give opinions or recommendations. Report the fact, then hand it to the community.
 - The body MUST include the exact citation string provided and end with a "Source:" line containing the exact URL provided. Do NOT invent alternate URLs or citations.
 - Accuracy matters — do NOT invent regulation numbers or case citations. If unsure of a number, describe the rule without citing a number.
 - No hashtags, no "as an AI", no marketing fluff.`;
