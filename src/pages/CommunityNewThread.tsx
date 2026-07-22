@@ -16,6 +16,7 @@ import { z } from "zod";
 import { listCategories, createThread, ForumCategory, amIBanned } from "@/lib/forum";
 import { useAuth } from "@/contexts/AuthContext";
 import { ChevronLeft } from "lucide-react";
+import ForumImageUploader from "@/components/forum/ForumImageUploader";
 
 const Schema = z.object({
   category_id: z.string().uuid({ message: "Pick a category" }),
@@ -34,6 +35,7 @@ export default function CommunityNewThread() {
   const [body, setBody] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [banned, setBanned] = useState(false);
+  const [attachments, setAttachments] = useState<string[]>([]);
 
   useEffect(() => {
     if (!loading && !user) navigate("/auth");
@@ -65,7 +67,7 @@ export default function CommunityNewThread() {
     setSubmitting(true);
     try {
       const { category_id, title: tt, body: bb } = parsed.data;
-      const t = await createThread({ category_id: category_id!, title: tt!, body: bb!, author_id: user.id });
+      const t = await createThread({ category_id: category_id!, title: tt!, body: bb!, author_id: user.id, attachments });
       toast.success("Thread posted");
       navigate(`/community/t/${t.id}`);
     } catch (err: any) {
@@ -113,6 +115,14 @@ export default function CommunityNewThread() {
               <Textarea id="body" value={body} maxLength={20000} onChange={(e) => setBody(e.target.value)} rows={10} placeholder="Share context, what you've tried, links, etc." />
               <p className="text-xs text-muted-foreground mt-1">Plain text supported. Be respectful — see community guidelines.</p>
             </div>
+            {user && (
+              <div>
+                <Label>Images (optional)</Label>
+                <div className="mt-2">
+                  <ForumImageUploader userId={user.id} attachments={attachments} onChange={setAttachments} disabled={submitting} />
+                </div>
+              </div>
+            )}
             <div className="flex gap-2 justify-end">
               <Link to="/community"><Button type="button" variant="outline">Cancel</Button></Link>
               <Button type="submit" disabled={submitting}>{submitting ? "Posting…" : "Post thread"}</Button>
