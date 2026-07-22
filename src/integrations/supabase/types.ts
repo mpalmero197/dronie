@@ -552,6 +552,7 @@ export type Database = {
       }
       forum_posts: {
         Row: {
+          attachments: string[]
           author_id: string
           body: string
           created_at: string
@@ -563,6 +564,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          attachments?: string[]
           author_id: string
           body: string
           created_at?: string
@@ -574,6 +576,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          attachments?: string[]
           author_id?: string
           body?: string
           created_at?: string
@@ -654,6 +657,7 @@ export type Database = {
       }
       forum_threads: {
         Row: {
+          attachments: string[]
           author_id: string
           body: string
           category_id: string
@@ -670,6 +674,7 @@ export type Database = {
           view_count: number
         }
         Insert: {
+          attachments?: string[]
           author_id: string
           body: string
           category_id: string
@@ -686,6 +691,7 @@ export type Database = {
           view_count?: number
         }
         Update: {
+          attachments?: string[]
           author_id?: string
           body?: string
           category_id?: string

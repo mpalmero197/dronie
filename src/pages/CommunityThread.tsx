@@ -25,6 +25,7 @@ import {
   setThreadFlags, reportContent, amIBanned, AuthorMini, ForumPost, ForumThread,
 } from "@/lib/forum";
 import { useAuth } from "@/contexts/AuthContext";
+import ForumImageUploader from "@/components/forum/ForumImageUploader";
 
 export default function CommunityThread() {
   const { id = "" } = useParams();
@@ -43,6 +44,9 @@ export default function CommunityThread() {
   const [banned, setBanned] = useState(false);
   const [reportOpen, setReportOpen] = useState<null | { thread_id?: string; post_id?: string }>(null);
   const [reportReason, setReportReason] = useState("");
+  const [replyAttachments, setReplyAttachments] = useState<string[]>([]);
+  const [editAttachments, setEditAttachments] = useState<string[]>([]);
+  const [lightbox, setLightbox] = useState<string | null>(null);
 
   async function refresh() {
     const t = await getThread(id);
@@ -93,11 +97,13 @@ export default function CommunityThread() {
     e.preventDefault();
     if (!user) { navigate("/auth"); return; }
     if (!thread) return;
-    if (reply.trim().length < 1) return;
+    if (reply.trim().length < 1 && replyAttachments.length === 0) return;
     setSubmitting(true);
     try {
-      await createPost({ thread_id: thread.id, body: reply, author_id: user.id });
+      const body = reply.trim().length > 0 ? reply : "(image)";
+      await createPost({ thread_id: thread.id, body, author_id: user.id, attachments: replyAttachments });
       setReply("");
+      setReplyAttachments([]);
       await refresh();
     } catch (err: any) {
       toast.error(err.message ?? "Reply failed");
@@ -108,7 +114,7 @@ export default function CommunityThread() {
     if (!editingId) return;
     try {
       await updatePost(editingId, editBody);
-      setEditingId(null); setEditBody("");
+      setEditingId(null); setEditBody(""); setEditAttachments([]);
       await refresh();
       toast.success("Edited");
     } catch (err: any) { toast.error(err.message ?? "Update failed"); }
@@ -249,6 +255,9 @@ export default function CommunityThread() {
                 <span className="text-sm font-medium">{opAuthor?.username ? `@${opAuthor.username}` : opAuthor?.full_name ?? "Pilot"}</span>
               </div>
               <p className="whitespace-pre-wrap leading-relaxed">{thread.body}</p>
+              {thread.attachments && thread.attachments.length > 0 && (
+                <ImageGrid urls={thread.attachments} onOpen={setLightbox} />
+              )}
             </div>
           </div>
         </Card>
@@ -318,7 +327,12 @@ export default function CommunityThread() {
                         </div>
                       </div>
                     ) : (
-                      <p className="whitespace-pre-wrap text-sm leading-relaxed">{p.body}</p>
+                      <>
+                        <p className="whitespace-pre-wrap text-sm leading-relaxed">{p.body}</p>
+                        {p.attachments && p.attachments.length > 0 && (
+                          <ImageGrid urls={p.attachments} onOpen={setLightbox} />
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -340,8 +354,9 @@ export default function CommunityThread() {
           ) : (
             <form onSubmit={onSubmitReply} className="space-y-2">
               <Textarea value={reply} onChange={(e) => setReply(e.target.value)} rows={4} maxLength={20000} placeholder="Write a reply…" />
+              <ForumImageUploader userId={user.id} attachments={replyAttachments} onChange={setReplyAttachments} disabled={submitting} />
               <div className="flex justify-end">
-                <Button type="submit" disabled={submitting || reply.trim().length === 0} className="gap-2">
+                <Button type="submit" disabled={submitting || (reply.trim().length === 0 && replyAttachments.length === 0)} className="gap-2">
                   <Send className="w-4 h-4" />{submitting ? "Posting…" : "Post reply"}
                 </Button>
               </div>
@@ -361,7 +376,32 @@ export default function CommunityThread() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={!!lightbox} onOpenChange={(o) => { if (!o) setLightbox(null); }}>
+        <DialogContent className="max-w-5xl p-2 bg-background">
+          {lightbox && (
+            <img src={lightbox} alt="attachment" className="w-full h-auto max-h-[85vh] object-contain rounded" />
+          )}
+        </DialogContent>
+      </Dialog>
+
       <FooterSection />
+    </div>
+  );
+}
+
+function ImageGrid({ urls, onOpen }: { urls: string[]; onOpen: (u: string) => void }) {
+  return (
+    <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
+      {urls.map((u) => (
+        <button
+          key={u}
+          type="button"
+          onClick={() => onOpen(u)}
+          className="relative aspect-square rounded-md overflow-hidden border bg-muted hover:opacity-90 transition"
+        >
+          <img src={u} alt="attachment" loading="lazy" className="w-full h-full object-cover" />
+        </button>
+      ))}
     </div>
   );
 }
