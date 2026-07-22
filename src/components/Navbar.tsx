@@ -186,7 +186,7 @@ export default function Navbar() {
 
       {/* Mobile menu */}
       {open &&
-      <nav className="md:hidden bg-card border-b border-border px-6 pb-6 pt-2 space-y-2" aria-label="Mobile navigation">
+      <nav className="md:hidden bg-card border-b border-border px-6 pb-6 pt-2 space-y-2 max-h-[calc(100vh-4rem)] overflow-y-auto overscroll-contain" aria-label="Mobile navigation">
           {navLinks.map((l) => {
             const Icon =
               l.hash === "features" ? Layers :
