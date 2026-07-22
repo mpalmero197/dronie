@@ -1,5 +1,9 @@
 import { supabase } from "@/integrations/supabase/client";
 
+export const FORUM_MEDIA_BUCKET = "portfolio-media";
+export const MAX_FORUM_ATTACHMENTS = 10;
+export const MAX_FORUM_IMAGE_BYTES = 8 * 1024 * 1024; // 8 MB
+
 export interface ForumCategory {
   id: string;
   slug: string;
@@ -24,6 +28,7 @@ export interface ForumThread {
   last_activity_at: string;
   created_at: string;
   updated_at: string;
+  attachments?: string[];
 }
 
 export interface ForumPost {
@@ -36,6 +41,7 @@ export interface ForumPost {
   edited_at: string | null;
   created_at: string;
   updated_at: string;
+  attachments?: string[];
 }
 
 export interface AuthorMini {
@@ -147,7 +153,7 @@ export async function getDidYouKnowStats(): Promise<DidYouKnowStats> {
 }
 
 export async function createThread(input: {
-  category_id: string; title: string; body: string; author_id: string;
+  category_id: string; title: string; body: string; author_id: string; attachments?: string[];
 }): Promise<ForumThread> {
   const { data, error } = await supabase
     .from("forum_threads")
@@ -157,6 +163,7 @@ export async function createThread(input: {
       title: input.title.trim(),
       slug: slugify(input.title),
       body: input.body.trim(),
+      attachments: (input.attachments ?? []).slice(0, MAX_FORUM_ATTACHMENTS),
     })
     .select()
     .single();
@@ -165,7 +172,7 @@ export async function createThread(input: {
 }
 
 export async function createPost(input: {
-  thread_id: string; body: string; author_id: string; parent_post_id?: string | null;
+  thread_id: string; body: string; author_id: string; parent_post_id?: string | null; attachments?: string[];
 }): Promise<ForumPost> {
   const { data, error } = await supabase
     .from("forum_posts")
@@ -174,11 +181,29 @@ export async function createPost(input: {
       author_id: input.author_id,
       body: input.body.trim(),
       parent_post_id: input.parent_post_id ?? null,
+      attachments: (input.attachments ?? []).slice(0, MAX_FORUM_ATTACHMENTS),
     })
     .select()
     .single();
   if (error) throw error;
   return data as ForumPost;
+}
+
+export async function uploadForumImage(file: File, userId: string): Promise<string> {
+  if (!file.type.startsWith("image/")) {
+    throw new Error("Only image files are allowed");
+  }
+  if (file.size > MAX_FORUM_IMAGE_BYTES) {
+    throw new Error("Image is larger than 8 MB");
+  }
+  const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+  const path = `${userId}/forum/${crypto.randomUUID()}.${ext}`;
+  const { error } = await supabase.storage
+    .from(FORUM_MEDIA_BUCKET)
+    .upload(path, file, { contentType: file.type, upsert: false, cacheControl: "31536000" });
+  if (error) throw error;
+  const { data } = supabase.storage.from(FORUM_MEDIA_BUCKET).getPublicUrl(path);
+  return data.publicUrl;
 }
 
 export async function updatePost(id: string, body: string) {
