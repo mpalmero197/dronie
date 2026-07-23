@@ -3,6 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 export const FORUM_MEDIA_BUCKET = "portfolio-media";
 export const MAX_FORUM_ATTACHMENTS = 10;
 export const MAX_FORUM_IMAGE_BYTES = 8 * 1024 * 1024; // 8 MB
+export const MAX_FORUM_VIDEO_BYTES = 60 * 1024 * 1024; // 60 MB
+export const ALLOWED_VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime", "video/ogg"];
+
+export function isVideoUrl(url: string): boolean {
+  return /\.(mp4|webm|mov|ogg|ogv|m4v)(\?|$)/i.test(url);
+}
 
 export interface ForumCategory {
   id: string;
@@ -204,6 +210,55 @@ export async function uploadForumImage(file: File, userId: string): Promise<stri
   if (error) throw error;
   const { data } = supabase.storage.from(FORUM_MEDIA_BUCKET).getPublicUrl(path);
   return data.publicUrl;
+}
+
+export async function uploadForumVideo(file: File, userId: string): Promise<string> {
+  if (!file.type.startsWith("video/")) {
+    throw new Error("Only video files are allowed");
+  }
+  if (!ALLOWED_VIDEO_TYPES.includes(file.type)) {
+    throw new Error("Unsupported video format. Use MP4, WebM, or MOV.");
+  }
+  if (file.size > MAX_FORUM_VIDEO_BYTES) {
+    throw new Error(`Video is larger than ${MAX_FORUM_VIDEO_BYTES / (1024 * 1024)} MB`);
+  }
+  const ext = (file.name.split(".").pop() || "mp4").toLowerCase().replace(/[^a-z0-9]/g, "") || "mp4";
+  const path = `${userId}/forum/${crypto.randomUUID()}.${ext}`;
+  const { error } = await supabase.storage
+    .from(FORUM_MEDIA_BUCKET)
+    .upload(path, file, { contentType: file.type, upsert: false, cacheControl: "31536000" });
+  if (error) throw error;
+  const { data } = supabase.storage.from(FORUM_MEDIA_BUCKET).getPublicUrl(path);
+  return data.publicUrl;
+}
+
+// ---------- Subscriptions ----------
+
+export async function isSubscribed(threadId: string, userId: string): Promise<boolean> {
+  if (!userId) return false;
+  const { data } = await supabase
+    .from("forum_subscriptions")
+    .select("id")
+    .eq("thread_id", threadId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  return !!data;
+}
+
+export async function subscribeThread(threadId: string, userId: string): Promise<void> {
+  const { error } = await supabase
+    .from("forum_subscriptions")
+    .insert({ thread_id: threadId, user_id: userId });
+  if (error && !`${error.message}`.toLowerCase().includes("duplicate")) throw error;
+}
+
+export async function unsubscribeThread(threadId: string, userId: string): Promise<void> {
+  const { error } = await supabase
+    .from("forum_subscriptions")
+    .delete()
+    .eq("thread_id", threadId)
+    .eq("user_id", userId);
+  if (error) throw error;
 }
 
 export async function updatePost(id: string, body: string) {
