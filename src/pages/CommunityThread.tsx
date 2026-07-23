@@ -26,6 +26,10 @@ import {
 } from "@/lib/forum";
 import { useAuth } from "@/contexts/AuthContext";
 import ForumImageUploader from "@/components/forum/ForumImageUploader";
+import { supabase } from "@/integrations/supabase/client";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Input } from "@/components/ui/input";
+import { Share2, User, Briefcase, Video, Sparkles } from "lucide-react";
 
 export default function CommunityThread() {
   const { id = "" } = useParams();
@@ -47,6 +51,8 @@ export default function CommunityThread() {
   const [replyAttachments, setReplyAttachments] = useState<string[]>([]);
   const [editAttachments, setEditAttachments] = useState<string[]>([]);
   const [lightbox, setLightbox] = useState<string | null>(null);
+  const [myUsername, setMyUsername] = useState<string | null>(null);
+  const [videoUrl, setVideoUrl] = useState("");
 
   async function refresh() {
     const t = await getThread(id);
@@ -74,6 +80,33 @@ export default function CommunityThread() {
   useEffect(() => {
     if (user) amIBanned(user.id).then(setBanned).catch(() => {});
   }, [user]);
+
+  useEffect(() => {
+    if (!user) { setMyUsername(null); return; }
+    supabase.from("profiles").select("username").eq("id", user.id).maybeSingle()
+      .then(({ data }) => setMyUsername(data?.username ?? null));
+  }, [user]);
+
+  function insertIntoReply(text: string) {
+    setReply((prev) => (prev.trim().length === 0 ? text : `${prev.trimEnd()}\n${text}`));
+  }
+  function shareMyPortfolio() {
+    if (!myUsername) { toast.error("Set a username on your profile first."); return; }
+    insertIntoReply(`${window.location.origin}/u/${myUsername}`);
+    toast.success("Portfolio link added");
+  }
+  function shareMyProfile() {
+    if (!user) return;
+    insertIntoReply(`${window.location.origin}/pilots/${user.id}`);
+    toast.success("Profile link added");
+  }
+  function shareVideoLink() {
+    const url = videoUrl.trim();
+    if (!/^https?:\/\//i.test(url)) { toast.error("Enter a valid https URL"); return; }
+    insertIntoReply(url);
+    setVideoUrl("");
+    toast.success("Video link added");
+  }
 
   const opAuthor = useMemo(() => thread ? authors[thread.author_id] : undefined, [thread, authors]);
 
@@ -267,6 +300,15 @@ export default function CommunityThread() {
         </h2>
 
         <div className="space-y-3">
+          {posts.length === 0 && (
+            <Card className="p-8 text-center border-dashed">
+              <Sparkles className="w-6 h-6 mx-auto mb-2 text-primary" />
+              <p className="font-medium">It's too quiet here.</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Be the first to comment — share a tip, a photo, or a link to your latest flight.
+              </p>
+            </Card>
+          )}
           {posts.map((p) => {
             const a = authors[p.author_id];
             const v = myVotes.posts[p.id] ?? 0;
@@ -355,7 +397,30 @@ export default function CommunityThread() {
             <form onSubmit={onSubmitReply} className="space-y-2">
               <Textarea value={reply} onChange={(e) => setReply(e.target.value)} rows={4} maxLength={20000} placeholder="Write a reply…" />
               <ForumImageUploader userId={user.id} attachments={replyAttachments} onChange={setReplyAttachments} disabled={submitting} />
-              <div className="flex justify-end">
+              <div className="flex flex-wrap items-center gap-2 justify-between">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button type="button" size="sm" variant="outline" className="gap-2">
+                      <Share2 className="w-4 h-4" /> Share
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="w-72 space-y-2">
+                    <p className="text-xs text-muted-foreground">Add a link to your reply</p>
+                    <Button type="button" variant="ghost" size="sm" className="w-full justify-start gap-2" onClick={shareMyPortfolio}>
+                      <Briefcase className="w-4 h-4" /> My portfolio
+                    </Button>
+                    <Button type="button" variant="ghost" size="sm" className="w-full justify-start gap-2" onClick={shareMyProfile}>
+                      <User className="w-4 h-4" /> My pilot profile
+                    </Button>
+                    <div className="pt-2 border-t space-y-2">
+                      <label className="text-xs text-muted-foreground flex items-center gap-1.5"><Video className="w-3.5 h-3.5" /> Video URL (YouTube, Vimeo, etc.)</label>
+                      <div className="flex gap-1.5">
+                        <Input value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} placeholder="https://…" className="h-8 text-xs" />
+                        <Button type="button" size="sm" onClick={shareVideoLink}>Add</Button>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
                 <Button type="submit" disabled={submitting || (reply.trim().length === 0 && replyAttachments.length === 0)} className="gap-2">
                   <Send className="w-4 h-4" />{submitting ? "Posting…" : "Post reply"}
                 </Button>
