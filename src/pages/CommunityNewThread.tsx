@@ -16,7 +16,7 @@ import { z } from "zod";
 import { listCategories, createThread, ForumCategory, amIBanned } from "@/lib/forum";
 import { useAuth } from "@/contexts/AuthContext";
 import { ChevronLeft } from "lucide-react";
-import ForumImageUploader from "@/components/forum/ForumImageUploader";
+import ForumMediaUploader from "@/components/forum/ForumMediaUploader";
 
 const Schema = z.object({
   category_id: z.string().uuid({ message: "Pick a category" }),
@@ -119,7 +119,7 @@ export default function CommunityNewThread() {
               <div>
                 <Label>Images (optional)</Label>
                 <div className="mt-2">
-                  <ForumImageUploader userId={user.id} attachments={attachments} onChange={setAttachments} disabled={submitting} />
+                  <ForumMediaUploader userId={user.id} attachments={attachments} onChange={setAttachments} disabled={submitting} />
                 </div>
               </div>
             )}

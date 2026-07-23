@@ -25,11 +25,22 @@ import {
   setThreadFlags, reportContent, amIBanned, AuthorMini, ForumPost, ForumThread,
 } from "@/lib/forum";
 import { useAuth } from "@/contexts/AuthContext";
-import ForumImageUploader from "@/components/forum/ForumImageUploader";
+import ForumMediaUploader from "@/components/forum/ForumMediaUploader";
+import AttachmentGrid from "@/components/forum/AttachmentGrid";
+import LinkPreviews from "@/components/forum/LinkPreviews";
+import SubscribeButton from "@/components/forum/SubscribeButton";
 import { supabase } from "@/integrations/supabase/client";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { Share2, User, Briefcase, Video, Sparkles } from "lucide-react";
+
+const QUICK_CHIPS: { label: string; template: string }[] = [
+  { label: "Gear I used", template: "Gear I used:\n- Drone: \n- Camera / lens: \n- Software: " },
+  { label: "Location", template: "Location / airspace:\n- Site: \n- Class: \n- LAANC: " },
+  { label: "Results", template: "Results:\n- GSD / accuracy: \n- Flight time: \n- What worked: \n- What I'd change: " },
+  { label: "Ask a question", template: "Question: " },
+  { label: "Share portfolio", template: "" }, // handled specially below
+];
 
 export default function CommunityThread() {
   const { id = "" } = useParams();
@@ -89,6 +100,10 @@ export default function CommunityThread() {
 
   function insertIntoReply(text: string) {
     setReply((prev) => (prev.trim().length === 0 ? text : `${prev.trimEnd()}\n${text}`));
+  }
+  function applyChip(label: string, template: string) {
+    if (label === "Share portfolio") { shareMyPortfolio(); return; }
+    insertIntoReply(template);
   }
   function shareMyPortfolio() {
     if (!myUsername) { toast.error("Set a username on your profile first."); return; }
@@ -228,19 +243,27 @@ export default function CommunityThread() {
             {thread.locked && <Lock className="w-4 h-4 text-muted-foreground" />}
             <h1 className="font-display text-2xl md:text-3xl font-bold">{thread.title}</h1>
           </div>
+          <div className="flex items-center gap-2">
+          <SubscribeButton threadId={thread.id} userId={user?.id} onRequireAuth={() => navigate("/auth")} />
+          {user && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="gap-2"
+              onClick={() => setReportOpen({ thread_id: thread.id })}
+              aria-label="Report thread"
+            >
+              <Flag className="w-4 h-4" /> Report
+            </Button>
+          )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon"><MoreHorizontal className="w-4 h-4" /></Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              {user && (
-                <DropdownMenuItem onClick={() => setReportOpen({ thread_id: thread.id })}>
-                  <Flag className="w-4 h-4 mr-2" />Report
-                </DropdownMenuItem>
-              )}
               {(isAdmin || user?.id === thread.author_id) && (
                 <>
-                  <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={onDeleteThread} className="text-destructive">
                     <Trash2 className="w-4 h-4 mr-2" />Delete thread
                   </DropdownMenuItem>
@@ -258,6 +281,7 @@ export default function CommunityThread() {
               )}
             </DropdownMenuContent>
           </DropdownMenu>
+          </div>
         </div>
 
         <div className="flex items-center gap-3 text-xs text-muted-foreground mb-6">
@@ -289,8 +313,9 @@ export default function CommunityThread() {
               </div>
               <p className="whitespace-pre-wrap leading-relaxed">{thread.body}</p>
               {thread.attachments && thread.attachments.length > 0 && (
-                <ImageGrid urls={thread.attachments} onOpen={setLightbox} />
+                <AttachmentGrid urls={thread.attachments} onOpenImage={setLightbox} />
               )}
+              <LinkPreviews text={thread.body} />
             </div>
           </div>
         </Card>
@@ -372,8 +397,9 @@ export default function CommunityThread() {
                       <>
                         <p className="whitespace-pre-wrap text-sm leading-relaxed">{p.body}</p>
                         {p.attachments && p.attachments.length > 0 && (
-                          <ImageGrid urls={p.attachments} onOpen={setLightbox} />
+                          <AttachmentGrid urls={p.attachments} onOpenImage={setLightbox} />
                         )}
+                        <LinkPreviews text={p.body} />
                       </>
                     )}
                   </div>
@@ -395,8 +421,20 @@ export default function CommunityThread() {
             <Card className="p-6 text-center text-destructive">You are restricted from posting.</Card>
           ) : (
             <form onSubmit={onSubmitReply} className="space-y-2">
+              <div className="flex flex-wrap gap-1.5">
+                {QUICK_CHIPS.map((c) => (
+                  <button
+                    key={c.label}
+                    type="button"
+                    onClick={() => applyChip(c.label, c.template)}
+                    className="text-xs px-2.5 py-1 rounded-full border border-border/60 bg-muted/40 hover:bg-muted transition text-foreground/80"
+                  >
+                    {c.label}
+                  </button>
+                ))}
+              </div>
               <Textarea value={reply} onChange={(e) => setReply(e.target.value)} rows={4} maxLength={20000} placeholder="Write a reply…" />
-              <ForumImageUploader userId={user.id} attachments={replyAttachments} onChange={setReplyAttachments} disabled={submitting} />
+              <ForumMediaUploader userId={user.id} attachments={replyAttachments} onChange={setReplyAttachments} disabled={submitting} />
               <div className="flex flex-wrap items-center gap-2 justify-between">
                 <Popover>
                   <PopoverTrigger asChild>
@@ -450,23 +488,6 @@ export default function CommunityThread() {
       </Dialog>
 
       <FooterSection />
-    </div>
-  );
-}
-
-function ImageGrid({ urls, onOpen }: { urls: string[]; onOpen: (u: string) => void }) {
-  return (
-    <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
-      {urls.map((u) => (
-        <button
-          key={u}
-          type="button"
-          onClick={() => onOpen(u)}
-          className="relative aspect-square rounded-md overflow-hidden border bg-muted hover:opacity-90 transition"
-        >
-          <img src={u} alt="attachment" loading="lazy" className="w-full h-full object-cover" />
-        </button>
-      ))}
     </div>
   );
 }
