@@ -300,6 +300,15 @@ export default function CommunityThread() {
         </h2>
 
         <div className="space-y-3">
+          {posts.length === 0 && (
+            <Card className="p-8 text-center border-dashed">
+              <Sparkles className="w-6 h-6 mx-auto mb-2 text-primary" />
+              <p className="font-medium">It's too quiet here.</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Be the first to comment — share a tip, a photo, or a link to your latest flight.
+              </p>
+            </Card>
+          )}
           {posts.map((p) => {
             const a = authors[p.author_id];
             const v = myVotes.posts[p.id] ?? 0;
