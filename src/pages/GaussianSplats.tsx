@@ -20,6 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { TrainDialog } from "@/components/splats/TrainDialog";
+import { VideoIngestDialog } from "@/components/splats/VideoIngestDialog";
 import { JobList } from "@/components/splats/JobList";
 import { ShareDialog } from "@/components/splats/ShareDialog";
 import CaptureRequirements from "@/components/splats/CaptureRequirements";
@@ -612,11 +613,18 @@ export default function GaussianSplats() {
                         Inspired by Luma AI, DJI Terra and Nerfstudio.
                       </p>
                     </div>
-                    <TrainDialog
-                      projectId={projectId}
-                      disabled={!projectId}
-                      onJobCreated={() => setJobsRefresh((n) => n + 1)}
-                    />
+                    <div className="flex items-center gap-2">
+                      <VideoIngestDialog
+                        projectId={projectId}
+                        disabled={!projectId}
+                        onJobCreated={() => setJobsRefresh((n) => n + 1)}
+                      />
+                      <TrainDialog
+                        projectId={projectId}
+                        disabled={!projectId}
+                        onJobCreated={() => setJobsRefresh((n) => n + 1)}
+                      />
+                    </div>
                   </div>
                 </div>
 

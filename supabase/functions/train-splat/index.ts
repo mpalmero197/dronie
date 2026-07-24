@@ -47,6 +47,11 @@ Deno.serve(async (req) => {
     const captureFlags = body.captureFlags && typeof body.captureFlags === "object"
       ? body.captureFlags
       : null;
+    const source: "photos" | "video" = body.source === "video" ? "video" : "photos";
+    const framePrefix: string | null =
+      typeof body.framePrefix === "string" && body.framePrefix.length > 0
+        ? body.framePrefix
+        : null;
 
     if (!projectId || !PRESETS[preset]) {
       return new Response(JSON.stringify({ error: "invalid_input" }), {
@@ -56,15 +61,27 @@ Deno.serve(async (req) => {
 
     const admin = createClient(supabaseUrl, serviceKey);
 
-    // Count images in the project's input bucket so we can show metadata.
+    // Count images in the input bucket so we can show metadata.
+    // Video ingests land under drone-images/<user>/<project>/video-<stamp>;
+    // photo ingests still use the legacy project-inputs bucket the trainer
+    // will read from.
     let imageCount: number | null = null;
     try {
-      const { data: files } = await admin.storage
-        .from("project-inputs")
-        .list(`${projectId}`, { limit: 1000 });
-      imageCount = (files ?? []).filter((f) =>
-        /\.(jpe?g|png|tiff?)$/i.test(f.name)
-      ).length;
+      if (source === "video" && framePrefix) {
+        const { data: files } = await admin.storage
+          .from("drone-images")
+          .list(framePrefix, { limit: 1000 });
+        imageCount = (files ?? []).filter((f) =>
+          /\.(jpe?g|png)$/i.test(f.name)
+        ).length;
+      } else {
+        const { data: files } = await admin.storage
+          .from("project-inputs")
+          .list(`${projectId}`, { limit: 1000 });
+        imageCount = (files ?? []).filter((f) =>
+          /\.(jpe?g|png|tiff?)$/i.test(f.name)
+        ).length;
+      }
     } catch { /* ignore — bucket may not exist yet */ }
 
     const cfg = PRESETS[preset];
@@ -81,6 +98,8 @@ Deno.serve(async (req) => {
         image_count: imageCount,
         status: "queued",
         capture_flags: captureFlags,
+        source,
+        frame_prefix: framePrefix,
       })
       .select()
       .single();
