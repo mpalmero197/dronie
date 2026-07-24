@@ -1,62 +1,77 @@
-# Add four new drone-job verticals
 
-Adds **Power Washing**, **Pest Control & Spraying**, **Film, Events & Weddings**, and **Telecom & Tower Inspection** everywhere existing verticals appear (landing pages, marketplace filter, pilot signup, Verticals section).
+# Video → Gaussian Splat
 
-## 1. Database (migration)
+Let users drop a phone or drone video into the Splats studio and get back a viewable 3DGS scene. Longer/higher-resolution clips produce denser splats; short clips still produce a recognizable one.
 
-Extend the `public.industry_vertical` enum with four new values so pilots can opt into them and clients can post requests:
+## User flow
 
-- `power_washing`
-- `pest_control`
-- `film_events`
-- `telecom`
+1. On `/splats`, next to **Train new scene**, add **From video…**.
+2. Modal accepts one file (`video/*`, up to ~500 MB) or a URL from an existing project asset.
+3. Client probes duration + resolution, shows a live estimate:
+   - Frames to extract, target preset, estimated training time.
+4. Client extracts JPEG frames in-browser via `ffmpeg.wasm` (already bundled in `src/lib/videoEditor/ffmpeg.ts`) using a sharpness-aware sampling rate.
+5. Frames are uploaded to `project-inputs/<projectId>/video-<jobId>/frame_%05d.jpg`.
+6. Client calls the existing `train-splat` edge function with `source: "video"` and the new frame folder; a job appears in `JobList` and streams to completion like today.
 
-Postgres `ALTER TYPE ... ADD VALUE IF NOT EXISTS` — no data backfill needed; existing rows unaffected.
+## Frame-extraction heuristic (the "quality scales with input" rule)
 
-## 2. `src/lib/marketplace.ts`
+Compute a target frame count from clip length and pixel area, then clamp to the preset floor:
 
-Extend `IndustryVertical` union and `VERTICAL_LABELS`:
+```text
+pixels    = width * height              // 1280x720 ≈ 0.9 MP, 3840x2160 ≈ 8.3 MP
+resFactor = clamp(sqrt(pixels / 2_073_600), 0.6, 2.0)   // 1080p = 1.0
+baseFps   = clamp(duration <= 30 ? 4 : duration <= 90 ? 2 : 1, ...)
+frames    = round(duration * baseFps * resFactor)
+frames    = clamp(frames, 40, 900)
+```
 
-- `power_washing` → "Power Washing & Exterior Cleaning"
-- `pest_control` → "Pest Control & Spraying"
-- `film_events` → "Film, Events & Weddings"
-- `telecom` → "Telecom & Tower Inspection"
+Preset auto-selected from `frames`:
+- `< 120`  → **draft** (still viewable, low detail)
+- `120–320` → **balanced**
+- `> 320` → **cinematic**
 
-Also add a few new deliverable options where relevant (e.g. `soft_wash_report`, `spray_map`, `event_highlight_reel`, `tower_inspection_report`) so posted requests can select them.
+User can override the preset in the modal. A short 20 s 1080p clip lands at ~80 frames → draft. A 2 min 4K clip lands at ~600 frames → cinematic.
 
-## 3. `src/pages/solutions/verticals.config.ts`
+### Extraction command
 
-Add four `VerticalConfig` entries with realistic drafted copy — headline, intro, four value props each, deliverable chips, example clients, and an appropriate `lucide-react` icon + accent gradient:
+Single ffmpeg pass, downscaled to 1600px on the long edge to keep uploads manageable while preserving detail:
 
-| Slug | Icon | Accent |
-|---|---|---|
-| power_washing | Droplets | sky→cyan |
-| pest_control | Bug | lime→emerald |
-| film_events | Clapperboard (or Film) | rose→fuchsia |
-| telecom | RadioTower | violet→indigo |
+```
+ffmpeg -i in.mp4 -vf "fps=<baseFps*resFactor>,scale='min(1600,iw)':-2" -q:v 3 frame_%05d.jpg
+```
 
-Each entry mirrors the shape of existing verticals (Construction, Real Estate, etc.) with 4 value props, ~4 deliverables, and an `exampleClients` line.
+Optional (cinematic only): a second pass with `select='gt(scene,0.02)'` to bias toward distinct viewpoints instead of near-duplicates.
 
-Sample draft (Power Washing):
-- Tagline: "Soft-wash from the sky, no ladders required"
-- Value props: Roof soft-wash missions · Solar panel rinse & yield boost · Multi-story façade cleaning · Before/after aerial proof reports
-- Deliverables: Soft-wash plan · Before/after photos · 3D façade scan · Cleaning coverage map
-- Clients: Roofing contractors, solar O&M, HOAs, commercial property managers
+## Where the code lives
 
-Similar drafted copy for the other three (spraying with NDVI targeting, cinematic multi-cam event reels, tower defect capture with no climb).
+- `src/lib/splatVideoIngest.ts` (new)
+  - `estimateFramePlan(durationS, w, h)` → `{ frames, fps, resFactor, preset }`
+  - `extractFrames(file, plan, onProgress)` → `Blob[]` (reuses `getFFmpeg()` from `videoEditor/ffmpeg.ts`)
+- `src/components/splats/VideoIngestDialog.tsx` (new)
+  - File picker + probe (reuses `probeVideo` from `videoEditor/render.ts`)
+  - Live plan preview + preset override
+  - Uploads frames sequentially with progress + concurrency of 4 to `project-inputs` bucket
+  - Calls `supabase.functions.invoke("train-splat", { body: { projectId, preset, source: "video", framePrefix } })`
+- `src/pages/GaussianSplats.tsx`
+  - Add the **From video…** trigger next to `TrainDialog`
+- `supabase/functions/train-splat/index.ts`
+  - Accept optional `source` + `framePrefix`; when present, count frames in that folder instead of the project root and stamp `splat_jobs.source = 'video'` for analytics.
+- Migration
+  - `alter table public.splat_jobs add column if not exists source text default 'photos' check (source in ('photos','video'))`
+  - `alter table public.splat_jobs add column if not exists frame_prefix text`
 
-They automatically flow into `VERTICAL_LIST`, driving `VerticalsSection`, `MarketplaceNew`, `PilotSignup`, `PilotsMap`, and `VerticalPilotsSection`.
+## Storage & limits
 
-## 4. Sitemaps
+- Uses the existing `project-inputs` bucket and its RLS (owner-scoped writes).
+- Hard caps in the client: max 900 frames, max 500 MB source file, max long-edge 1600 px on extracted JPEGs.
+- On free-tier accounts we already gate `/splats` via subscription; no new billing surface.
 
-Regenerate `public/sitemap-solutions.xml` (and refresh the solutions section in `public/sitemap.xml` / `sitemap-static.xml`) so the four new `/solutions/<slug>` URLs are indexed.
+## Out of scope for this plan
 
-## 5. Verification
+- Running the actual 3DGS trainer on a GPU. The current `train-splat` function is a simulator that reports `ready` without producing a `.ply` — that stays the same. This work makes the ingest path real so it's ready the moment a GPU worker is wired in.
+- Live audio/voiceover, video trimming UI (users can pre-trim in the existing Video Editor if needed).
 
-- `tsgo` typecheck (union changes ripple).
-- Load `/solutions/power_washing`, `/solutions/pest_control`, `/solutions/film_events`, `/solutions/telecom` in the preview and confirm they render with the drafted copy and correct icon.
-- Confirm the new verticals appear in the `VerticalsSection` grid on the home page and in the marketplace vertical filter.
+## Verification
 
-## Out of scope
-
-No changes to pricing, routing structure, or bot content. No new pages beyond what `VerticalLanding` already renders per slug.
+- Probe + plan unit test in `src/test/` for the heuristic (20 s 1080p → draft ~80 frames; 120 s 4K → cinematic ~600 frames).
+- Manual: upload a 20 s phone clip → job appears with `source=video`, frame count matches plan, viewer opens demo/last splat as today.
