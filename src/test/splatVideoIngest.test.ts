@@ -9,8 +9,8 @@ describe("estimateFramePlan", () => {
     expect(p.frames).toBeLessThan(120);
   });
 
-  it("120s 4K → cinematic preset with dense frame count", () => {
-    const p = estimateFramePlan(120, 3840, 2160);
+  it("3min 4K → cinematic preset with dense frame count", () => {
+    const p = estimateFramePlan(180, 3840, 2160);
     expect(p.preset).toBe("cinematic");
     expect(p.frames).toBeGreaterThan(320);
     expect(p.frames).toBeLessThanOrEqual(900);
