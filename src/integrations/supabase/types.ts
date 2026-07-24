@@ -2224,6 +2224,7 @@ export type Database = {
           capture_flags: Json | null
           created_at: string
           error: string | null
+          frame_prefix: string | null
           id: string
           image_count: number | null
           iterations: number
@@ -2231,6 +2232,7 @@ export type Database = {
           preset: string
           project_id: string
           psnr: number | null
+          source: string
           sph_degree: number
           status: string
           training_seconds: number | null
@@ -2242,6 +2244,7 @@ export type Database = {
           capture_flags?: Json | null
           created_at?: string
           error?: string | null
+          frame_prefix?: string | null
           id?: string
           image_count?: number | null
           iterations?: number
@@ -2249,6 +2252,7 @@ export type Database = {
           preset?: string
           project_id: string
           psnr?: number | null
+          source?: string
           sph_degree?: number
           status?: string
           training_seconds?: number | null
@@ -2260,6 +2264,7 @@ export type Database = {
           capture_flags?: Json | null
           created_at?: string
           error?: string | null
+          frame_prefix?: string | null
           id?: string
           image_count?: number | null
           iterations?: number
@@ -2267,6 +2272,7 @@ export type Database = {
           preset?: string
           project_id?: string
           psnr?: number | null
+          source?: string
           sph_degree?: number
           status?: string
           training_seconds?: number | null
