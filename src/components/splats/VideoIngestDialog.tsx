@@ -124,8 +124,8 @@ export function VideoIngestDialog({ projectId, disabled, onJobCreated }: Props) 
       };
       await Promise.all(Array.from({ length: concurrency }, () => worker()));
 
-      // 3. Dispatch training job.
-      setMsg("Queuing training…");
+      // 3. Dispatch the cloud 3D conversion job.
+      setMsg("Creating 3D splat…");
       const { error: fnErr } = await supabase.functions.invoke("train-splat", {
         body: {
           projectId,
@@ -149,8 +149,8 @@ export function VideoIngestDialog({ projectId, disabled, onJobCreated }: Props) 
       });
 
       toast({
-        title: "Video splat queued",
-        description: `${total} frames · ${plan.preset} preset.`,
+        title: "Video splat started",
+        description: `${total} frames are being converted into a 3D Gaussian splat.`,
       });
       onJobCreated?.();
       setOpen(false);
@@ -184,13 +184,14 @@ export function VideoIngestDialog({ projectId, disabled, onJobCreated }: Props) 
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Film className="w-4 h-4 text-primary" /> Video → Gaussian Splat
+            <Film className="w-4 h-4 text-primary" /> Video → 3D Gaussian Splat
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
           <p className="text-xs text-muted-foreground leading-relaxed">
-            Drop a phone or drone clip. Longer, higher-resolution footage produces a denser splat.
+            Upload a phone or drone clip and Dronie will turn extracted frames into a real 3D splat file.
+            Longer, higher-resolution footage produces a denser splat.
             Keep the camera moving <em>around</em> the subject for best results.
           </p>
 
@@ -253,9 +254,9 @@ export function VideoIngestDialog({ projectId, disabled, onJobCreated }: Props) 
                   <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="auto">Auto — recommended</SelectItem>
-                    <SelectItem value="draft">Draft · ~1.5 min</SelectItem>
-                    <SelectItem value="balanced">Balanced · ~6 min</SelectItem>
-                    <SelectItem value="cinematic">Cinematic · ~12 min</SelectItem>
+                    <SelectItem value="draft">Draft · faster conversion</SelectItem>
+                    <SelectItem value="balanced">Balanced · more detail</SelectItem>
+                    <SelectItem value="cinematic">Cinematic · highest detail</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -281,7 +282,7 @@ export function VideoIngestDialog({ projectId, disabled, onJobCreated }: Props) 
             className="gap-1.5"
           >
             {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-            Extract & train
+            Create 3D splat
           </Button>
         </DialogFooter>
       </DialogContent>

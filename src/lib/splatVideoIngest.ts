@@ -126,7 +126,7 @@ export async function extractFrames(
 /** Human-readable summary of the plan for the ingest dialog. */
 export function describePlan(plan: FramePlan): string {
   const mins = Math.round(plan.estimatedTrainingSeconds / 60);
-  return `${plan.frames} frames · ${plan.preset} preset · ~${mins} min training`;
+  return `${plan.frames} frames · ${plan.preset} preset · ~${mins} min conversion`;
 }
 
 export const INGEST_LIMITS = {

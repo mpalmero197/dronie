@@ -2231,6 +2231,9 @@ export type Database = {
           output_path: string | null
           preset: string
           project_id: string
+          provider: string | null
+          provider_output_url: string | null
+          provider_prediction_id: string | null
           psnr: number | null
           source: string
           sph_degree: number
@@ -2251,6 +2254,9 @@ export type Database = {
           output_path?: string | null
           preset?: string
           project_id: string
+          provider?: string | null
+          provider_output_url?: string | null
+          provider_prediction_id?: string | null
           psnr?: number | null
           source?: string
           sph_degree?: number
@@ -2271,6 +2277,9 @@ export type Database = {
           output_path?: string | null
           preset?: string
           project_id?: string
+          provider?: string | null
+          provider_output_url?: string | null
+          provider_prediction_id?: string | null
           psnr?: number | null
           source?: string
           sph_degree?: number

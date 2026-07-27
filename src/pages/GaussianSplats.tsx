@@ -630,7 +630,7 @@ export default function GaussianSplats() {
 
                 <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
                   <h3 className="font-display font-700 text-sm">Recent jobs</h3>
-                  <JobList projectId={projectId} refreshKey={jobsRefresh} />
+                  <JobList projectId={projectId} refreshKey={jobsRefresh} onSceneReady={() => refresh(projectId)} />
                 </div>
               </TabsContent>
             </Tabs>

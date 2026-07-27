@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Clock, Loader2, XCircle, Zap, Coins, Timer } from "lucide-react";
+import { CheckCircle2, Clock, Loader2, XCircle, Zap, Coins, Timer, FileBox } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
 
 interface SplatJob {
   id: string;
@@ -11,12 +12,15 @@ interface SplatJob {
   psnr: number | null;
   training_seconds: number | null;
   error: string | null;
+  output_path: string | null;
+  source?: "photos" | "video" | null;
   created_at: string;
 }
 
 interface Props {
   projectId: string;
   refreshKey: number;
+  onSceneReady?: () => void;
 }
 
 /** Tunable per-1k-iteration cost in cents. Drives the cost estimator chip. */
@@ -41,7 +45,7 @@ function formatSeconds(s: number): string {
   return `${(s / 3600).toFixed(1)}h`;
 }
 
-export function JobList({ projectId, refreshKey }: Props) {
+export function JobList({ projectId, refreshKey, onSceneReady }: Props) {
   const [jobs, setJobs] = useState<SplatJob[]>([]);
 
   useEffect(() => {
@@ -122,6 +126,17 @@ export function JobList({ projectId, refreshKey }: Props) {
               {j.psnr && <>PSNR {j.psnr.toFixed(2)} dB</>}
               {j.psnr && j.training_seconds ? " · " : ""}
               {j.training_seconds && <>{Math.round(j.training_seconds / 60)} min</>}
+            </div>
+          )}
+          {j.status === "ready" && j.output_path && (
+            <div className="mt-2 flex items-center justify-between gap-2 rounded-md border border-primary/25 bg-primary/5 p-2">
+              <span className="inline-flex min-w-0 items-center gap-1 text-[10px] text-primary">
+                <FileBox className="h-3 w-3 shrink-0" />
+                <span className="truncate">3D splat file created</span>
+              </span>
+              <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={onSceneReady}>
+                Load scene
+              </Button>
             </div>
           )}
           {j.error && (
