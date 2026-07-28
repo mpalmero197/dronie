@@ -1,5 +1,7 @@
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { fetchFile, toBlobURL } from "@ffmpeg/util";
+import coreURL from "@ffmpeg/core?url";
+import wasmURL from "@ffmpeg/core/wasm?url";
 
 let ffmpegSingleton: FFmpeg | null = null;
 let loadingPromise: Promise<FFmpeg> | null = null;
@@ -15,11 +17,11 @@ export async function getFFmpeg(onLog?: LoadProgress): Promise<FFmpeg> {
     if (onLog) {
       ff.on("log", ({ message }) => onLog(message));
     }
-    // unpkg multi-thread build is heavier; use single-thread core for portability.
-    const baseURL = "https://unpkg.com/@ffmpeg/[email protected]/dist/umd";
+    // Load the single-thread core from bundled app assets instead of a third-
+    // party CDN so video uploads do not fail with generic network errors.
     await ff.load({
-      coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
-      wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
+      coreURL: await toBlobURL(coreURL, "text/javascript"),
+      wasmURL: await toBlobURL(wasmURL, "application/wasm"),
     });
     ffmpegSingleton = ff;
     return ff;
