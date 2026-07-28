@@ -600,6 +600,26 @@ export default function GaussianSplats() {
               </label>
               <p className="text-[10px] text-muted-foreground">Max 500 MB per scene. Stored under your project outputs.</p>
             </div>
+
+            <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
+              <h3 className="font-display font-700 text-sm flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-primary" /> Video → 3D splat
+              </h3>
+              <p className="text-[11px] text-muted-foreground">
+                No <code className="text-[10px]">.ply</code> yet? Upload a phone or drone video and
+                Dronie will extract frames and convert them into a{" "}
+                <code className="text-[10px]">.ply</code> / <code className="text-[10px]">.splat</code>{" "}
+                you can view here.
+              </p>
+              <VideoIngestDialog
+                projectId={projectId}
+                disabled={!projectId}
+                onJobCreated={() => setJobsRefresh((n) => n + 1)}
+              />
+              <p className="text-[10px] text-muted-foreground">
+                Longer, higher-resolution clips produce denser splats. Track progress under the Train tab.
+              </p>
+            </div>
               </TabsContent>
 
               <TabsContent value="train" className="space-y-4 mt-3">
