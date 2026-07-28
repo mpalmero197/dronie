@@ -1,7 +1,7 @@
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { fetchFile, toBlobURL } from "@ffmpeg/util";
-import coreURL from "@ffmpeg/core/dist/umd/ffmpeg-core.js?url";
-import wasmURL from "@ffmpeg/core/dist/umd/ffmpeg-core.wasm?url";
+import coreURL from "@ffmpeg/core?url";
+import wasmURL from "@ffmpeg/core/wasm?url";
 
 let ffmpegSingleton: FFmpeg | null = null;
 let loadingPromise: Promise<FFmpeg> | null = null;
