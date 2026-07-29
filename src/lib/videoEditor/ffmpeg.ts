@@ -5,18 +5,30 @@ import wasmURL from "@ffmpeg/core/wasm?url";
 
 let ffmpegSingleton: FFmpeg | null = null;
 let loadingPromise: Promise<FFmpeg> | null = null;
+const logSubscribers = new Set<LoadProgress>();
+let logListenerAttached = false;
 
 export type LoadProgress = (msg: string) => void;
 
+function attachLogListener(ff: FFmpeg) {
+  if (logListenerAttached) return;
+  ff.on("log", ({ message }) => {
+    for (const subscriber of logSubscribers) subscriber(message);
+  });
+  logListenerAttached = true;
+}
+
 export async function getFFmpeg(onLog?: LoadProgress): Promise<FFmpeg> {
-  if (ffmpegSingleton) return ffmpegSingleton;
+  if (onLog) logSubscribers.add(onLog);
+  if (ffmpegSingleton) {
+    attachLogListener(ffmpegSingleton);
+    return ffmpegSingleton;
+  }
   if (loadingPromise) return loadingPromise;
 
   loadingPromise = (async () => {
     const ff = new FFmpeg();
-    if (onLog) {
-      ff.on("log", ({ message }) => onLog(message));
-    }
+    attachLogListener(ff);
     // Load the single-thread core from bundled app assets instead of a third-
     // party CDN so video uploads do not fail with generic network errors.
     await ff.load({
@@ -28,6 +40,16 @@ export async function getFFmpeg(onLog?: LoadProgress): Promise<FFmpeg> {
   })();
 
   return loadingPromise;
+}
+
+export async function withFFmpegLogs<T>(onLog: LoadProgress, task: (ff: FFmpeg) => Promise<T>): Promise<T> {
+  logSubscribers.add(onLog);
+  try {
+    const ff = await getFFmpeg();
+    return await task(ff);
+  } finally {
+    logSubscribers.delete(onLog);
+  }
 }
 
 export { fetchFile };

@@ -211,12 +211,29 @@ export function probeVideo(src: string): Promise<{ durationS: number; width: num
     const v = document.createElement("video");
     v.preload = "metadata";
     v.muted = true;
-    v.crossOrigin = "anonymous";
-    v.src = src;
-    v.onloadedmetadata = () => {
-      resolve({ durationS: v.duration || 0, width: v.videoWidth || 1920, height: v.videoHeight || 1080 });
+    v.playsInline = true;
+    if (!src.startsWith("blob:")) v.crossOrigin = "anonymous";
+    const timer = window.setTimeout(() => {
+      cleanup();
+      reject(new Error("Video metadata took too long to load. Try a shorter MP4/WebM clip."));
+    }, 20_000);
+    const cleanup = () => {
+      window.clearTimeout(timer);
+      v.onloadedmetadata = null;
+      v.onerror = null;
+      v.removeAttribute("src");
+      v.load();
       v.remove();
     };
-    v.onerror = () => reject(new Error("Could not read video metadata"));
+    v.onloadedmetadata = () => {
+      resolve({ durationS: v.duration || 0, width: v.videoWidth || 1920, height: v.videoHeight || 1080 });
+      cleanup();
+    };
+    v.onerror = () => {
+      cleanup();
+      reject(new Error("Could not read video metadata. Try MP4/H.264 or WebM."));
+    };
+    v.src = src;
+    v.load();
   });
 }
