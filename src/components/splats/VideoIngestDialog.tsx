@@ -13,9 +13,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { track } from "@/lib/analytics";
-import { probeVideo } from "@/lib/videoEditor/render";
 import {
-  estimateFramePlan, extractFrames, describePlan, INGEST_LIMITS, type FramePlan,
+  estimateFramePlan,
+  extractFrames,
+  describePlan,
+  INGEST_LIMITS,
+  probeVideoFile,
+  transcodeVideoForBrowser,
+  type FramePlan,
 } from "@/lib/splatVideoIngest";
 
 interface Props {
@@ -33,6 +38,7 @@ export function VideoIngestDialog({ projectId, disabled, onJobCreated }: Props) 
   const [file, setFile] = useState<File | null>(null);
   const [probeErr, setProbeErr] = useState<string | null>(null);
   const [meta, setMeta] = useState<{ durationS: number; width: number; height: number } | null>(null);
+  const [probing, setProbing] = useState(false);
   const [presetOverride, setPresetOverride] = useState<PresetOverride>("auto");
   const [busy, setBusy] = useState(false);
   const [pct, setPct] = useState(0);
@@ -56,6 +62,7 @@ export function VideoIngestDialog({ projectId, disabled, onJobCreated }: Props) 
     setFile(null);
     setMeta(null);
     setProbeErr(null);
+    setProbing(false);
     setPct(0);
     setMsg("");
     setPresetOverride("auto");
@@ -71,10 +78,23 @@ export function VideoIngestDialog({ projectId, disabled, onJobCreated }: Props) 
       return;
     }
     setFile(f);
-    const url = URL.createObjectURL(f);
-    previewUrlRef.current = url;
+    setProbing(true);
+    setPct(0);
+    setMsg("Reading video metadata…");
     try {
-      const m = await probeVideo(url);
+      let videoFile = f;
+      let m: { durationS: number; width: number; height: number };
+      try {
+        m = await probeVideoFile(videoFile);
+      } catch {
+        setMsg("Converting video to a compatible format…");
+        videoFile = await transcodeVideoForBrowser(f, (p, m2) => {
+          setPct(p);
+          setMsg(m2);
+        });
+        m = await probeVideoFile(videoFile);
+        setFile(videoFile);
+      }
       if (!m.durationS || m.durationS < 3) {
         setProbeErr("Video is too short — need at least 3 seconds.");
         return;
@@ -82,6 +102,8 @@ export function VideoIngestDialog({ projectId, disabled, onJobCreated }: Props) 
       setMeta(m);
     } catch (e) {
       setProbeErr(e instanceof Error ? e.message : "Could not read video metadata.");
+    } finally {
+      setProbing(false);
     }
   };
 
@@ -223,6 +245,16 @@ export function VideoIngestDialog({ projectId, disabled, onJobCreated }: Props) 
             </div>
           )}
 
+          {probing && (
+            <div className="space-y-1.5 rounded-md border border-border bg-secondary/50 p-2.5">
+              <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span>{msg || "Reading video metadata…"}</span>
+              </div>
+              {pct > 0 && <Progress value={Math.max(0, pct)} />}
+            </div>
+          )}
+
           {meta && plan && (
             <div className="rounded-lg border border-border p-3 space-y-2 text-xs">
               <div className="flex justify-between">
@@ -278,7 +310,7 @@ export function VideoIngestDialog({ projectId, disabled, onJobCreated }: Props) 
           <Button
             size="sm"
             onClick={handleStart}
-            disabled={busy || !file || !plan}
+            disabled={busy || probing || !file || !plan}
             className="gap-1.5"
           >
             {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
