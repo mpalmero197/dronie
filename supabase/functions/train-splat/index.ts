@@ -6,6 +6,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { z } from "npm:zod@3.23.8";
 import { getAppSecret } from "../_shared/appSecrets.ts";
+import { requirePaid } from "../_shared/requirePaid.ts";
 
 const TRELLIS_VERSION = "e8f6c45206993f297372f5436b90350817bd9b4a0d52d2a76df50c1c8afa2b3c";
 const OUTPUT_BUCKET = "project-outputs";
@@ -262,6 +263,9 @@ Deno.serve(async (req) => {
     const { data: userRes } = await userClient.auth.getUser();
     const user = userRes?.user;
     if (!user) return json({ error: "unauthorized" }, 401);
+
+    const paywall = await requirePaid({ id: user.id, email: user.email }, responseHeaders);
+    if (paywall) return paywall;
 
     const rawBody = await req.json().catch(() => ({}));
     const parsed = BodySchema.safeParse(rawBody);

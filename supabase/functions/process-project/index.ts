@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requirePaid } from "../_shared/requirePaid.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -130,6 +131,9 @@ Deno.serve(async (req) => {
   }
 
   const userId = user.id;
+
+  const paywall = await requirePaid({ id: user.id, email: user.email }, corsHeaders);
+  if (paywall) return paywall;
 
   const { project_id, settings } = await req.json();
   if (!project_id) {

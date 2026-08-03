@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requirePaid } from "../_shared/requirePaid.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -34,6 +35,12 @@ serve(async (req) => {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    const paywall = await requirePaid(
+      { id: userData.user.id, email: userData.user.email },
+      corsHeaders,
+    );
+    if (paywall) return paywall;
 
     const { audio, mimeType, durationS } = await req.json();
     if (!audio) throw new Error("audio (base64) is required");

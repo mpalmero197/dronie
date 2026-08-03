@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requirePaid } from "../_shared/requirePaid.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -111,6 +112,9 @@ Deno.serve(async (req) => {
   const token = authHeader.replace("Bearer ", "");
   const { data: { user }, error: userError } = await supabase.auth.getUser(token);
   if (userError || !user) return json(401, { error: "Unauthorized" });
+
+  const paywall = await requirePaid({ id: user.id, email: user.email }, corsHeaders);
+  if (paywall) return paywall;
 
   let body: AnalyzeBody | ChatBody;
   try {
