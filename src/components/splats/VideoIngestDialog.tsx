@@ -66,6 +66,24 @@ async function functionErrorMessage(error: unknown): Promise<string> {
   return error instanceof Error ? error.message : String(error);
 }
 
+async function validAccessToken(): Promise<string> {
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError || !sessionData.session) {
+    throw new Error("Your session expired. Sign in again, then retry the conversion.");
+  }
+
+  const { data: userData, error: userError } = await supabase.auth.getUser(
+    sessionData.session.access_token,
+  );
+  if (!userError && userData.user) return sessionData.session.access_token;
+
+  const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
+  if (refreshError || !refreshed.session?.access_token) {
+    throw new Error("Your session expired. Sign in again, then retry the conversion.");
+  }
+  return refreshed.session.access_token;
+}
+
 export function VideoIngestDialog({ projectId, disabled, onJobCreated }: Props) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -178,13 +196,10 @@ export function VideoIngestDialog({ projectId, disabled, onJobCreated }: Props) 
 
       // 3. Dispatch the cloud 3D conversion job.
       setMsg("Creating 3D splat…");
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !sessionData.session?.access_token) {
-        throw new Error("Your session expired. Sign in again, then retry the conversion.");
-      }
+      const accessToken = await validAccessToken();
       const { error: fnErr } = await supabase.functions.invoke("train-splat", {
         headers: {
-          Authorization: `Bearer ${sessionData.session.access_token}`,
+          Authorization: `Bearer ${accessToken}`,
         },
         body: {
           projectId,
