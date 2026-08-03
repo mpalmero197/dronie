@@ -196,7 +196,8 @@ export default function Dashboard() {
   }, [projects]);
 
   const projectsRemaining = getProjectsRemaining(subscriptionTier, monthlyProjectCount, isAdmin);
-  const canCreate = canCreateProject(subscriptionTier, monthlyProjectCount, isAdmin);
+  const hasPaidAccess = isAdmin || isSubscribed;
+  const canCreate = hasPaidAccess && canCreateProject(subscriptionTier, monthlyProjectCount, isAdmin);
 
   // Handle checkout redirect
   useEffect(() => {
