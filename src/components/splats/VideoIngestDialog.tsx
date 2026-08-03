@@ -31,6 +31,41 @@ interface Props {
 
 type PresetOverride = "auto" | "draft" | "balanced" | "cinematic";
 
+const UPLOAD_ATTEMPTS = 3;
+
+async function uploadFrame(path: string, frame: Blob): Promise<void> {
+  let lastError: Error | null = null;
+  for (let attempt = 1; attempt <= UPLOAD_ATTEMPTS; attempt++) {
+    const { error } = await supabase.storage
+      .from("drone-images")
+      .upload(path, frame, {
+        contentType: "image/jpeg",
+        cacheControl: "3600",
+        upsert: false,
+      });
+    if (!error || error.message.toLowerCase().includes("already exists")) return;
+    lastError = new Error(error.message);
+    if (attempt < UPLOAD_ATTEMPTS) {
+      await new Promise((resolve) => window.setTimeout(resolve, attempt * 750));
+    }
+  }
+  throw lastError ?? new Error("A video frame could not be uploaded.");
+}
+
+async function functionErrorMessage(error: unknown): Promise<string> {
+  if (error && typeof error === "object" && "context" in error) {
+    const context = (error as { context?: Response }).context;
+    if (context instanceof Response) {
+      const payload = await context.clone().json().catch(() => null) as
+        | { error?: unknown; message?: unknown }
+        | null;
+      const detail = payload?.message ?? payload?.error;
+      if (typeof detail === "string") return detail;
+    }
+  }
+  return error instanceof Error ? error.message : String(error);
+}
+
 export function VideoIngestDialog({ projectId, disabled, onJobCreated }: Props) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -122,7 +157,9 @@ export function VideoIngestDialog({ projectId, disabled, onJobCreated }: Props) 
       const framePrefix = `${user.id}/${projectId}/video-${jobStamp}`;
       const total = frames.length;
       let done = 0;
-      const concurrency = 4;
+      // Keep concurrency conservative: mobile browsers frequently terminate
+      // several simultaneous storage requests with a generic "Failed to fetch".
+      const concurrency = 2;
       let cursor = 0;
 
       const worker = async () => {
@@ -130,14 +167,7 @@ export function VideoIngestDialog({ projectId, disabled, onJobCreated }: Props) 
           const i = cursor++;
           const name = `frame_${String(i + 1).padStart(5, "0")}.jpg`;
           const path = `${framePrefix}/${name}`;
-          const { error } = await supabase.storage
-            .from("drone-images")
-            .upload(path, frames[i], {
-              contentType: "image/jpeg",
-              cacheControl: "3600",
-              upsert: true,
-            });
-          if (error) throw error;
+          await uploadFrame(path, frames[i]);
           done++;
           const p = 80 + Math.round((done / total) * 18);
           setPct(p);
@@ -148,7 +178,14 @@ export function VideoIngestDialog({ projectId, disabled, onJobCreated }: Props) 
 
       // 3. Dispatch the cloud 3D conversion job.
       setMsg("Creating 3D splat…");
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !sessionData.session?.access_token) {
+        throw new Error("Your session expired. Sign in again, then retry the conversion.");
+      }
       const { error: fnErr } = await supabase.functions.invoke("train-splat", {
+        headers: {
+          Authorization: `Bearer ${sessionData.session.access_token}`,
+        },
         body: {
           projectId,
           preset: plan.preset,
@@ -159,13 +196,13 @@ export function VideoIngestDialog({ projectId, disabled, onJobCreated }: Props) 
           captureFlags: null,
         },
       });
-      if (fnErr) throw fnErr;
+      if (fnErr) throw new Error(await functionErrorMessage(fnErr));
 
       track("splats_video_ingest", {
         projectId,
-        durationS: Math.round(meta!.durationS),
-        width: meta!.width,
-        height: meta!.height,
+        durationS: Math.round(meta?.durationS ?? 0),
+        width: meta?.width ?? 0,
+        height: meta?.height ?? 0,
         frames: total,
         preset: plan.preset,
       });
