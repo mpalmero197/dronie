@@ -111,17 +111,16 @@ async function listInputImages(
 }
 
 async function createSignedImageUrls(admin: AdminClient, paths: string[]) {
-  const urls: string[] = [];
-  for (const path of paths) {
-    const { data, error } = await admin.storage
-      .from(IMAGE_BUCKET)
-      .createSignedUrl(path, 60 * 60 * 6);
-    if (error || !data?.signedUrl) {
-      throw new Error(error?.message ?? `Could not prepare ${path}`);
-    }
-    urls.push(data.signedUrl);
+  const { data, error } = await admin.storage
+    .from(IMAGE_BUCKET)
+    .createSignedUrls(paths, 60 * 60 * 6);
+  if (error) throw new Error(error.message);
+
+  const missing = (data ?? []).find((item) => item.error || !item.signedUrl);
+  if (missing) {
+    throw new Error(missing.error ?? `Could not prepare ${missing.path}`);
   }
-  return urls;
+  return (data ?? []).map((item) => item.signedUrl as string);
 }
 
 async function startPrediction(apiKey: string, imageUrls: string[], preset: string) {
