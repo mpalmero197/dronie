@@ -111,17 +111,16 @@ async function listInputImages(
 }
 
 async function createSignedImageUrls(admin: AdminClient, paths: string[]) {
-  const urls: string[] = [];
-  for (const path of paths) {
-    const { data, error } = await admin.storage
-      .from(IMAGE_BUCKET)
-      .createSignedUrl(path, 60 * 60 * 6);
-    if (error || !data?.signedUrl) {
-      throw new Error(error?.message ?? `Could not prepare ${path}`);
-    }
-    urls.push(data.signedUrl);
+  const { data, error } = await admin.storage
+    .from(IMAGE_BUCKET)
+    .createSignedUrls(paths, 60 * 60 * 6);
+  if (error) throw new Error(error.message);
+
+  const missing = (data ?? []).find((item) => item.error || !item.signedUrl);
+  if (missing) {
+    throw new Error(missing.error ?? `Could not prepare ${missing.path}`);
   }
-  return urls;
+  return (data ?? []).map((item) => item.signedUrl as string);
 }
 
 async function startPrediction(apiKey: string, imageUrls: string[], preset: string) {
@@ -255,14 +254,17 @@ Deno.serve(async (req) => {
     return json({ error: "backend_not_configured" }, 500);
   }
 
+  const admin = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
+  let createdJobId: string | null = null;
   try {
     const auth = req.headers.get("Authorization") ?? "";
-    const userClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: auth } },
-    });
-    const { data: userRes } = await userClient.auth.getUser();
+    const token = auth.replace(/^Bearer\s+/i, "").trim();
+    if (!token) return json({ error: "unauthorized", message: "Sign in again to create a 3D splat." }, 401);
+    const { data: userRes, error: userError } = await admin.auth.getUser(token);
     const user = userRes?.user;
-    if (!user) return json({ error: "unauthorized" }, 401);
+    if (userError || !user) {
+      return json({ error: "unauthorized", message: "Your session expired. Sign in again, then retry." }, 401);
+    }
 
     const paywall = await requirePaid({ id: user.id, email: user.email }, responseHeaders);
     if (paywall) return paywall;
@@ -273,8 +275,6 @@ Deno.serve(async (req) => {
 
     const body = parsed.data;
     const cfg = PRESETS[body.preset];
-    const admin = createClient(supabaseUrl, serviceKey);
-
     const { data: project } = await admin
       .from("projects")
       .select("id,user_id")
@@ -319,6 +319,7 @@ Deno.serve(async (req) => {
     if (insertErr || !job) return json({ error: insertErr?.message ?? "insert_failed" }, 500);
 
     const jobId = (job as { id: string }).id;
+    createdJobId = jobId;
     const apiKey = await getRendererKey();
     if (!apiKey) {
       await admin.from("splat_jobs").update({
@@ -341,6 +342,10 @@ Deno.serve(async (req) => {
 
     return json({ job: { ...job, status: "training", provider_prediction_id: prediction.id } });
   } catch (error) {
-    return json({ error: error instanceof Error ? error.message : String(error) }, 500);
+    const message = error instanceof Error ? error.message : String(error);
+    if (createdJobId) {
+      await admin.from("splat_jobs").update({ status: "failed", error: message }).eq("id", createdJobId);
+    }
+    return json({ error: message, message }, 500);
   }
 });
