@@ -264,7 +264,10 @@ export default function Dashboard() {
     if (!user || !newProjectName.trim()) return;
     if (!canCreate) {
       setNewProjectOpen(false);
-      setUpgradeFeature({
+      setUpgradeFeature(!hasPaidAccess ? {
+        feature: "Subscription Required",
+        description: "DronieApp is a paid platform. Choose a plan to create projects and run processing.",
+      } : {
         feature: "Project Limit Reached",
         description: `You've used all ${tierLimits.projectsPerMonth} projects this month on the ${tierLimits.tierLabel} plan. Upgrade to Professional for unlimited projects.`,
       });
@@ -290,7 +293,10 @@ export default function Dashboard() {
 
   function handleNewProject() {
     if (!canCreate) {
-      setUpgradeFeature({
+      setUpgradeFeature(!hasPaidAccess ? {
+        feature: "Subscription Required",
+        description: "DronieApp is a paid platform. Choose a plan to create projects and run processing.",
+      } : {
         feature: "Project Limit Reached",
         description: `You've used all ${tierLimits.projectsPerMonth} projects this month on the ${tierLimits.tierLabel} plan. Upgrade to Professional for unlimited projects.`,
       });
