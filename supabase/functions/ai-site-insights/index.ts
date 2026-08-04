@@ -31,18 +31,123 @@ function json(status: number, body: unknown) {
   });
 }
 
-function pickThumbnail(urls: Record<string, string> | null): string | null {
-  if (!urls) return null;
-  const keys = ["orthomosaic", "ortho", "preview", "thumbnail", "dem", "dsm"];
-  for (const k of keys) {
+function pickImageCandidates(urls: Record<string, string> | null): { key: string; url: string }[] {
+  if (!urls) return [];
+  const order = ["orthomosaic", "ortho", "preview", "thumbnail", "dsm_preview", "dtm_preview"];
+  const out: { key: string; url: string }[] = [];
+  for (const k of order) {
     const v = urls[k];
-    if (typeof v === "string" && /^https?:\/\//.test(v)) return v;
+    if (typeof v === "string" && /^https?:\/\//.test(v) && /\.(png|jpe?g|webp)(\?|$)/i.test(v)) {
+      out.push({ key: k, url: v });
+    }
   }
-  // fall back to the first http url we find
-  for (const v of Object.values(urls)) {
-    if (typeof v === "string" && /^https?:\/\//.test(v)) return v;
+  for (const [k, v] of Object.entries(urls)) {
+    if (out.some((o) => o.key === k)) continue;
+    if (typeof v === "string" && /^https?:\/\//.test(v) && /\.(png|jpe?g|webp)(\?|$)/i.test(v)) {
+      out.push({ key: k, url: v });
+    }
   }
-  return null;
+  return out.slice(0, 3);
+}
+
+/** Only keep images that are real raster deliverables, not 1x1 placeholders. */
+async function usableImages(cands: { key: string; url: string }[]) {
+  const kept: { key: string; url: string; bytes: number }[] = [];
+  const skipped: string[] = [];
+  await Promise.all(
+    cands.map(async (c) => {
+      try {
+        const res = await fetch(c.url, { method: "HEAD" });
+        const bytes = Number(res.headers.get("content-length") ?? "0");
+        if (res.ok && bytes > 5_000) kept.push({ ...c, bytes });
+        else skipped.push(`${c.key} (${res.ok ? `${bytes} bytes — placeholder` : `HTTP ${res.status}`})`);
+      } catch {
+        skipped.push(`${c.key} (unreachable)`);
+      }
+    }),
+  );
+  return { kept, skipped };
+}
+
+async function fetchText(url: string, maxBytes = 60_000): Promise<string | null> {
+  try {
+    const res = await fetch(url, { headers: { Range: `bytes=0-${maxBytes}` } });
+    if (!res.ok && res.status !== 206) return null;
+    return await res.text();
+  } catch {
+    return null;
+  }
+}
+
+/** Parse the ESRI ASCII grid header from a DSM/DTM to derive real extent + resolution. */
+function summarizeAsc(key: string, text: string): string | null {
+  const head: Record<string, string> = {};
+  for (const line of text.split(/\r?\n/).slice(0, 8)) {
+    const m = line.trim().match(/^([A-Za-z_]+)\s+(-?[\d.eE+]+)$/);
+    if (m) head[m[1].toLowerCase()] = m[2];
+  }
+  if (!head.ncols || !head.nrows) return null;
+  const cell = Number(head.cellsize ?? 0);
+  const cols = Number(head.ncols);
+  const rows = Number(head.nrows);
+  const parts = [`${key.toUpperCase()}: ${cols} x ${rows} cells`];
+  if (cell) {
+    parts.push(`cell size ${cell} (~${(cell * 100).toFixed(1)} cm/px)`);
+    parts.push(`coverage ~${((cols * cell) * (rows * cell) / 10_000).toFixed(2)} ha`);
+  }
+  if (head.xllcorner && head.yllcorner) parts.push(`origin ${head.xllcorner}, ${head.yllcorner}`);
+  // elevation range from the sampled body
+  const nums = text
+    .split(/\r?\n/)
+    .slice(6, 400)
+    .join(" ")
+    .split(/\s+/)
+    .map(Number)
+    .filter((n) => Number.isFinite(n) && n !== Number(head.nodata_value ?? -9999));
+  if (nums.length > 20) {
+    parts.push(`sampled elevation ${Math.min(...nums).toFixed(1)}–${Math.max(...nums).toFixed(1)} m`);
+  }
+  return parts.join(", ");
+}
+
+function summarizeGeoJson(text: string): string | null {
+  try {
+    const gj = JSON.parse(text);
+    const feats = Array.isArray(gj?.features) ? gj.features : [];
+    if (!feats.length) return null;
+    const elevs = feats
+      .map((f: any) => Number(f?.properties?.elevation ?? f?.properties?.ELEV ?? NaN))
+      .filter((n: number) => Number.isFinite(n));
+    let s = `Contours: ${feats.length} lines`;
+    if (elevs.length) s += `, elevation band ${Math.min(...elevs)}–${Math.max(...elevs)} m`;
+    return s;
+  } catch {
+    return null;
+  }
+}
+
+function bboxFromGps(points: unknown): string | null {
+  const arr = Array.isArray(points) ? points : (points as any)?.points;
+  if (!Array.isArray(arr) || !arr.length) return null;
+  const lats: number[] = [];
+  const lngs: number[] = [];
+  const alts: number[] = [];
+  for (const p of arr) {
+    const lat = Number(p?.lat ?? p?.latitude);
+    const lng = Number(p?.lng ?? p?.lon ?? p?.longitude);
+    const alt = Number(p?.alt ?? p?.altitude);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) { lats.push(lat); lngs.push(lng); }
+    if (Number.isFinite(alt)) alts.push(alt);
+  }
+  if (!lats.length) return null;
+  const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+  const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
+  const spanKm = Math.max((maxLat - minLat) * 111, (maxLng - minLng) * 111 * Math.cos((minLat * Math.PI) / 180));
+  let s = `Capture footprint: ${arr.length} geotagged photos, centroid ${(
+    (minLat + maxLat) / 2
+  ).toFixed(5)}, ${((minLng + maxLng) / 2).toFixed(5)}; bbox ${minLat.toFixed(5)},${minLng.toFixed(5)} → ${maxLat.toFixed(5)},${maxLng.toFixed(5)} (~${spanKm.toFixed(2)} km across)`;
+  if (alts.length) s += `; flight altitude ${Math.min(...alts).toFixed(0)}–${Math.max(...alts).toFixed(0)} m`;
+  return s;
 }
 
 const SYSTEM_PROMPT = `You are a senior aerial mapping analyst for Dronie, a drone photogrammetry platform.
