@@ -156,6 +156,9 @@ You are calibrated, never overconfident. If the imagery or metadata is insuffici
 Use clear, professional language. No marketing fluff.`;
 
 const ANALYZE_INSTRUCTIONS = `Return ONLY valid JSON (no markdown fences, no prose) with this exact shape:
+
+Ground every statement in the PROJECT EVIDENCE block: cite concrete values (coordinates, hectares, GSD/cell size, elevation range, image count, GCP count, contour count, processing settings, annotation text). Never produce generic drone-survey boilerplate that would read the same for any project. If imagery was not attached, do not describe what the site looks like — analyze the survey data and capture quality instead, and state the limitation once.
+
 {
   "summary": string,                       // 2-4 sentence executive summary
   "features": [{ "title": string, "detail": string }],          // 3-6 observed site features
