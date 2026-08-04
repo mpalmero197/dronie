@@ -183,7 +183,70 @@ export function JobList({ projectId, refreshKey, onSceneReady }: Props) {
   );
 }
 
-function QueueSummary({ jobs }: { jobs: SplatJob[] }) {
+function StageTrack({ job }: { job: SplatJob }) {
+  const hasPrediction = Boolean(job.provider_prediction_id);
+  const hasOutput = Boolean(job.provider_output_url || job.output_path);
+  const framesDone = (job.image_count ?? 0) > 0;
+
+  const steps: { label: string; icon: typeof Images; state: "done" | "active" | "pending" }[] = [
+    {
+      label: framesDone ? `Frames received (${job.image_count})` : "Receiving frames",
+      icon: Images,
+      state: framesDone ? "done" : "active",
+    },
+    {
+      label: hasPrediction ? "Signed URLs generated" : "Generating signed URLs",
+      icon: Link2,
+      state: hasPrediction ? "done" : framesDone ? "active" : "pending",
+    },
+    {
+      label: job.status === "training" ? "Training in progress" : "Training queued",
+      icon: Cpu,
+      state: job.status === "training" ? "active" : hasPrediction ? "active" : "pending",
+    },
+    {
+      label: hasOutput ? "Splat file written" : "Awaiting splat file",
+      icon: FileBox,
+      state: hasOutput ? "done" : "pending",
+    },
+  ];
+
+  return (
+    <ol className="mt-2 space-y-1">
+      {steps.map((s) => (
+        <li
+          key={s.label}
+          className={`flex items-center gap-1.5 text-[10px] ${
+            s.state === "done"
+              ? "text-primary"
+              : s.state === "active"
+                ? "text-amber-400"
+                : "text-muted-foreground/60"
+          }`}
+        >
+          {s.state === "done" ? (
+            <CheckCircle2 className="w-3 h-3 shrink-0" />
+          ) : s.state === "active" ? (
+            <Loader2 className="w-3 h-3 shrink-0 animate-spin" />
+          ) : (
+            <s.icon className="w-3 h-3 shrink-0" />
+          )}
+          <span>{s.label}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function QueueSummary({
+  jobs, lastSync, syncing, tick, onRefresh,
+}: {
+  jobs: SplatJob[];
+  lastSync: number | null;
+  syncing: boolean;
+  tick: number;
+  onRefresh: () => void;
+}) {
   const stats = useMemo(() => {
     const queued = jobs.filter((j) => j.status === "queued").length;
     const training = jobs.filter((j) => j.status === "training").length;
@@ -194,6 +257,8 @@ function QueueSummary({ jobs }: { jobs: SplatJob[] }) {
       .reduce((acc, j) => acc + estimateCostCents(j), 0);
     return { queued, training, ready, failed, totalCost };
   }, [jobs]);
+  const agoS = lastSync ? Math.max(0, Math.round((Date.now() - lastSync) / 1000)) : null;
+  void tick;
   return (
     <div className="rounded-lg border border-border bg-secondary/40 p-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] uppercase tracking-wider font-semibold">
       {stats.training > 0 && <span className="text-amber-500">{stats.training} training</span>}
@@ -203,6 +268,15 @@ function QueueSummary({ jobs }: { jobs: SplatJob[] }) {
       <span className="ml-auto text-muted-foreground normal-case">
         {formatCents(stats.totalCost)} session spend
       </span>
+      <button
+        type="button"
+        onClick={onRefresh}
+        className="inline-flex items-center gap-1 normal-case text-muted-foreground hover:text-foreground transition-colors"
+        title="Refresh job status"
+      >
+        <RefreshCw className={`w-3 h-3 ${syncing ? "animate-spin" : ""}`} />
+        {agoS == null ? "syncing…" : agoS < 2 ? "live" : `${agoS}s ago`}
+      </button>
     </div>
   );
 }
