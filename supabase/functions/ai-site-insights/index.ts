@@ -237,13 +237,89 @@ Deno.serve(async (req) => {
   // Load the project (RLS ensures the user owns it)
   const { data: project, error: projErr } = await supabase
     .from("projects")
-    .select("id, name, description, area_ha, image_count, status, outputs, outputs_urls, created_at")
+    .select(
+      "id, name, description, area_ha, image_count, status, outputs, outputs_urls, created_at, gps_points, processing_settings, accuracy_report, current_stage, stage_log",
+    )
     .eq("id", projectId)
     .maybeSingle();
 
   if (projErr || !project) return json(404, { error: "Project not found" });
 
-  const thumb = pickThumbnail((project as any).outputs_urls ?? null);
+  const urls = ((project as any).outputs_urls ?? null) as Record<string, string> | null;
+
+  // ── Gather real, project-specific evidence ────────────────────────────────
+  const [{ kept: images, skipped: skippedImages }, annotationsRes, gcpRes] = await Promise.all([
+    usableImages(pickImageCandidates(urls)),
+    supabase
+      .from("project_annotations")
+      .select("kind, label, body, measurement, resolved")
+      .eq("project_id", projectId)
+      .limit(40),
+    supabase
+      .from("ground_control_points")
+      .select("name, latitude, longitude, elevation")
+      .eq("project_id", projectId)
+      .limit(30),
+  ]);
+
+  const rasterFacts: string[] = [];
+  await Promise.all(
+    ["dsm", "dtm"].map(async (k) => {
+      const u = urls?.[k];
+      if (!u || !/\.asc(\?|$)/i.test(u)) return;
+      const txt = await fetchText(u, 40_000);
+      if (!txt) return;
+      const s = summarizeAsc(k, txt);
+      if (s) rasterFacts.push(s);
+    }),
+  );
+  if (urls?.contours && /\.(geo)?json(\?|$)/i.test(urls.contours)) {
+    const txt = await fetchText(urls.contours, 200_000);
+    if (txt) {
+      const s = summarizeGeoJson(txt);
+      if (s) rasterFacts.push(s);
+    }
+  }
+  if (urls?.metadata && /\.json(\?|$)/i.test(urls.metadata)) {
+    const txt = await fetchText(urls.metadata, 20_000);
+    if (txt) rasterFacts.push(`Deliverable metadata: ${txt.replace(/\s+/g, " ").slice(0, 1200)}`);
+  }
+
+  const settings = ((project as any).processing_settings ?? {}) as Record<string, unknown>;
+  const accuracy = (project as any).accuracy_report ?? null;
+  const annotations = annotationsRes.data ?? [];
+  const gcps = gcpRes.data ?? [];
+  const gpsSummary = bboxFromGps((project as any).gps_points);
+
+  const evidence = [
+    gpsSummary ?? "Capture footprint: no geotags recorded with this project.",
+    Object.keys(settings).length
+      ? `Processing settings: ${Object.entries(settings)
+          .map(([k, v]) => `${k}=${Array.isArray(v) ? v.join("/") : String(v)}`)
+          .join(", ")}`
+      : "Processing settings: (not recorded)",
+    accuracy ? `Accuracy report: ${JSON.stringify(accuracy).slice(0, 1500)}` : "Accuracy report: none stored.",
+    gcps.length
+      ? `Ground control points (${gcps.length}): ${gcps
+          .map((g: any) => `${g.name} @ ${g.latitude},${g.longitude}${g.elevation != null ? ` (${g.elevation} m)` : ""}`)
+          .join("; ")}`
+      : "Ground control points: none uploaded (results are GPS-accuracy only).",
+    annotations.length
+      ? `Site annotations (${annotations.length}): ${annotations
+          .map((a: any) =>
+            `[${a.kind}${a.resolved ? "/resolved" : ""}] ${a.label ?? "untitled"}${
+              a.body ? ` — ${String(a.body).slice(0, 160)}` : ""
+            }${a.measurement ? ` (${JSON.stringify(a.measurement).slice(0, 120)})` : ""}`,
+          )
+          .join("; ")}`
+      : "Site annotations: none recorded by the operator.",
+    rasterFacts.length ? `Raster/vector deliverable facts: ${rasterFacts.join(" | ")}` : "Raster deliverable headers: unavailable.",
+    images.length
+      ? `Imagery attached to this request: ${images.map((i) => `${i.key} (${Math.round(i.bytes / 1024)} KB)`).join(", ")}`
+      : `Imagery attached to this request: NONE. ${
+          skippedImages.length ? `Unusable outputs: ${skippedImages.join(", ")}.` : "No raster preview was exported."
+        } Do NOT describe visual site contents — you cannot see the site. Base every statement on the metadata above and say plainly that visual interpretation is unavailable until a real orthomosaic is exported.`,
+  ].join("\n");
 
   const projectContext = `PROJECT METADATA
 Name: ${project.name}
@@ -252,15 +328,18 @@ Status: ${project.status}
 Captured: ${new Date(project.created_at).toLocaleDateString()}
 Surveyed area: ${project.area_ha != null ? `${Number(project.area_ha).toFixed(2)} ha` : "unknown"}
 Image count: ${project.image_count}
-Generated deliverables: ${(project.outputs ?? []).join(", ") || "(none)"}`;
+Generated deliverables: ${(project.outputs ?? []).join(", ") || "(none)"}
+
+PROJECT EVIDENCE
+${evidence}`;
 
   try {
     if (mode === "analyze") {
       const userParts: unknown[] = [
         { type: "text", text: `${projectContext}\n\n${ANALYZE_INSTRUCTIONS}` },
       ];
-      if (thumb) {
-        userParts.push({ type: "image_url", image_url: { url: thumb } });
+      for (const img of images) {
+        userParts.push({ type: "image_url", image_url: { url: img.url } });
       }
 
       const content = await callGateway(
