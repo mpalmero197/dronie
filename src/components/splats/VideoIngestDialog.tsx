@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Film, Loader2, Sparkles, Upload, AlertTriangle } from "lucide-react";
+import { Film, Loader2, Sparkles, Upload, AlertTriangle, CheckCircle2, Circle, XCircle } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
 } from "@/components/ui/dialog";
@@ -30,6 +30,17 @@ interface Props {
 }
 
 type PresetOverride = "auto" | "draft" | "balanced" | "cinematic";
+
+type StepKey = "extract" | "upload" | "dispatch" | "training";
+type StepState = "pending" | "active" | "done" | "error";
+
+const STEP_LABELS: Record<StepKey, string> = {
+  extract: "Extract frames from video",
+  upload: "Upload frames to cloud storage",
+  dispatch: "Generate signed URLs & queue training",
+  training: "Training started",
+};
+const STEP_ORDER: StepKey[] = ["extract", "upload", "dispatch", "training"];
 
 const UPLOAD_ATTEMPTS = 3;
 
@@ -96,6 +107,10 @@ export function VideoIngestDialog({ projectId, disabled, onJobCreated }: Props) 
   const [busy, setBusy] = useState(false);
   const [pct, setPct] = useState(0);
   const [msg, setMsg] = useState("");
+  const [steps, setSteps] = useState<Record<StepKey, StepState>>({
+    extract: "pending", upload: "pending", dispatch: "pending", training: "pending",
+  });
+  const [stepDetail, setStepDetail] = useState<Partial<Record<StepKey, string>>>({});
   const previewUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -119,6 +134,8 @@ export function VideoIngestDialog({ projectId, disabled, onJobCreated }: Props) 
     setPct(0);
     setMsg("");
     setPresetOverride("auto");
+    setSteps({ extract: "pending", upload: "pending", dispatch: "pending", training: "pending" });
+    setStepDetail({});
     if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
     previewUrlRef.current = null;
   };
@@ -163,14 +180,24 @@ export function VideoIngestDialog({ projectId, disabled, onJobCreated }: Props) 
   const handleStart = async () => {
     if (!file || !plan || !user || !projectId) return;
     setBusy(true);
+    const mark = (key: StepKey, state: StepState, detail?: string) => {
+      setSteps((s) => ({ ...s, [key]: state }));
+      if (detail !== undefined) setStepDetail((d) => ({ ...d, [key]: detail }));
+    };
+    let stage: StepKey = "extract";
     try {
       // 1. Extract frames locally.
+      mark("extract", "active");
       const frames = await extractFrames(file, plan, (p, m) => {
         setPct(p);
         setMsg(m);
+        setStepDetail((d) => ({ ...d, extract: m }));
       });
+      mark("extract", "done", `${frames.length} frames extracted`);
 
       // 2. Upload to drone-images bucket with owner-scoped path.
+      stage = "upload";
+      mark("upload", "active");
       const jobStamp = Date.now().toString(36);
       const framePrefix = `${user.id}/${projectId}/video-${jobStamp}`;
       const total = frames.length;
@@ -190,11 +217,15 @@ export function VideoIngestDialog({ projectId, disabled, onJobCreated }: Props) 
           const p = 80 + Math.round((done / total) * 18);
           setPct(p);
           setMsg(`Uploading frames… ${done}/${total}`);
+          setStepDetail((d) => ({ ...d, upload: `${done}/${total} frames uploaded` }));
         }
       };
       await Promise.all(Array.from({ length: concurrency }, () => worker()));
+      mark("upload", "done", `${total}/${total} frames uploaded`);
 
       // 3. Dispatch the cloud 3D conversion job.
+      stage = "dispatch";
+      mark("dispatch", "active", "Requesting signed frame URLs…");
       setMsg("Creating 3D splat…");
       const accessToken = await validAccessToken();
       const { error: fnErr } = await supabase.functions.invoke("train-splat", {
@@ -212,6 +243,9 @@ export function VideoIngestDialog({ projectId, disabled, onJobCreated }: Props) 
         },
       });
       if (fnErr) throw new Error(await functionErrorMessage(fnErr));
+      mark("dispatch", "done", "Signed URLs generated");
+      mark("training", "done", "Training job queued — track progress below");
+      setPct(100);
 
       track("splats_video_ingest", {
         projectId,
@@ -230,6 +264,7 @@ export function VideoIngestDialog({ projectId, disabled, onJobCreated }: Props) 
       setOpen(false);
       reset();
     } catch (e) {
+      mark(stage, "error", e instanceof Error ? e.message : String(e));
       toast({
         title: "Could not process video",
         description: e instanceof Error ? e.message : String(e),
