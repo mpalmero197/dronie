@@ -388,6 +388,40 @@ export function VideoIngestDialog({ projectId, disabled, onJobCreated }: Props) 
               <p className="text-[11px] text-muted-foreground">{msg || "Working…"}</p>
             </div>
           )}
+
+          {(busy || Object.values(steps).some((s) => s !== "pending")) && (
+            <ol className="space-y-1.5 rounded-lg border border-border bg-secondary/40 p-3">
+              {STEP_ORDER.map((key) => {
+                const state = steps[key];
+                return (
+                  <li key={key} className="flex items-start gap-2 text-[11px]">
+                    {state === "done" ? (
+                      <CheckCircle2 className="w-3.5 h-3.5 shrink-0 mt-px text-primary" />
+                    ) : state === "active" ? (
+                      <Loader2 className="w-3.5 h-3.5 shrink-0 mt-px animate-spin text-amber-400" />
+                    ) : state === "error" ? (
+                      <XCircle className="w-3.5 h-3.5 shrink-0 mt-px text-destructive" />
+                    ) : (
+                      <Circle className="w-3.5 h-3.5 shrink-0 mt-px text-muted-foreground/50" />
+                    )}
+                    <div className="min-w-0">
+                      <p className={
+                        state === "done" ? "text-foreground"
+                          : state === "active" ? "text-amber-400 font-medium"
+                            : state === "error" ? "text-destructive font-medium"
+                              : "text-muted-foreground/70"
+                      }>
+                        {STEP_LABELS[key]}
+                      </p>
+                      {stepDetail[key] && (
+                        <p className="text-[10px] text-muted-foreground break-words">{stepDetail[key]}</p>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          )}
         </div>
 
         <DialogFooter>
