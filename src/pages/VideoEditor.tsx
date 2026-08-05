@@ -20,8 +20,9 @@ import {
 import {
   Clip, EditorProject, FilterPreset, TextOverlay, TransitionKind,
   CaptionStyle, CaptionCue, clipStartGlobal, newId, totalDuration,
+  defaultTransform, defaultColor, defaultWatermark,
 } from "@/lib/videoEditor/types";
-import { probeVideo, renderProject } from "@/lib/videoEditor/render";
+import { probeVideo, renderProject, describeRenderError, preflight } from "@/lib/videoEditor/render";
 import { extractAudioBase64, transcribeAudio, translateCues } from "@/lib/videoEditor/transcribe";
 import { cuesToSrt } from "@/lib/videoEditor/ass";
 import { PORTFOLIO_BUCKET, PortfolioItem } from "@/lib/portfolio";
@@ -104,6 +105,10 @@ export default function VideoEditor() {
     texts: [],
     captions: { enabled: true, burnIn: true, style: "classic", fontSize: 48, position: "bottom", cues: [] },
     audioVolume: 1,
+    audioTracks: [],
+    watermark: defaultWatermark(),
+    quality: "standard",
+    duckMusic: true,
   });
 
   const [selectedClipIdx, setSelectedClipIdx] = useState(0);
@@ -123,6 +128,7 @@ export default function VideoEditor() {
   const previewRef = useRef<HTMLVideoElement | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
   const rafRef = useRef<number | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   // Auth gate
   useEffect(() => {
@@ -157,6 +163,9 @@ export default function VideoEditor() {
           transitionDurS: 0.6,
           width: probe.width,
           height: probe.height,
+          transform: defaultTransform(),
+          color: defaultColor(),
+          freezeS: 0,
         };
         setProject((p) => ({
           ...p,
@@ -214,6 +223,7 @@ export default function VideoEditor() {
           speed: 1, volume: 1, filter: "none",
           transitionToNext: "fade", transitionDurS: 0.6,
           width: probe.width, height: probe.height,
+          transform: defaultTransform(), color: defaultColor(), freezeS: 0,
         };
         setProject((p) => ({
           ...p,
@@ -380,20 +390,29 @@ export default function VideoEditor() {
       toast({ title: "Add at least one clip" });
       return;
     }
+    const pre = preflight(project);
+    if (pre.blockers.length > 0) {
+      toast({ title: pre.blockers[0], variant: "destructive" });
+      return;
+    }
+    for (const w of pre.warnings) toast({ title: "Heads up", description: w });
+    const controller = new AbortController();
+    abortRef.current = controller;
     setRendering(true);
     setRenderPct(0);
-    setRenderMsg("Loading editor engine…");
+    setRenderMsg(`Loading editor engine… (~${Math.round(pre.estimatedSeconds / 60) || 1} min, ~${pre.estimatedMb}MB)`);
     try {
       const blob = await renderProject(project, (pct, msg) => {
         if (pct >= 0) setRenderPct(pct);
         if (msg) setRenderMsg(msg);
-      });
+      }, { signal: controller.signal });
       setRenderedBlob(blob);
       setSaveOpen(true);
     } catch (e) {
       console.error(e);
-      toast({ title: e instanceof Error ? e.message : "Render failed", variant: "destructive" });
+      toast({ title: describeRenderError(e), variant: "destructive" });
     } finally {
+      abortRef.current = null;
       setRendering(false);
     }
   };
@@ -516,6 +535,11 @@ export default function VideoEditor() {
               {rendering ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
               {rendering ? "Rendering…" : "Render & Save"}
             </Button>
+            {rendering && (
+              <Button variant="outline" size="sm" onClick={() => abortRef.current?.abort()}>
+                Cancel
+              </Button>
+            )}
           </div>
         </div>
         {rendering && (
