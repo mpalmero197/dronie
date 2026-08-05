@@ -20,8 +20,9 @@ import {
 import {
   Clip, EditorProject, FilterPreset, TextOverlay, TransitionKind,
   CaptionStyle, CaptionCue, clipStartGlobal, newId, totalDuration,
+  defaultTransform, defaultColor, defaultWatermark,
 } from "@/lib/videoEditor/types";
-import { probeVideo, renderProject } from "@/lib/videoEditor/render";
+import { probeVideo, renderProject, describeRenderError, preflight } from "@/lib/videoEditor/render";
 import { extractAudioBase64, transcribeAudio, translateCues } from "@/lib/videoEditor/transcribe";
 import { cuesToSrt } from "@/lib/videoEditor/ass";
 import { PORTFOLIO_BUCKET, PortfolioItem } from "@/lib/portfolio";
@@ -104,6 +105,10 @@ export default function VideoEditor() {
     texts: [],
     captions: { enabled: true, burnIn: true, style: "classic", fontSize: 48, position: "bottom", cues: [] },
     audioVolume: 1,
+    audioTracks: [],
+    watermark: defaultWatermark(),
+    quality: "standard",
+    duckMusic: true,
   });
 
   const [selectedClipIdx, setSelectedClipIdx] = useState(0);
@@ -157,6 +162,9 @@ export default function VideoEditor() {
           transitionDurS: 0.6,
           width: probe.width,
           height: probe.height,
+          transform: defaultTransform(),
+          color: defaultColor(),
+          freezeS: 0,
         };
         setProject((p) => ({
           ...p,
@@ -214,6 +222,7 @@ export default function VideoEditor() {
           speed: 1, volume: 1, filter: "none",
           transitionToNext: "fade", transitionDurS: 0.6,
           width: probe.width, height: probe.height,
+          transform: defaultTransform(), color: defaultColor(), freezeS: 0,
         };
         setProject((p) => ({
           ...p,
