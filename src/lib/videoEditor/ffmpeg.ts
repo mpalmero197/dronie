@@ -52,4 +52,34 @@ export async function withFFmpegLogs<T>(onLog: LoadProgress, task: (ff: FFmpeg) 
   }
 }
 
+/**
+ * Tears down the ffmpeg worker. Used to hard-cancel a render — ffmpeg.wasm
+ * cannot interrupt a running exec any other way — and to recover memory after
+ * a failed pass. The next getFFmpeg() boots a fresh instance.
+ */
+export function resetFFmpeg() {
+  const ff = ffmpegSingleton;
+  ffmpegSingleton = null;
+  loadingPromise = null;
+  logListenerAttached = false;
+  logSubscribers.clear();
+  try { ff?.terminate(); } catch { /* already gone */ }
+}
+
+/** Captures ffmpeg log output while running a task (used for stream probing). */
+export async function captureFFmpegLogs<T>(task: (ff: FFmpeg) => Promise<T>): Promise<{ result: T | null; logs: string; error: unknown }> {
+  const lines: string[] = [];
+  const collect = (m: string) => { lines.push(m); };
+  logSubscribers.add(collect);
+  try {
+    const ff = await getFFmpeg();
+    const result = await task(ff);
+    return { result, logs: lines.join("\n"), error: null };
+  } catch (error) {
+    return { result: null, logs: lines.join("\n"), error };
+  } finally {
+    logSubscribers.delete(collect);
+  }
+}
+
 export { fetchFile };
