@@ -1034,21 +1034,119 @@ const WEBODM_EXTRA_DOWNLOADS: Record<string, { name: string; contentType: string
   cesium3dtiles: { name: "3d_tiles.zip", contentType: "application/zip", outputKey: "cesium3dtiles", label: "Cesium 3D Tiles" },
 };
 
-/** WebODM processing options to enable selected extras. */
-function webodmOptionsForExtras(extras: string[]): Array<{ name: string; value: unknown }> {
+/** Mirror of QUALITY_PROFILE in src/lib/photogrammetry.ts — keep in sync. */
+const QUALITY_PROFILE: Record<string, {
+  featureQuality: string;
+  pcQuality: string;
+  depthmapResolution: number;
+  meshOctreeDepth: number;
+  meshSize: number;
+  orthoResolutionCm: number;
+}> = {
+  low:    { featureQuality: "low",    pcQuality: "low",    depthmapResolution: 320,  meshOctreeDepth: 9,  meshSize: 100_000, orthoResolutionCm: 10 },
+  medium: { featureQuality: "medium", pcQuality: "medium", depthmapResolution: 640,  meshOctreeDepth: 10, meshSize: 200_000, orthoResolutionCm: 5 },
+  high:   { featureQuality: "high",   pcQuality: "high",   depthmapResolution: 1280, meshOctreeDepth: 11, meshSize: 400_000, orthoResolutionCm: 3 },
+  ultra:  { featureQuality: "ultra",  pcQuality: "ultra",  depthmapResolution: 2560, meshOctreeDepth: 12, meshSize: 800_000, orthoResolutionCm: 1.5 },
+};
+
+/**
+ * Translate the full Dronie processing settings object into concrete ODM
+ * options. Everything the operator picks in the UI has to survive the trip to
+ * the reconstruction engine — otherwise the deliverables are generic defaults.
+ */
+function buildWebodmOptions(settings: any): Array<{ name: string; value: unknown }> {
   const opts: Array<{ name: string; value: unknown }> = [];
+  const push = (name: string, value: unknown) => opts.push({ name, value });
+
+  const quality: string = settings?.quality || "high";
+  const profile = QUALITY_PROFILE[quality] || QUALITY_PROFILE.high;
+  const extras: string[] = Array.isArray(settings?.extraOutputs) ? settings.extraOutputs : [];
+  const meshType: string = settings?.meshType || "2.5d";
+  const density: number = Array.isArray(settings?.pointDensity) ? Number(settings.pointDensity[0]) || 75 : 75;
+
+  /* ── Core quality profile ── */
+  push("feature-quality", profile.featureQuality);
+  push("pc-quality", density >= 90 ? "ultra" : density >= 70 ? profile.pcQuality : density >= 45 ? "medium" : "low");
+  push("depthmap-resolution", profile.depthmapResolution);
+  push("mesh-octree-depth", profile.meshOctreeDepth);
+
+  /* ── Ground sample distance drives ortho + DEM resolution ── */
+  const gsdCm = Number(settings?.targetGsdCm);
+  const orthoCm = Number.isFinite(gsdCm) && gsdCm > 0 ? gsdCm : profile.orthoResolutionCm;
+  push("orthophoto-resolution", Number(orthoCm.toFixed(2)));
+  // DEMs are conventionally produced at ~2x the ortho GSD for a stable surface.
+  push("dem-resolution", Number((orthoCm * 2).toFixed(2)));
+
+  /* ── Mesh ── */
+  if (meshType === "3d") {
+    push("use-3dmesh", true);
+    push("mesh-size", profile.meshSize);
+    push("texturing-skip-global-seam-leveling", false);
+  } else if (meshType === "none") {
+    push("skip-3dmodel", true);
+    push("mesh-size", 0);
+  } else {
+    push("mesh-size", Math.round(profile.meshSize / 2));
+  }
+
+  /* ── Feature matching ── */
+  if (settings?.matcher === "bruteforce") push("matcher-type", "bruteforce");
+  else push("matcher-type", "bow");
+  const minFeatures = Number(settings?.minFeatures);
+  if (Number.isFinite(minFeatures) && minFeatures > 0) push("min-num-features", Math.round(minFeatures));
+
+  /* ── Elevation models ── */
+  if (settings?.dsmEnabled) push("dsm", true);
+  if (settings?.dtmEnabled) {
+    push("dtm", true);
+    // Ground classification tuning — tighter thresholds give a cleaner DTM.
+    push("smrf-threshold", 0.5);
+    push("smrf-scalar", 1.25);
+    push("smrf-slope", 0.15);
+    push("smrf-window", 18);
+  }
+  if (settings?.dsmEnabled || settings?.dtmEnabled) {
+    push("dem-gapfill-steps", 4);
+    push("dem-euclidean-map", true);
+  }
+
+  /* ── Orthophoto packaging ── */
+  if (settings?.outputFormat === "cog") push("cog", true);
+  push("orthophoto-compression", "DEFLATE");
+  push("orthophoto-cutline", true);
+  push("crop", 3);
+
+  /* ── Point cloud quality ── */
+  push("pc-rectify", true);
+  push("pc-filter", density >= 90 ? 1.5 : density >= 70 ? 2.5 : 4);
+  push("auto-boundary", true);
+
+  if (settings?.preset === "agriculture") {
+    push("radiometric-calibration", "camera+sun");
+  }
+
+  /* ── Extra deliverables ── */
   if (extras.includes("obj") || extras.includes("fbx")) {
-    opts.push({ name: "use-3dmesh", value: true });
-    opts.push({ name: "texturing-skip-global-seam-leveling", value: false });
+    push("use-3dmesh", true);
+    push("texturing-skip-global-seam-leveling", false);
   }
   if (extras.includes("ply") || extras.includes("potree")) {
-    opts.push({ name: "pc-las", value: true });
-    opts.push({ name: "pc-ept", value: true });
+    push("pc-las", true);
+    push("pc-ept", true);
   }
-  if (extras.includes("cesium3dtiles")) {
-    opts.push({ name: "3d-tiles", value: true });
-  }
-  return opts;
+  if (extras.includes("cesium3dtiles")) push("3d-tiles", true);
+
+  // De-duplicate, last write wins (extras may re-assert mesh options).
+  const seen = new Map<string, unknown>();
+  for (const o of opts) seen.set(o.name, o.value);
+  return [...seen.entries()].map(([name, value]) => ({ name, value }));
+}
+
+/** Human-readable output spec recorded in metadata + logs. */
+function orthoResolutionCmFor(settings: any): number {
+  const profile = QUALITY_PROFILE[settings?.quality || "high"] || QUALITY_PROFILE.high;
+  const gsdCm = Number(settings?.targetGsdCm);
+  return Number.isFinite(gsdCm) && gsdCm > 0 ? gsdCm : profile.orthoResolutionCm;
 }
 
 function buildMetadataJSON(opts: {
@@ -1056,6 +1154,11 @@ function buildMetadataJSON(opts: {
   vDatum: string;
   crs: string;
   extras: string[];
+  orthoResolutionCm?: number;
+  demResolutionCm?: number;
+  engine?: string;
+  options?: Array<{ name: string; value: unknown }>;
+  achievedGsdCm?: number | null;
 }): Uint8Array {
   const datumDescriptions: Record<string, string> = {
     ellipsoid: "WGS-84 ellipsoidal heights (raw GPS).",
@@ -1069,6 +1172,11 @@ function buildMetadataJSON(opts: {
     vertical_datum: opts.vDatum,
     vertical_datum_note: datumDescriptions[opts.vDatum] || datumDescriptions.egm96,
     extra_outputs_requested: opts.extras,
+    engine: opts.engine ?? "dronie-simulator",
+    requested_ortho_resolution_cm: opts.orthoResolutionCm ?? null,
+    requested_dem_resolution_cm: opts.demResolutionCm ?? null,
+    achieved_gsd_cm: opts.achievedGsdCm ?? null,
+    processing_options: opts.options ?? [],
     generated_at: new Date().toISOString(),
   };
   return utf8(JSON.stringify(meta, null, 2));
@@ -1109,8 +1217,8 @@ async function generateExtraDeliverables(
       continue;
     }
     urls[spec.outputKey] = `${baseUrl}/${path}`;
-    labels.push(spec.label);
-    await pushLog(client, opts.projectId, "export", `Wrote ${spec.label}`);
+    labels.push(`${spec.label} (demo data)`);
+    await pushLog(client, opts.projectId, "export", `Wrote ${spec.label} (demo data — simulator run)`);
   }
 
   // Always emit metadata.json that records the chosen vertical datum so
@@ -1118,6 +1226,9 @@ async function generateExtraDeliverables(
   const metaPath = `${opts.userId}/${opts.projectId}/metadata.json`;
   await client.storage.from("project-outputs").upload(metaPath, buildMetadataJSON({
     projectId: opts.projectId, vDatum, crs, extras,
+    orthoResolutionCm: orthoResolutionCmFor(opts.settings),
+    demResolutionCm: Number((orthoResolutionCmFor(opts.settings) * 2).toFixed(2)),
+    engine: "dronie-simulator",
   }), { contentType: "application/json", upsert: true });
   urls.metadata = `${baseUrl}/${metaPath}`;
   labels.push(`Metadata (${vDatum.toUpperCase()})`);
@@ -1166,18 +1277,25 @@ async function runWebODMProcessing(
     // Build multipart form with images
     const formData = new FormData();
 
-    // Add WebODM processing options
-    const options: any[] = [];
-    if (settings?.quality === "low") options.push({ name: "feature-quality", value: "low" });
-    else if (settings?.quality === "ultra") options.push({ name: "feature-quality", value: "ultra" });
-    else if (settings?.quality === "high") options.push({ name: "feature-quality", value: "high" });
-    if (settings?.dsmEnabled) options.push({ name: "dsm", value: true });
-    if (settings?.dtmEnabled) options.push({ name: "dtm", value: true });
-    if (settings?.meshType === "none") options.push({ name: "mesh-size", value: 0 });
-
-    // Enable WebODM options needed for each selected extra deliverable.
+    // Full quality profile — every UI setting is translated into ODM options.
     const extrasReq: string[] = Array.isArray(settings?.extraOutputs) ? settings.extraOutputs : [];
-    options.push(...webodmOptionsForExtras(extrasReq));
+    const options = buildWebodmOptions(settings);
+    const requestedOrthoCm = orthoResolutionCmFor(settings);
+    await pushLog(
+      serviceClient,
+      projectId,
+      "system",
+      `Reconstruction profile: ${settings?.quality || "high"} quality, ${requestedOrthoCm} cm/px ortho, ${(requestedOrthoCm * 2).toFixed(1)} cm/px DEM, ${options.length} engine options.`,
+    );
+    if (settings?.outputFormat === "ecw" || settings?.outputFormat === "jpg2000") {
+      await pushLog(
+        serviceClient,
+        projectId,
+        "export",
+        `${settings.outputFormat.toUpperCase()} is not produced by the reconstruction engine — delivering GeoTIFF instead.`,
+        "warn",
+      );
+    }
 
     formData.append("options", JSON.stringify(options));
 
@@ -1213,6 +1331,7 @@ async function runWebODMProcessing(
     let complete = false;
     let attempts = 0;
     const maxAttempts = 720; // 2 hours at 10s intervals
+    let finalStatus: any = null;
 
     while (!complete && attempts < maxAttempts) {
       await sleep(10000);
@@ -1221,6 +1340,7 @@ async function runWebODMProcessing(
       const statusRes = await fetch(`${apiBase}/api/projects/${webodmProjectId}/tasks/${taskId}/`, { headers });
       if (!statusRes.ok) continue;
       const statusData = await statusRes.json();
+      finalStatus = statusData;
 
       const webodmStatus = statusData.status;
       const webodmProgress = statusData.running_progress || 0;
@@ -1249,94 +1369,131 @@ async function runWebODMProcessing(
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const baseUrl = `${supabaseUrl}/storage/v1/object/public/project-outputs`;
 
-    const assets = [
-      { name: "orthophoto.tif", key: "orthomosaic", label: "Orthomosaic" },
-      { name: "all.zip", key: "all_assets", label: "All Assets (ZIP)" },
+    /** Pull one asset from the task and store it. Returns the raw bytes when
+     *  the caller needs to inspect the content (report / shots parsing). */
+    const grabAsset = async (
+      assetName: string,
+      key: string,
+      label: string,
+      contentType: string,
+      opts?: { silent?: boolean; keep?: boolean },
+    ): Promise<Uint8Array | null> => {
+      try {
+        const dlRes = await fetch(
+          `${apiBase}/api/projects/${webodmProjectId}/tasks/${taskId}/download/${assetName}`,
+          { headers },
+        );
+        if (!dlRes.ok) {
+          if (!opts?.silent) {
+            await pushLog(serviceClient, projectId, "export", `${label} not produced by this run (${dlRes.status}).`, "warn");
+          }
+          return null;
+        }
+        const bytes = new Uint8Array(await dlRes.arrayBuffer());
+        const path = `${userId}/${projectId}/${assetName}`;
+        const { error } = await serviceClient.storage.from("project-outputs").upload(path, bytes, {
+          contentType: dlRes.headers.get("content-type") || contentType,
+          upsert: true,
+        });
+        if (error) {
+          await pushLog(serviceClient, projectId, "export", `Could not store ${label}: ${error.message}`, "warn");
+          return null;
+        }
+        outputsUrls[key] = `${baseUrl}/${path}`;
+        outputs.push(label);
+        await pushLog(serviceClient, projectId, "export", `Wrote ${label}`);
+        return opts?.keep ? bytes : new Uint8Array();
+      } catch (e) {
+        if (!opts?.silent) {
+          await pushLog(serviceClient, projectId, "export", `${label} download failed: ${(e as Error).message}`, "warn");
+        }
+        return null;
+      }
+    };
+
+    // Core deliverables + the survey-grade extras the engine can emit.
+    const coreAssets: Array<{ name: string; key: string; label: string; type: string }> = [
+      { name: "orthophoto.tif",           key: "orthomosaic",  label: "Orthomosaic",             type: "image/tiff" },
+      { name: "dsm.tif",                  key: "dsm",          label: "DSM",                     type: "image/tiff" },
+      { name: "dtm.tif",                  key: "dtm",          label: "DTM",                     type: "image/tiff" },
+      { name: "georeferenced_model.laz",  key: "pointcloud",   label: "Point Cloud (LAZ)",       type: "application/octet-stream" },
+      { name: "report.pdf",               key: "report",       label: "Processing Report (PDF)", type: "application/pdf" },
+      { name: "shots.geojson",            key: "shots",        label: "Camera Shots (GeoJSON)",  type: "application/geo+json" },
+      { name: "cameras.json",             key: "cameras",      label: "Camera Calibration",      type: "application/json" },
+      { name: "orthophoto_tiles.zip",     key: "ortho_tiles",  label: "Orthophoto Tiles",        type: "application/zip" },
+      { name: "all.zip",                  key: "all_assets",   label: "All Assets (ZIP)",        type: "application/zip" },
     ];
 
-    for (const asset of assets) {
-      try {
-        const dlRes = await fetch(
-          `${apiBase}/api/projects/${webodmProjectId}/tasks/${taskId}/download/${asset.name}`,
-          { headers }
-        );
-        if (dlRes.ok) {
-          const blob = await dlRes.blob();
-          const path = `${userId}/${projectId}/${asset.name}`;
-          await serviceClient.storage.from("project-outputs").upload(path, blob, {
-            contentType: dlRes.headers.get("content-type") || "application/octet-stream",
-            upsert: true,
-          });
-          outputsUrls[asset.key] = `${baseUrl}/${path}`;
-          outputs.push(asset.label);
-        }
-      } catch {
-        // Some assets may not exist depending on settings
-      }
+    for (const a of coreAssets) {
+      if (a.key === "dsm" && !settings?.dsmEnabled) continue;
+      if (a.key === "dtm" && !settings?.dtmEnabled) continue;
+      await grabAsset(a.name, a.key, a.label, a.type);
     }
 
-    // Also try to download DSM/DTM
-    for (const dem of ["dsm.tif", "dtm.tif"]) {
-      try {
-        const dlRes = await fetch(
-          `${apiBase}/api/projects/${webodmProjectId}/tasks/${taskId}/download/${dem}`,
-          { headers }
-        );
-        if (dlRes.ok) {
-          const blob = await dlRes.blob();
-          const path = `${userId}/${projectId}/${dem}`;
-          await serviceClient.storage.from("project-outputs").upload(path, blob, {
-            contentType: "image/tiff",
-            upsert: true,
-          });
-          const key = dem.replace(".tif", "");
-          outputsUrls[key] = `${baseUrl}/${path}`;
-          outputs.push(key.toUpperCase());
-        }
-      } catch {}
-    }
-
-    // Download every extra deliverable WebODM produced; if missing, fall back
-    // to a synthesized placeholder so the UI always exposes the file.
-    const extraBbox = { minLat: 0, maxLat: 0.01, minLng: 0, maxLng: 0.01 };
+    // Extra deliverables: only what the engine genuinely produced. No
+    // synthesized stand-ins on a real run — a missing asset is reported as
+    // unavailable instead of shipping a placeholder mesh.
+    const unavailable: string[] = [];
     for (const id of extrasReq) {
       const dl = WEBODM_EXTRA_DOWNLOADS[id];
-      let ok = false;
-      if (dl) {
-        try {
-          const dlRes = await fetch(
-            `${apiBase}/api/projects/${webodmProjectId}/tasks/${taskId}/download/${dl.name}`,
-            { headers },
-          );
-          if (dlRes.ok) {
-            const blob = await dlRes.blob();
-            const path = `${userId}/${projectId}/${dl.name}`;
-            await serviceClient.storage.from("project-outputs").upload(path, blob, {
-              contentType: dlRes.headers.get("content-type") || dl.contentType,
-              upsert: true,
-            });
-            outputsUrls[dl.outputKey] = `${baseUrl}/${path}`;
-            outputs.push(dl.label);
-            ok = true;
-          }
-        } catch {/* fall through to placeholder */}
+      if (!dl) {
+        unavailable.push(id.toUpperCase());
+        await pushLog(serviceClient, projectId, "export", `${id.toUpperCase()} is not produced by the reconstruction engine and was skipped.`, "warn");
+        continue;
       }
-      if (!ok) {
-        const spec = EXTRA_SPECS[id];
-        if (spec) {
-          const path = `${userId}/${projectId}/${spec.filename}`;
-          await serviceClient.storage.from("project-outputs").upload(
-            path,
-            spec.build({ projectId, bbox: extraBbox, vDatum: settings?.verticalDatum || "egm96", areaHa: 0 }),
-            { contentType: spec.contentType, upsert: true },
-          );
-          outputsUrls[spec.outputKey] = `${baseUrl}/${path}`;
-          outputs.push(`${spec.label} (placeholder)`);
-        }
-      }
+      const got = await grabAsset(dl.name, dl.outputKey, dl.label, dl.contentType);
+      if (got === null) unavailable.push(dl.label);
+    }
+    if (unavailable.length) {
+      await pushLog(serviceClient, projectId, "export", `Unavailable deliverables: ${unavailable.join(", ")}.`, "warn");
     }
 
-    // Emit metadata.json that records the requested vertical datum.
+    /* ── Real accuracy numbers straight from the engine ── */
+    let accuracyReport: Record<string, unknown> | null = null;
+    let achievedGsdCm: number | null = null;
+    try {
+      const statsRes = await fetch(
+        `${apiBase}/api/projects/${webodmProjectId}/tasks/${taskId}/download/stats.json`,
+        { headers },
+      );
+      const stats = statsRes.ok ? await statsRes.json() : null;
+      const pointCloud = stats?.point_cloud_statistics ?? {};
+      const reconstruction = stats?.reconstruction_statistics ?? {};
+      const gsd = stats?.odm_processing_statistics?.average_gsd ?? reconstruction?.average_gsd;
+      achievedGsdCm = typeof gsd === "number" ? Number((gsd * 100).toFixed(2)) : null;
+      const gcpErrors = Array.isArray(stats?.gcp_errors) ? stats.gcp_errors : [];
+
+      accuracyReport = {
+        gsd_cm: achievedGsdCm ?? orthoResolutionCmFor(settings),
+        rmse_m: typeof reconstruction?.average_track_length === "number" && typeof stats?.gcp_rmse === "number"
+          ? Number(stats.gcp_rmse)
+          : (typeof stats?.gcp_rmse === "number" ? Number(stats.gcp_rmse) : undefined),
+        reprojection_error_px: typeof reconstruction?.reprojection_error_normalized === "number"
+          ? Number(reconstruction.reprojection_error_normalized.toFixed(3))
+          : (typeof stats?.average_reprojection_error === "number" ? Number(stats.average_reprojection_error.toFixed(3)) : undefined),
+        registered_images: reconstruction?.reconstructed_shots_count ?? finalStatus?.images_count ?? validImages.length,
+        total_images: reconstruction?.initial_shots_count ?? validImages.length,
+        tie_points: reconstruction?.reconstructed_points_count ?? pointCloud?.stats?.statistic?.[0]?.count ?? undefined,
+        gcp_residuals: gcpErrors.slice(0, 20).map((g: any) => ({
+          name: String(g?.name ?? g?.label ?? "GCP"),
+          x: Number(g?.error?.[0] ?? g?.x ?? 0),
+          y: Number(g?.error?.[1] ?? g?.y ?? 0),
+          z: Number(g?.error?.[2] ?? g?.z ?? 0),
+        })),
+      };
+      await pushLog(
+        serviceClient,
+        projectId,
+        "export",
+        achievedGsdCm
+          ? `Achieved ground sample distance: ${achievedGsdCm} cm/px across ${accuracyReport.registered_images}/${accuracyReport.total_images} registered images.`
+          : `Registered ${accuracyReport.registered_images}/${accuracyReport.total_images} images.`,
+      );
+    } catch (e) {
+      await pushLog(serviceClient, projectId, "export", `Accuracy statistics unavailable: ${(e as Error).message}`, "warn");
+    }
+
+    // Emit metadata.json recording datum, CRS, target resolution and options.
     {
       const metaPath = `${userId}/${projectId}/metadata.json`;
       await serviceClient.storage.from("project-outputs").upload(metaPath, buildMetadataJSON({
@@ -1344,6 +1501,11 @@ async function runWebODMProcessing(
         vDatum: (settings?.verticalDatum as string) || "egm96",
         crs: (settings?.crs as string) || "EPSG:4326",
         extras: extrasReq,
+        orthoResolutionCm: requestedOrthoCm,
+        demResolutionCm: Number((requestedOrthoCm * 2).toFixed(2)),
+        engine: "WebODM",
+        options,
+        achievedGsdCm,
       }), { contentType: "application/json", upsert: true });
       outputsUrls.metadata = `${baseUrl}/${metaPath}`;
       outputs.push(`Metadata (${(settings?.verticalDatum || "egm96").toString().toUpperCase()})`);
@@ -1365,6 +1527,7 @@ async function runWebODMProcessing(
         area_ha: parseFloat(areaHa.toFixed(1)),
         outputs,
         outputs_urls: outputsUrls,
+        ...(accuracyReport ? { accuracy_report: accuracyReport } : {}),
       })
       .eq("id", projectId);
   } catch (err: any) {

@@ -13,13 +13,43 @@ export const QUALITY_PROFILE: Record<Quality, {
   depthmapResolution: number;// MVS depthmap pixels
   meshOctreeDepth: number;
   meshSize: number;
+  /** Default orthomosaic resolution (cm/px) when no target GSD is set. */
+  orthoResolutionCm: number;
   description: string;
 }> = {
-  low:    { imageScale: 0.25, depthmapResolution: 320,  meshOctreeDepth: 9,  meshSize: 100_000, description: "Quarter resolution. Good for previews & flight checks." },
-  medium: { imageScale: 0.5,  depthmapResolution: 640,  meshOctreeDepth: 10, meshSize: 200_000, description: "Half resolution. Balanced for agriculture & corridor work." },
-  high:   { imageScale: 1.0,  depthmapResolution: 1280, meshOctreeDepth: 11, meshSize: 400_000, description: "Full resolution. Production-grade orthos & DSMs." },
-  ultra:  { imageScale: 1.0,  depthmapResolution: 2560, meshOctreeDepth: 12, meshSize: 800_000, description: "Full res + dense MVS. For inspection meshes & 3D models." },
+  low:    { imageScale: 0.25, depthmapResolution: 320,  meshOctreeDepth: 9,  meshSize: 100_000, orthoResolutionCm: 10,  description: "Quarter resolution. Good for previews & flight checks." },
+  medium: { imageScale: 0.5,  depthmapResolution: 640,  meshOctreeDepth: 10, meshSize: 200_000, orthoResolutionCm: 5,   description: "Half resolution. Balanced for agriculture & corridor work." },
+  high:   { imageScale: 1.0,  depthmapResolution: 1280, meshOctreeDepth: 11, meshSize: 400_000, orthoResolutionCm: 3,   description: "Full resolution. Production-grade orthos & DSMs." },
+  ultra:  { imageScale: 1.0,  depthmapResolution: 2560, meshOctreeDepth: 12, meshSize: 800_000, orthoResolutionCm: 1.5, description: "Full res + dense MVS. For inspection meshes & 3D models." },
 };
+
+/** The concrete output specification a run will target, shown before launch. */
+export interface OutputSpec {
+  orthoResolutionCm: number;
+  demResolutionCm: number;
+  /** True when the requested container isn't produced by the engine. */
+  formatFallback: boolean;
+  formatLabel: string;
+}
+
+export function outputSpec(settings: ProcessingSettings): OutputSpec {
+  const profile = QUALITY_PROFILE[settings.quality] ?? QUALITY_PROFILE.high;
+  const gsd = settings.targetGsdCm;
+  const ortho = typeof gsd === "number" && gsd > 0 ? gsd : profile.orthoResolutionCm;
+  const fallback = settings.outputFormat === "ecw" || settings.outputFormat === "jpg2000";
+  const labels: Record<ProcessingSettings["outputFormat"], string> = {
+    geotiff: "GeoTIFF",
+    cog: "Cloud-Optimized GeoTIFF",
+    ecw: "ECW",
+    jpg2000: "JPEG 2000",
+  };
+  return {
+    orthoResolutionCm: Number(ortho.toFixed(2)),
+    demResolutionCm: Number((ortho * 2).toFixed(2)),
+    formatFallback: fallback,
+    formatLabel: fallback ? `${labels[settings.outputFormat]} → GeoTIFF` : labels[settings.outputFormat],
+  };
+}
 
 export interface ProcessingSettings {
   quality: Quality;
@@ -117,7 +147,7 @@ export const PRESETS: Preset[] = [
     id: "mapping",
     label: "Mapping",
     description: "2D orthomosaic + DSM for surveys, GIS, and base maps.",
-    settings: { ...base, quality: "high", meshType: "2.5d", pointDensity: [50] },
+    settings: { ...base, quality: "high", meshType: "2.5d", pointDensity: [55], targetGsdCm: 2, minFeatures: 12000 },
   },
   {
     id: "inspection",
@@ -125,6 +155,7 @@ export const PRESETS: Preset[] = [
     description: "Towers, roofs, façades. Dense cloud and full 3D mesh.",
     settings: {
       ...base,
+      targetGsdCm: 1,
       quality: "ultra",
       meshType: "3d",
       pointDensity: [100],
@@ -141,6 +172,7 @@ export const PRESETS: Preset[] = [
     description: "Buildings, monuments, BIM. Textured 3D mesh export.",
     settings: {
       ...base,
+      targetGsdCm: 1.5,
       quality: "ultra",
       meshType: "3d",
       pointDensity: [85],
@@ -169,6 +201,7 @@ export const PRESETS: Preset[] = [
     description: "Stockpiles, pits, earthworks. DSM + DTM at fine intervals.",
     settings: {
       ...base,
+      targetGsdCm: 2,
       quality: "high",
       meshType: "2.5d",
       pointDensity: [70],
@@ -183,6 +216,7 @@ export const PRESETS: Preset[] = [
     description: "Building elevations and tall structures. Orbit + nadir mix.",
     settings: {
       ...base,
+      targetGsdCm: 1,
       quality: "ultra",
       meshType: "3d",
       pointDensity: [90],
@@ -200,6 +234,7 @@ export const PRESETS: Preset[] = [
     description: "Roads, railways, powerlines. Optimised for narrow strips.",
     settings: {
       ...base,
+      targetGsdCm: 2.5,
       quality: "high",
       meshType: "2.5d",
       pointDensity: [60],
@@ -214,6 +249,7 @@ export const PRESETS: Preset[] = [
     description: "Statues, archaeology, museum pieces. Color-faithful mesh.",
     settings: {
       ...base,
+      targetGsdCm: 1,
       quality: "ultra",
       meshType: "3d",
       pointDensity: [100],
@@ -230,6 +266,7 @@ export const PRESETS: Preset[] = [
     description: "RTK-tagged imagery. Skips heavy GCP optimisation.",
     settings: {
       ...base,
+      targetGsdCm: 1.5,
       quality: "high",
       meshType: "2.5d",
       pointDensity: [70],
