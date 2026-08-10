@@ -1154,6 +1154,11 @@ function buildMetadataJSON(opts: {
   vDatum: string;
   crs: string;
   extras: string[];
+  orthoResolutionCm?: number;
+  demResolutionCm?: number;
+  engine?: string;
+  options?: Array<{ name: string; value: unknown }>;
+  achievedGsdCm?: number | null;
 }): Uint8Array {
   const datumDescriptions: Record<string, string> = {
     ellipsoid: "WGS-84 ellipsoidal heights (raw GPS).",
@@ -1167,6 +1172,11 @@ function buildMetadataJSON(opts: {
     vertical_datum: opts.vDatum,
     vertical_datum_note: datumDescriptions[opts.vDatum] || datumDescriptions.egm96,
     extra_outputs_requested: opts.extras,
+    engine: opts.engine ?? "dronie-simulator",
+    requested_ortho_resolution_cm: opts.orthoResolutionCm ?? null,
+    requested_dem_resolution_cm: opts.demResolutionCm ?? null,
+    achieved_gsd_cm: opts.achievedGsdCm ?? null,
+    processing_options: opts.options ?? [],
     generated_at: new Date().toISOString(),
   };
   return utf8(JSON.stringify(meta, null, 2));
