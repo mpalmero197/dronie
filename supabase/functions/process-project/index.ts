@@ -1328,6 +1328,7 @@ async function runWebODMProcessing(
     let complete = false;
     let attempts = 0;
     const maxAttempts = 720; // 2 hours at 10s intervals
+    let finalStatus: any = null;
 
     while (!complete && attempts < maxAttempts) {
       await sleep(10000);
@@ -1336,6 +1337,7 @@ async function runWebODMProcessing(
       const statusRes = await fetch(`${apiBase}/api/projects/${webodmProjectId}/tasks/${taskId}/`, { headers });
       if (!statusRes.ok) continue;
       const statusData = await statusRes.json();
+      finalStatus = statusData;
 
       const webodmStatus = statusData.status;
       const webodmProgress = statusData.running_progress || 0;
