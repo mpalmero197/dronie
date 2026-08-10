@@ -147,13 +147,14 @@ export const PRESETS: Preset[] = [
     id: "mapping",
     label: "Mapping",
     description: "2D orthomosaic + DSM for surveys, GIS, and base maps.",
-    settings: { ...base, quality: "high", meshType: "2.5d", pointDensity: [50] },
+    settings: { ...base, quality: "high", meshType: "2.5d", pointDensity: [55], targetGsdCm: 2, minFeatures: 12000 },
   },
   {
     id: "inspection",
     label: "Inspection",
     description: "Towers, roofs, façades. Dense cloud and full 3D mesh.",
     settings: {
+      targetGsdCm: 1,
       ...base,
       quality: "ultra",
       meshType: "3d",
@@ -170,6 +171,7 @@ export const PRESETS: Preset[] = [
     label: "3D Model",
     description: "Buildings, monuments, BIM. Textured 3D mesh export.",
     settings: {
+      targetGsdCm: 1.5,
       ...base,
       quality: "ultra",
       meshType: "3d",
@@ -198,6 +200,7 @@ export const PRESETS: Preset[] = [
     label: "Volumetrics",
     description: "Stockpiles, pits, earthworks. DSM + DTM at fine intervals.",
     settings: {
+      targetGsdCm: 2,
       ...base,
       quality: "high",
       meshType: "2.5d",
@@ -212,6 +215,7 @@ export const PRESETS: Preset[] = [
     label: "Façade / Vertical",
     description: "Building elevations and tall structures. Orbit + nadir mix.",
     settings: {
+      targetGsdCm: 1,
       ...base,
       quality: "ultra",
       meshType: "3d",
@@ -229,6 +233,7 @@ export const PRESETS: Preset[] = [
     label: "Linear corridor",
     description: "Roads, railways, powerlines. Optimised for narrow strips.",
     settings: {
+      targetGsdCm: 2.5,
       ...base,
       quality: "high",
       meshType: "2.5d",
@@ -243,6 +248,7 @@ export const PRESETS: Preset[] = [
     label: "Cultural heritage",
     description: "Statues, archaeology, museum pieces. Color-faithful mesh.",
     settings: {
+      targetGsdCm: 1,
       ...base,
       quality: "ultra",
       meshType: "3d",
@@ -259,6 +265,7 @@ export const PRESETS: Preset[] = [
     label: "RTK / PPK survey",
     description: "RTK-tagged imagery. Skips heavy GCP optimisation.",
     settings: {
+      targetGsdCm: 1.5,
       ...base,
       quality: "high",
       meshType: "2.5d",
