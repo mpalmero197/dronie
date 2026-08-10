@@ -1,13 +1,14 @@
 import { forwardRef } from "react";
-import { Clock, Coins, HardDrive, AlertTriangle } from "lucide-react";
-import type { Estimate } from "@/lib/photogrammetry";
+import { Clock, Coins, HardDrive, AlertTriangle, Ruler } from "lucide-react";
+import { outputSpec, type Estimate, type ProcessingSettings } from "@/lib/photogrammetry";
 
 export interface EstimatePanelProps {
   estimate: Estimate;
+  settings?: ProcessingSettings;
 }
 
 export const EstimatePanel = forwardRef<HTMLDivElement, EstimatePanelProps>(
-  function EstimatePanel({ estimate }, ref) {
+  function EstimatePanel({ estimate, settings }, ref) {
     const hours = Math.floor(estimate.minutes / 60);
     const mins = estimate.minutes % 60;
     const timeLabel = hours > 0 ? `${hours}h ${mins}m` : `${mins} min`;
@@ -15,6 +16,7 @@ export const EstimatePanel = forwardRef<HTMLDivElement, EstimatePanelProps>(
       estimate.storageMb >= 1024
         ? `${(estimate.storageMb / 1024).toFixed(1)} GB`
         : `${estimate.storageMb} MB`;
+    const spec = settings ? outputSpec(settings) : null;
     return (
       <div ref={ref} className="rounded-2xl border border-border bg-gradient-to-br from-primary/5 to-accent/5 p-4 space-y-3">
         <p className="text-xs font-display font-700 text-foreground uppercase tracking-wider">
@@ -25,6 +27,22 @@ export const EstimatePanel = forwardRef<HTMLDivElement, EstimatePanelProps>(
           <Stat icon={Coins} label="Credits" value={String(estimate.credits)} />
           <Stat icon={HardDrive} label="Storage" value={storageLabel} />
         </div>
+        {spec && (
+          <div className="rounded-lg border border-border/60 bg-card/70 p-2.5">
+            <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+              <Ruler className="w-3 h-3" />
+              Output spec
+            </div>
+            <p className="text-xs text-foreground mt-1 font-mono">
+              Ortho {spec.orthoResolutionCm} cm/px · DEM {spec.demResolutionCm} cm/px · {spec.formatLabel}
+            </p>
+            {spec.formatFallback && (
+              <p className="text-[11px] text-accent mt-1">
+                This container isn't produced by the reconstruction engine — you'll receive GeoTIFF.
+              </p>
+            )}
+          </div>
+        )}
         {estimate.notes.length > 0 && (
           <ul className="space-y-1 pt-1">
             {estimate.notes.map((n, i) => (
