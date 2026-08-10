@@ -1217,8 +1217,8 @@ async function generateExtraDeliverables(
       continue;
     }
     urls[spec.outputKey] = `${baseUrl}/${path}`;
-    labels.push(spec.label);
-    await pushLog(client, opts.projectId, "export", `Wrote ${spec.label}`);
+    labels.push(`${spec.label} (demo data)`);
+    await pushLog(client, opts.projectId, "export", `Wrote ${spec.label} (demo data — simulator run)`);
   }
 
   // Always emit metadata.json that records the chosen vertical datum so
@@ -1226,6 +1226,9 @@ async function generateExtraDeliverables(
   const metaPath = `${opts.userId}/${opts.projectId}/metadata.json`;
   await client.storage.from("project-outputs").upload(metaPath, buildMetadataJSON({
     projectId: opts.projectId, vDatum, crs, extras,
+    orthoResolutionCm: orthoResolutionCmFor(opts.settings),
+    demResolutionCm: Number((orthoResolutionCmFor(opts.settings) * 2).toFixed(2)),
+    engine: "dronie-simulator",
   }), { contentType: "application/json", upsert: true });
   urls.metadata = `${baseUrl}/${metaPath}`;
   labels.push(`Metadata (${vDatum.toUpperCase()})`);
