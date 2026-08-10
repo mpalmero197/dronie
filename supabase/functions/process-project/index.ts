@@ -1364,91 +1364,83 @@ async function runWebODMProcessing(
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const baseUrl = `${supabaseUrl}/storage/v1/object/public/project-outputs`;
 
-    const assets = [
-      { name: "orthophoto.tif", key: "orthomosaic", label: "Orthomosaic" },
-      { name: "all.zip", key: "all_assets", label: "All Assets (ZIP)" },
+    /** Pull one asset from the task and store it. Returns the raw bytes when
+     *  the caller needs to inspect the content (report / shots parsing). */
+    const grabAsset = async (
+      assetName: string,
+      key: string,
+      label: string,
+      contentType: string,
+      opts?: { silent?: boolean; keep?: boolean },
+    ): Promise<Uint8Array | null> => {
+      try {
+        const dlRes = await fetch(
+          `${apiBase}/api/projects/${webodmProjectId}/tasks/${taskId}/download/${assetName}`,
+          { headers },
+        );
+        if (!dlRes.ok) {
+          if (!opts?.silent) {
+            await pushLog(serviceClient, projectId, "export", `${label} not produced by this run (${dlRes.status}).`, "warn");
+          }
+          return null;
+        }
+        const bytes = new Uint8Array(await dlRes.arrayBuffer());
+        const path = `${userId}/${projectId}/${assetName}`;
+        const { error } = await serviceClient.storage.from("project-outputs").upload(path, bytes, {
+          contentType: dlRes.headers.get("content-type") || contentType,
+          upsert: true,
+        });
+        if (error) {
+          await pushLog(serviceClient, projectId, "export", `Could not store ${label}: ${error.message}`, "warn");
+          return null;
+        }
+        outputsUrls[key] = `${baseUrl}/${path}`;
+        outputs.push(label);
+        await pushLog(serviceClient, projectId, "export", `Wrote ${label}`);
+        return opts?.keep ? bytes : new Uint8Array();
+      } catch (e) {
+        if (!opts?.silent) {
+          await pushLog(serviceClient, projectId, "export", `${label} download failed: ${(e as Error).message}`, "warn");
+        }
+        return null;
+      }
+    };
+
+    // Core deliverables + the survey-grade extras the engine can emit.
+    const coreAssets: Array<{ name: string; key: string; label: string; type: string }> = [
+      { name: "orthophoto.tif",           key: "orthomosaic",  label: "Orthomosaic",             type: "image/tiff" },
+      { name: "dsm.tif",                  key: "dsm",          label: "DSM",                     type: "image/tiff" },
+      { name: "dtm.tif",                  key: "dtm",          label: "DTM",                     type: "image/tiff" },
+      { name: "georeferenced_model.laz",  key: "pointcloud",   label: "Point Cloud (LAZ)",       type: "application/octet-stream" },
+      { name: "report.pdf",               key: "report",       label: "Processing Report (PDF)", type: "application/pdf" },
+      { name: "shots.geojson",            key: "shots",        label: "Camera Shots (GeoJSON)",  type: "application/geo+json" },
+      { name: "cameras.json",             key: "cameras",      label: "Camera Calibration",      type: "application/json" },
+      { name: "orthophoto_tiles.zip",     key: "ortho_tiles",  label: "Orthophoto Tiles",        type: "application/zip" },
+      { name: "all.zip",                  key: "all_assets",   label: "All Assets (ZIP)",        type: "application/zip" },
     ];
 
-    for (const asset of assets) {
-      try {
-        const dlRes = await fetch(
-          `${apiBase}/api/projects/${webodmProjectId}/tasks/${taskId}/download/${asset.name}`,
-          { headers }
-        );
-        if (dlRes.ok) {
-          const blob = await dlRes.blob();
-          const path = `${userId}/${projectId}/${asset.name}`;
-          await serviceClient.storage.from("project-outputs").upload(path, blob, {
-            contentType: dlRes.headers.get("content-type") || "application/octet-stream",
-            upsert: true,
-          });
-          outputsUrls[asset.key] = `${baseUrl}/${path}`;
-          outputs.push(asset.label);
-        }
-      } catch {
-        // Some assets may not exist depending on settings
-      }
+    for (const a of coreAssets) {
+      if (a.key === "dsm" && !settings?.dsmEnabled) continue;
+      if (a.key === "dtm" && !settings?.dtmEnabled) continue;
+      await grabAsset(a.name, a.key, a.label, a.type);
     }
 
-    // Also try to download DSM/DTM
-    for (const dem of ["dsm.tif", "dtm.tif"]) {
-      try {
-        const dlRes = await fetch(
-          `${apiBase}/api/projects/${webodmProjectId}/tasks/${taskId}/download/${dem}`,
-          { headers }
-        );
-        if (dlRes.ok) {
-          const blob = await dlRes.blob();
-          const path = `${userId}/${projectId}/${dem}`;
-          await serviceClient.storage.from("project-outputs").upload(path, blob, {
-            contentType: "image/tiff",
-            upsert: true,
-          });
-          const key = dem.replace(".tif", "");
-          outputsUrls[key] = `${baseUrl}/${path}`;
-          outputs.push(key.toUpperCase());
-        }
-      } catch {}
-    }
-
-    // Download every extra deliverable WebODM produced; if missing, fall back
-    // to a synthesized placeholder so the UI always exposes the file.
-    const extraBbox = { minLat: 0, maxLat: 0.01, minLng: 0, maxLng: 0.01 };
+    // Extra deliverables: only what the engine genuinely produced. No
+    // synthesized stand-ins on a real run — a missing asset is reported as
+    // unavailable instead of shipping a placeholder mesh.
+    const unavailable: string[] = [];
     for (const id of extrasReq) {
       const dl = WEBODM_EXTRA_DOWNLOADS[id];
-      let ok = false;
-      if (dl) {
-        try {
-          const dlRes = await fetch(
-            `${apiBase}/api/projects/${webodmProjectId}/tasks/${taskId}/download/${dl.name}`,
-            { headers },
-          );
-          if (dlRes.ok) {
-            const blob = await dlRes.blob();
-            const path = `${userId}/${projectId}/${dl.name}`;
-            await serviceClient.storage.from("project-outputs").upload(path, blob, {
-              contentType: dlRes.headers.get("content-type") || dl.contentType,
-              upsert: true,
-            });
-            outputsUrls[dl.outputKey] = `${baseUrl}/${path}`;
-            outputs.push(dl.label);
-            ok = true;
-          }
-        } catch {/* fall through to placeholder */}
+      if (!dl) {
+        unavailable.push(id.toUpperCase());
+        await pushLog(serviceClient, projectId, "export", `${id.toUpperCase()} is not produced by the reconstruction engine and was skipped.`, "warn");
+        continue;
       }
-      if (!ok) {
-        const spec = EXTRA_SPECS[id];
-        if (spec) {
-          const path = `${userId}/${projectId}/${spec.filename}`;
-          await serviceClient.storage.from("project-outputs").upload(
-            path,
-            spec.build({ projectId, bbox: extraBbox, vDatum: settings?.verticalDatum || "egm96", areaHa: 0 }),
-            { contentType: spec.contentType, upsert: true },
-          );
-          outputsUrls[spec.outputKey] = `${baseUrl}/${path}`;
-          outputs.push(`${spec.label} (placeholder)`);
-        }
-      }
+      const got = await grabAsset(dl.name, dl.outputKey, dl.label, dl.contentType);
+      if (got === null) unavailable.push(dl.label);
+    }
+    if (unavailable.length) {
+      await pushLog(serviceClient, projectId, "export", `Unavailable deliverables: ${unavailable.join(", ")}.`, "warn");
     }
 
     // Emit metadata.json that records the requested vertical datum.
