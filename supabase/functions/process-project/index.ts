@@ -1445,7 +1445,52 @@ async function runWebODMProcessing(
       await pushLog(serviceClient, projectId, "export", `Unavailable deliverables: ${unavailable.join(", ")}.`, "warn");
     }
 
-    // Emit metadata.json that records the requested vertical datum.
+    /* ── Real accuracy numbers straight from the engine ── */
+    let accuracyReport: Record<string, unknown> | null = null;
+    let achievedGsdCm: number | null = null;
+    try {
+      const statsRes = await fetch(
+        `${apiBase}/api/projects/${webodmProjectId}/tasks/${taskId}/download/stats.json`,
+        { headers },
+      );
+      const stats = statsRes.ok ? await statsRes.json() : null;
+      const pointCloud = stats?.point_cloud_statistics ?? {};
+      const reconstruction = stats?.reconstruction_statistics ?? {};
+      const gsd = stats?.odm_processing_statistics?.average_gsd ?? reconstruction?.average_gsd;
+      achievedGsdCm = typeof gsd === "number" ? Number((gsd * 100).toFixed(2)) : null;
+      const gcpErrors = Array.isArray(stats?.gcp_errors) ? stats.gcp_errors : [];
+
+      accuracyReport = {
+        gsd_cm: achievedGsdCm ?? orthoResolutionCmFor(settings),
+        rmse_m: typeof reconstruction?.average_track_length === "number" && typeof stats?.gcp_rmse === "number"
+          ? Number(stats.gcp_rmse)
+          : (typeof stats?.gcp_rmse === "number" ? Number(stats.gcp_rmse) : undefined),
+        reprojection_error_px: typeof reconstruction?.reprojection_error_normalized === "number"
+          ? Number(reconstruction.reprojection_error_normalized.toFixed(3))
+          : (typeof stats?.average_reprojection_error === "number" ? Number(stats.average_reprojection_error.toFixed(3)) : undefined),
+        registered_images: reconstruction?.reconstructed_shots_count ?? finalStatus?.images_count ?? validImages.length,
+        total_images: reconstruction?.initial_shots_count ?? validImages.length,
+        tie_points: reconstruction?.reconstructed_points_count ?? pointCloud?.stats?.statistic?.[0]?.count ?? undefined,
+        gcp_residuals: gcpErrors.slice(0, 20).map((g: any) => ({
+          name: String(g?.name ?? g?.label ?? "GCP"),
+          x: Number(g?.error?.[0] ?? g?.x ?? 0),
+          y: Number(g?.error?.[1] ?? g?.y ?? 0),
+          z: Number(g?.error?.[2] ?? g?.z ?? 0),
+        })),
+      };
+      await pushLog(
+        serviceClient,
+        projectId,
+        "export",
+        achievedGsdCm
+          ? `Achieved ground sample distance: ${achievedGsdCm} cm/px across ${accuracyReport.registered_images}/${accuracyReport.total_images} registered images.`
+          : `Registered ${accuracyReport.registered_images}/${accuracyReport.total_images} images.`,
+      );
+    } catch (e) {
+      await pushLog(serviceClient, projectId, "export", `Accuracy statistics unavailable: ${(e as Error).message}`, "warn");
+    }
+
+    // Emit metadata.json recording datum, CRS, target resolution and options.
     {
       const metaPath = `${userId}/${projectId}/metadata.json`;
       await serviceClient.storage.from("project-outputs").upload(metaPath, buildMetadataJSON({
@@ -1453,6 +1498,11 @@ async function runWebODMProcessing(
         vDatum: (settings?.verticalDatum as string) || "egm96",
         crs: (settings?.crs as string) || "EPSG:4326",
         extras: extrasReq,
+        orthoResolutionCm: requestedOrthoCm,
+        demResolutionCm: Number((requestedOrthoCm * 2).toFixed(2)),
+        engine: "WebODM",
+        options,
+        achievedGsdCm,
       }), { contentType: "application/json", upsert: true });
       outputsUrls.metadata = `${baseUrl}/${metaPath}`;
       outputs.push(`Metadata (${(settings?.verticalDatum || "egm96").toString().toUpperCase()})`);
@@ -1474,6 +1524,7 @@ async function runWebODMProcessing(
         area_ha: parseFloat(areaHa.toFixed(1)),
         outputs,
         outputs_urls: outputsUrls,
+        ...(accuracyReport ? { accuracy_report: accuracyReport } : {}),
       })
       .eq("id", projectId);
   } catch (err: any) {
