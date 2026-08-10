@@ -1034,21 +1034,119 @@ const WEBODM_EXTRA_DOWNLOADS: Record<string, { name: string; contentType: string
   cesium3dtiles: { name: "3d_tiles.zip", contentType: "application/zip", outputKey: "cesium3dtiles", label: "Cesium 3D Tiles" },
 };
 
-/** WebODM processing options to enable selected extras. */
-function webodmOptionsForExtras(extras: string[]): Array<{ name: string; value: unknown }> {
+/** Mirror of QUALITY_PROFILE in src/lib/photogrammetry.ts — keep in sync. */
+const QUALITY_PROFILE: Record<string, {
+  featureQuality: string;
+  pcQuality: string;
+  depthmapResolution: number;
+  meshOctreeDepth: number;
+  meshSize: number;
+  orthoResolutionCm: number;
+}> = {
+  low:    { featureQuality: "low",    pcQuality: "low",    depthmapResolution: 320,  meshOctreeDepth: 9,  meshSize: 100_000, orthoResolutionCm: 10 },
+  medium: { featureQuality: "medium", pcQuality: "medium", depthmapResolution: 640,  meshOctreeDepth: 10, meshSize: 200_000, orthoResolutionCm: 5 },
+  high:   { featureQuality: "high",   pcQuality: "high",   depthmapResolution: 1280, meshOctreeDepth: 11, meshSize: 400_000, orthoResolutionCm: 3 },
+  ultra:  { featureQuality: "ultra",  pcQuality: "ultra",  depthmapResolution: 2560, meshOctreeDepth: 12, meshSize: 800_000, orthoResolutionCm: 1.5 },
+};
+
+/**
+ * Translate the full Dronie processing settings object into concrete ODM
+ * options. Everything the operator picks in the UI has to survive the trip to
+ * the reconstruction engine — otherwise the deliverables are generic defaults.
+ */
+function buildWebodmOptions(settings: any): Array<{ name: string; value: unknown }> {
   const opts: Array<{ name: string; value: unknown }> = [];
+  const push = (name: string, value: unknown) => opts.push({ name, value });
+
+  const quality: string = settings?.quality || "high";
+  const profile = QUALITY_PROFILE[quality] || QUALITY_PROFILE.high;
+  const extras: string[] = Array.isArray(settings?.extraOutputs) ? settings.extraOutputs : [];
+  const meshType: string = settings?.meshType || "2.5d";
+  const density: number = Array.isArray(settings?.pointDensity) ? Number(settings.pointDensity[0]) || 75 : 75;
+
+  /* ── Core quality profile ── */
+  push("feature-quality", profile.featureQuality);
+  push("pc-quality", density >= 90 ? "ultra" : density >= 70 ? profile.pcQuality : density >= 45 ? "medium" : "low");
+  push("depthmap-resolution", profile.depthmapResolution);
+  push("mesh-octree-depth", profile.meshOctreeDepth);
+
+  /* ── Ground sample distance drives ortho + DEM resolution ── */
+  const gsdCm = Number(settings?.targetGsdCm);
+  const orthoCm = Number.isFinite(gsdCm) && gsdCm > 0 ? gsdCm : profile.orthoResolutionCm;
+  push("orthophoto-resolution", Number(orthoCm.toFixed(2)));
+  // DEMs are conventionally produced at ~2x the ortho GSD for a stable surface.
+  push("dem-resolution", Number((orthoCm * 2).toFixed(2)));
+
+  /* ── Mesh ── */
+  if (meshType === "3d") {
+    push("use-3dmesh", true);
+    push("mesh-size", profile.meshSize);
+    push("texturing-skip-global-seam-leveling", false);
+  } else if (meshType === "none") {
+    push("skip-3dmodel", true);
+    push("mesh-size", 0);
+  } else {
+    push("mesh-size", Math.round(profile.meshSize / 2));
+  }
+
+  /* ── Feature matching ── */
+  if (settings?.matcher === "bruteforce") push("matcher-type", "bruteforce");
+  else push("matcher-type", "bow");
+  const minFeatures = Number(settings?.minFeatures);
+  if (Number.isFinite(minFeatures) && minFeatures > 0) push("min-num-features", Math.round(minFeatures));
+
+  /* ── Elevation models ── */
+  if (settings?.dsmEnabled) push("dsm", true);
+  if (settings?.dtmEnabled) {
+    push("dtm", true);
+    // Ground classification tuning — tighter thresholds give a cleaner DTM.
+    push("smrf-threshold", 0.5);
+    push("smrf-scalar", 1.25);
+    push("smrf-slope", 0.15);
+    push("smrf-window", 18);
+  }
+  if (settings?.dsmEnabled || settings?.dtmEnabled) {
+    push("dem-gapfill-steps", 4);
+    push("dem-euclidean-map", true);
+  }
+
+  /* ── Orthophoto packaging ── */
+  if (settings?.outputFormat === "cog") push("cog", true);
+  push("orthophoto-compression", "DEFLATE");
+  push("orthophoto-cutline", true);
+  push("crop", 3);
+
+  /* ── Point cloud quality ── */
+  push("pc-rectify", true);
+  push("pc-filter", density >= 90 ? 1.5 : density >= 70 ? 2.5 : 4);
+  push("auto-boundary", true);
+
+  if (settings?.preset === "agriculture") {
+    push("radiometric-calibration", "camera+sun");
+  }
+
+  /* ── Extra deliverables ── */
   if (extras.includes("obj") || extras.includes("fbx")) {
-    opts.push({ name: "use-3dmesh", value: true });
-    opts.push({ name: "texturing-skip-global-seam-leveling", value: false });
+    push("use-3dmesh", true);
+    push("texturing-skip-global-seam-leveling", false);
   }
   if (extras.includes("ply") || extras.includes("potree")) {
-    opts.push({ name: "pc-las", value: true });
-    opts.push({ name: "pc-ept", value: true });
+    push("pc-las", true);
+    push("pc-ept", true);
   }
-  if (extras.includes("cesium3dtiles")) {
-    opts.push({ name: "3d-tiles", value: true });
-  }
-  return opts;
+  if (extras.includes("cesium3dtiles")) push("3d-tiles", true);
+
+  // De-duplicate, last write wins (extras may re-assert mesh options).
+  const seen = new Map<string, unknown>();
+  for (const o of opts) seen.set(o.name, o.value);
+  return [...seen.entries()].map(([name, value]) => ({ name, value }));
+}
+
+/** Human-readable output spec recorded in metadata + logs. */
+function orthoResolutionCmFor(settings: any): number {
+  const profile = QUALITY_PROFILE[settings?.quality || "high"] || QUALITY_PROFILE.high;
+  const gsdCm = Number(settings?.targetGsdCm);
+  return Number.isFinite(gsdCm) && gsdCm > 0 ? gsdCm : profile.orthoResolutionCm;
 }
 
 function buildMetadataJSON(opts: {
