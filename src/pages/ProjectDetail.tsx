@@ -898,6 +898,7 @@ export default function ProjectDetail() {
                 areaHa: project.area_ha,
                 settings,
               })}
+              settings={settings}
             />
 
             {/* Image QA */}
