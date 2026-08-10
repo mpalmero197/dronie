@@ -1274,18 +1274,25 @@ async function runWebODMProcessing(
     // Build multipart form with images
     const formData = new FormData();
 
-    // Add WebODM processing options
-    const options: any[] = [];
-    if (settings?.quality === "low") options.push({ name: "feature-quality", value: "low" });
-    else if (settings?.quality === "ultra") options.push({ name: "feature-quality", value: "ultra" });
-    else if (settings?.quality === "high") options.push({ name: "feature-quality", value: "high" });
-    if (settings?.dsmEnabled) options.push({ name: "dsm", value: true });
-    if (settings?.dtmEnabled) options.push({ name: "dtm", value: true });
-    if (settings?.meshType === "none") options.push({ name: "mesh-size", value: 0 });
-
-    // Enable WebODM options needed for each selected extra deliverable.
+    // Full quality profile — every UI setting is translated into ODM options.
     const extrasReq: string[] = Array.isArray(settings?.extraOutputs) ? settings.extraOutputs : [];
-    options.push(...webodmOptionsForExtras(extrasReq));
+    const options = buildWebodmOptions(settings);
+    const requestedOrthoCm = orthoResolutionCmFor(settings);
+    await pushLog(
+      serviceClient,
+      projectId,
+      "system",
+      `Reconstruction profile: ${settings?.quality || "high"} quality, ${requestedOrthoCm} cm/px ortho, ${(requestedOrthoCm * 2).toFixed(1)} cm/px DEM, ${options.length} engine options.`,
+    );
+    if (settings?.outputFormat === "ecw" || settings?.outputFormat === "jpg2000") {
+      await pushLog(
+        serviceClient,
+        projectId,
+        "export",
+        `${settings.outputFormat.toUpperCase()} is not produced by the reconstruction engine — delivering GeoTIFF instead.`,
+        "warn",
+      );
+    }
 
     formData.append("options", JSON.stringify(options));
 
