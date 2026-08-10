@@ -154,8 +154,8 @@ export const PRESETS: Preset[] = [
     label: "Inspection",
     description: "Towers, roofs, façades. Dense cloud and full 3D mesh.",
     settings: {
-      targetGsdCm: 1,
       ...base,
+      targetGsdCm: 1,
       quality: "ultra",
       meshType: "3d",
       pointDensity: [100],
@@ -171,8 +171,8 @@ export const PRESETS: Preset[] = [
     label: "3D Model",
     description: "Buildings, monuments, BIM. Textured 3D mesh export.",
     settings: {
-      targetGsdCm: 1.5,
       ...base,
+      targetGsdCm: 1.5,
       quality: "ultra",
       meshType: "3d",
       pointDensity: [85],
@@ -200,8 +200,8 @@ export const PRESETS: Preset[] = [
     label: "Volumetrics",
     description: "Stockpiles, pits, earthworks. DSM + DTM at fine intervals.",
     settings: {
-      targetGsdCm: 2,
       ...base,
+      targetGsdCm: 2,
       quality: "high",
       meshType: "2.5d",
       pointDensity: [70],
@@ -215,8 +215,8 @@ export const PRESETS: Preset[] = [
     label: "Façade / Vertical",
     description: "Building elevations and tall structures. Orbit + nadir mix.",
     settings: {
-      targetGsdCm: 1,
       ...base,
+      targetGsdCm: 1,
       quality: "ultra",
       meshType: "3d",
       pointDensity: [90],
@@ -233,8 +233,8 @@ export const PRESETS: Preset[] = [
     label: "Linear corridor",
     description: "Roads, railways, powerlines. Optimised for narrow strips.",
     settings: {
-      targetGsdCm: 2.5,
       ...base,
+      targetGsdCm: 2.5,
       quality: "high",
       meshType: "2.5d",
       pointDensity: [60],
@@ -248,8 +248,8 @@ export const PRESETS: Preset[] = [
     label: "Cultural heritage",
     description: "Statues, archaeology, museum pieces. Color-faithful mesh.",
     settings: {
-      targetGsdCm: 1,
       ...base,
+      targetGsdCm: 1,
       quality: "ultra",
       meshType: "3d",
       pointDensity: [100],
@@ -265,8 +265,8 @@ export const PRESETS: Preset[] = [
     label: "RTK / PPK survey",
     description: "RTK-tagged imagery. Skips heavy GCP optimisation.",
     settings: {
-      targetGsdCm: 1.5,
       ...base,
+      targetGsdCm: 1.5,
       quality: "high",
       meshType: "2.5d",
       pointDensity: [70],
