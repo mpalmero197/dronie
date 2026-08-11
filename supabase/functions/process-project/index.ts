@@ -636,6 +636,8 @@ async function runSimulatedProcessing(
 
     // Extract EXIF from images (up to 50 for speed)
     const gpsPoints: Array<{ lat: number; lng: number; alt: number | null; camera: string | null; date: string | null }> = [];
+    // Keep the filename alongside each fix so the orthomosaic can place frames.
+    const geoImages: Array<{ name: string; lat: number; lng: number }> = [];
 
     const imagesToParse = validImages.slice(0, 50);
     for (let i = 0; i < imagesToParse.length; i++) {
@@ -652,7 +654,10 @@ async function runSimulatedProcessing(
         if (fileData) {
           const bytes = new Uint8Array(await fileData.arrayBuffer());
           const gps = extractExifGPS(bytes);
-          if (gps) gpsPoints.push(gps);
+          if (gps) {
+            gpsPoints.push(gps);
+            geoImages.push({ name: imagesToParse[i].name, lat: gps.lat, lng: gps.lng });
+          }
         }
       } catch {
         // Skip files that fail
@@ -711,14 +716,32 @@ async function runSimulatedProcessing(
     await setProgress(serviceClient, projectId, 72, startedAt, { stageStartTs: stageStarts.ortho });
     await pushLog(serviceClient, projectId, "ortho", "Compositing orthomosaic");
 
-    // We generate a small PNG as orthomosaic placeholder
-    // (A real one would be a massive GeoTIFF)
-    const orthoPlaceholder = generateOrthomosaicPlaceholder(gpsPoints.length);
+    // Composite the actual source frames into a georeferenced mosaic image.
+    const ortho = await buildOrthomosaic(serviceClient, {
+      userId,
+      projectId,
+      geoImages,
+      fallbackNames: validImages.slice(0, 36).map((f) => f.name),
+      bbox,
+    });
     const orthoPath = `${userId}/${projectId}/orthomosaic.png`;
-    await serviceClient.storage.from("project-outputs").upload(orthoPath, orthoPlaceholder, {
+    await serviceClient.storage.from("project-outputs").upload(orthoPath, ortho.png, {
       contentType: "image/png",
       upsert: true,
     });
+    await pushLog(
+      serviceClient,
+      projectId,
+      "ortho",
+      `Orthomosaic composited at ${ortho.width}×${ortho.height} px from ${ortho.frames} frames`,
+    );
+    // World file so GIS tools can place the PNG on the map.
+    const worldPath = `${userId}/${projectId}/orthomosaic.pgw`;
+    await serviceClient.storage.from("project-outputs").upload(
+      worldPath,
+      new TextEncoder().encode(ortho.worldFile),
+      { contentType: "text/plain", upsert: true },
+    );
 
     await setProgress(serviceClient, projectId, 82, startedAt);
     await sleep(1000);
@@ -772,6 +795,7 @@ async function runSimulatedProcessing(
 
     const outputsUrls: Record<string, string> = {
       orthomosaic: `${baseUrl}/${orthoPath}`,
+      orthomosaic_worldfile: `${baseUrl}/${worldPath}`,
       dsm: `${baseUrl}/${dsmPath}`,
       dtm: `${baseUrl}/${dtmPath}`,
       contours: `${baseUrl}/${contoursPath}`,
@@ -819,22 +843,93 @@ async function runSimulatedProcessing(
   }
 }
 
-/* ────── Generate a tiny placeholder PNG ────── */
-function generateOrthomosaicPlaceholder(imageCount: number): Uint8Array {
-  // Generate a minimal 1x1 green PNG as placeholder
-  // In reality this would be a composite of the drone images
-  const png = new Uint8Array([
-    0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, // PNG signature
-    0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, // IHDR chunk
-    0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
-    0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53,
-    0xDE, 0x00, 0x00, 0x00, 0x0C, 0x49, 0x44, 0x41,
-    0x54, 0x08, 0xD7, 0x63, 0x10, 0x65, 0x60, 0x00,
-    0x00, 0x00, 0x06, 0x00, 0x03, 0x36, 0x37, 0x7C,
-    0xA8, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E,
-    0x44, 0xAE, 0x42, 0x60, 0x82,
-  ]);
-  return png;
+/* ────── Orthomosaic compositor ──────
+ * Builds a real, full-size mosaic image by decoding the uploaded frames and
+ * placing each one at its GPS position inside the flight bounding box.
+ * Falls back to a regular grid layout when the frames have no GPS. */
+async function buildOrthomosaic(
+  serviceClient: ReturnType<typeof createClient>,
+  args: {
+    userId: string;
+    projectId: string;
+    geoImages: Array<{ name: string; lat: number; lng: number }>;
+    fallbackNames: string[];
+    bbox: { minLat: number; maxLat: number; minLng: number; maxLng: number };
+  },
+): Promise<{ png: Uint8Array; width: number; height: number; frames: number; worldFile: string }> {
+  const { Image } = await import("https://deno.land/x/imagescript@1.2.17/mod.ts");
+  const { userId, projectId, bbox } = args;
+
+  const MAX_FRAMES = 40;
+  const placed = (args.geoImages.length >= 2 ? args.geoImages : []).slice(0, MAX_FRAMES);
+  const names = placed.length ? placed.map((g) => g.name) : args.fallbackNames.slice(0, MAX_FRAMES);
+
+  // Canvas sized from the flight footprint aspect ratio.
+  const latSpan = Math.max(1e-6, bbox.maxLat - bbox.minLat);
+  const lngSpan = Math.max(1e-6, bbox.maxLng - bbox.minLng);
+  const midLat = (bbox.minLat + bbox.maxLat) / 2;
+  const metersX = lngSpan * 111320 * Math.cos((midLat * Math.PI) / 180);
+  const metersY = latSpan * 111320;
+  const aspect = Math.min(3, Math.max(1 / 3, metersX / Math.max(1, metersY)));
+  const LONG_EDGE = 2400;
+  const width = aspect >= 1 ? LONG_EDGE : Math.round(LONG_EDGE * aspect);
+  const height = aspect >= 1 ? Math.round(LONG_EDGE / aspect) : LONG_EDGE;
+
+  const canvas = new Image(width, height);
+  canvas.fill(0xf2f2f0ff);
+
+  // Tile footprint: enough overlap that the mosaic reads as continuous coverage.
+  const cols = Math.max(1, Math.ceil(Math.sqrt(Math.max(1, names.length) * aspect)));
+  const rows = Math.max(1, Math.ceil(Math.max(1, names.length) / cols));
+  const tileW = Math.max(64, Math.round((width / cols) * 1.6));
+  const tileH = Math.max(64, Math.round((height / rows) * 1.6));
+
+  let frames = 0;
+  for (let i = 0; i < names.length; i++) {
+    try {
+      const { data: file } = await serviceClient.storage
+        .from("drone-images")
+        .download(`${userId}/${projectId}/${names[i]}`);
+      if (!file) continue;
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const decoded = await Image.decode(bytes);
+      const tile = decoded.resize(tileW, tileH);
+
+      let cx: number;
+      let cy: number;
+      if (placed.length) {
+        const g = placed[i];
+        cx = ((g.lng - bbox.minLng) / lngSpan) * width;
+        cy = (1 - (g.lat - bbox.minLat) / latSpan) * height;
+      } else {
+        const c = i % cols;
+        const r = Math.floor(i / cols);
+        cx = ((c + 0.5) / cols) * width;
+        cy = ((r + 0.5) / rows) * height;
+      }
+      canvas.composite(tile, Math.round(cx - tileW / 2), Math.round(cy - tileH / 2));
+      frames++;
+    } catch {
+      // Unsupported/corrupt frame — skip it rather than failing the mosaic.
+    }
+  }
+
+  const png = await canvas.encode(3);
+
+  // ESRI world file: pixel size + upper-left pixel center, in degrees.
+  const pxX = lngSpan / width;
+  const pxY = latSpan / height;
+  const worldFile = [
+    pxX.toFixed(12),
+    "0.0",
+    "0.0",
+    (-pxY).toFixed(12),
+    (bbox.minLng + pxX / 2).toFixed(10),
+    (bbox.maxLat - pxY / 2).toFixed(10),
+    "",
+  ].join("\n");
+
+  return { png, width, height, frames, worldFile };
 }
 
 /* ────── Extra deliverables: per-format generators ──────
