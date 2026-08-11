@@ -795,6 +795,7 @@ async function runSimulatedProcessing(
 
     const outputsUrls: Record<string, string> = {
       orthomosaic: `${baseUrl}/${orthoPath}`,
+      orthomosaic_worldfile: `${baseUrl}/${worldPath}`,
       dsm: `${baseUrl}/${dsmPath}`,
       dtm: `${baseUrl}/${dtmPath}`,
       contours: `${baseUrl}/${contoursPath}`,
