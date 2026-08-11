@@ -716,14 +716,32 @@ async function runSimulatedProcessing(
     await setProgress(serviceClient, projectId, 72, startedAt, { stageStartTs: stageStarts.ortho });
     await pushLog(serviceClient, projectId, "ortho", "Compositing orthomosaic");
 
-    // We generate a small PNG as orthomosaic placeholder
-    // (A real one would be a massive GeoTIFF)
-    const orthoPlaceholder = generateOrthomosaicPlaceholder(gpsPoints.length);
+    // Composite the actual source frames into a georeferenced mosaic image.
+    const ortho = await buildOrthomosaic(serviceClient, {
+      userId,
+      projectId,
+      geoImages,
+      fallbackNames: validImages.slice(0, 36).map((f) => f.name),
+      bbox,
+    });
     const orthoPath = `${userId}/${projectId}/orthomosaic.png`;
-    await serviceClient.storage.from("project-outputs").upload(orthoPath, orthoPlaceholder, {
+    await serviceClient.storage.from("project-outputs").upload(orthoPath, ortho.png, {
       contentType: "image/png",
       upsert: true,
     });
+    await pushLog(
+      serviceClient,
+      projectId,
+      "ortho",
+      `Orthomosaic composited at ${ortho.width}×${ortho.height} px from ${ortho.frames} frames`,
+    );
+    // World file so GIS tools can place the PNG on the map.
+    const worldPath = `${userId}/${projectId}/orthomosaic.pgw`;
+    await serviceClient.storage.from("project-outputs").upload(
+      worldPath,
+      new TextEncoder().encode(ortho.worldFile),
+      { contentType: "text/plain", upsert: true },
+    );
 
     await setProgress(serviceClient, projectId, 82, startedAt);
     await sleep(1000);
