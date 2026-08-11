@@ -636,6 +636,8 @@ async function runSimulatedProcessing(
 
     // Extract EXIF from images (up to 50 for speed)
     const gpsPoints: Array<{ lat: number; lng: number; alt: number | null; camera: string | null; date: string | null }> = [];
+    // Keep the filename alongside each fix so the orthomosaic can place frames.
+    const geoImages: Array<{ name: string; lat: number; lng: number }> = [];
 
     const imagesToParse = validImages.slice(0, 50);
     for (let i = 0; i < imagesToParse.length; i++) {
@@ -652,7 +654,10 @@ async function runSimulatedProcessing(
         if (fileData) {
           const bytes = new Uint8Array(await fileData.arrayBuffer());
           const gps = extractExifGPS(bytes);
-          if (gps) gpsPoints.push(gps);
+          if (gps) {
+            gpsPoints.push(gps);
+            geoImages.push({ name: imagesToParse[i].name, lat: gps.lat, lng: gps.lng });
+          }
         }
       } catch {
         // Skip files that fail
