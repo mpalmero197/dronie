@@ -32,6 +32,7 @@ import { PresetDetailCard } from "@/components/project/PresetDetailCard";
 import { DeliverableShareDialog } from "@/components/project/DeliverableShareDialog";
 import { AnnotationsPanel } from "@/components/project/AnnotationsPanel";
 import { AccuracyReport, type AccuracyData } from "@/components/project/AccuracyReport";
+import { OrthoPreview } from "@/components/project/OrthoPreview";
 import { downloadProjectReport } from "@/lib/generateProjectReport";
 import { listAnnotations } from "@/lib/projectAnnotations";
 import { DroneCameraPicker } from "@/components/project/DroneCameraPicker";
