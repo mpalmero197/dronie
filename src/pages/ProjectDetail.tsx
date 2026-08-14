@@ -639,6 +639,14 @@ export default function ProjectDetail() {
               <AccuracyReport data={project.accuracy_report as AccuracyData} />
             )}
 
+            {/* Orthomosaic preview — review the map before exporting */}
+            {isComplete && !project.outputs_urls?.error && project.outputs_urls?.orthomosaic && (
+              <OrthoPreview
+                url={project.outputs_urls.orthomosaic as string}
+                caption="Composited map from your flight. Inspect coverage and edges before downloading."
+              />
+            )}
+
             {/* Deliverables */}
             {isComplete && project.outputs && project.outputs.length > 0 && (
               <div className="bg-card rounded-2xl border border-border p-5 space-y-4">
