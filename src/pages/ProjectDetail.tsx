@@ -32,6 +32,7 @@ import { PresetDetailCard } from "@/components/project/PresetDetailCard";
 import { DeliverableShareDialog } from "@/components/project/DeliverableShareDialog";
 import { AnnotationsPanel } from "@/components/project/AnnotationsPanel";
 import { AccuracyReport, type AccuracyData } from "@/components/project/AccuracyReport";
+import { OrthoPreview } from "@/components/project/OrthoPreview";
 import { downloadProjectReport } from "@/lib/generateProjectReport";
 import { listAnnotations } from "@/lib/projectAnnotations";
 import { DroneCameraPicker } from "@/components/project/DroneCameraPicker";
@@ -637,6 +638,14 @@ export default function ProjectDetail() {
             {/* Accuracy Report */}
             {isComplete && project.accuracy_report && (
               <AccuracyReport data={project.accuracy_report as AccuracyData} />
+            )}
+
+            {/* Orthomosaic preview — review the map before exporting */}
+            {isComplete && !project.outputs_urls?.error && project.outputs_urls?.orthomosaic && (
+              <OrthoPreview
+                url={project.outputs_urls.orthomosaic as string}
+                caption="Composited map from your flight. Inspect coverage and edges before downloading."
+              />
             )}
 
             {/* Deliverables */}
