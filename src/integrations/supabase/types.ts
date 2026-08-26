@@ -1926,6 +1926,62 @@ export type Database = {
           },
         ]
       }
+      project_crm: {
+        Row: {
+          checklist: Json
+          created_at: string
+          crew_briefing: string | null
+          hazardous_attitudes: Json
+          id: string
+          pmc_name: string | null
+          project_id: string
+          rpic_cert: string | null
+          rpic_name: string | null
+          signed_off_at: string | null
+          updated_at: string
+          user_id: string
+          visual_observers: string[]
+        }
+        Insert: {
+          checklist?: Json
+          created_at?: string
+          crew_briefing?: string | null
+          hazardous_attitudes?: Json
+          id?: string
+          pmc_name?: string | null
+          project_id: string
+          rpic_cert?: string | null
+          rpic_name?: string | null
+          signed_off_at?: string | null
+          updated_at?: string
+          user_id: string
+          visual_observers?: string[]
+        }
+        Update: {
+          checklist?: Json
+          created_at?: string
+          crew_briefing?: string | null
+          hazardous_attitudes?: Json
+          id?: string
+          pmc_name?: string | null
+          project_id?: string
+          rpic_cert?: string | null
+          rpic_name?: string | null
+          signed_off_at?: string | null
+          updated_at?: string
+          user_id?: string
+          visual_observers?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_crm_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: true
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           accuracy_report: Json | null

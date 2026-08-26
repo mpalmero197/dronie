@@ -33,6 +33,8 @@ import { DeliverableShareDialog } from "@/components/project/DeliverableShareDia
 import { AnnotationsPanel } from "@/components/project/AnnotationsPanel";
 import { AccuracyReport, type AccuracyData } from "@/components/project/AccuracyReport";
 import { OrthoPreview } from "@/components/project/OrthoPreview";
+import CrewResourcePanel from "@/components/project/CrewResourcePanel";
+
 import { downloadProjectReport } from "@/lib/generateProjectReport";
 import { listAnnotations } from "@/lib/projectAnnotations";
 import { DroneCameraPicker } from "@/components/project/DroneCameraPicker";
@@ -705,6 +707,11 @@ export default function ProjectDetail() {
             {isComplete && user && (
               <AnnotationsPanel projectId={project.id} userId={user.id} />
             )}
+
+            {/* Crew Resource Management */}
+            {user && <CrewResourcePanel projectId={project.id} userId={user.id} />}
+
+
 
             {/* Files Tab */}
             <div className="bg-card rounded-2xl border border-border p-5 space-y-4">
