@@ -31,15 +31,28 @@ export default function AuthPage() {
     e.preventDefault();
     setLoading(true);
     try {
+      const cleanEmail = email.trim().toLowerCase();
       if (mode === 'signup') {
-        const { error } = await supabase.auth.signUp({
-          email,
+        const { data, error } = await supabase.auth.signUp({
+          email: cleanEmail,
           password,
           options: { data: { full_name: fullName } }
         });
-        if (error) throw error;
+        if (error) {
+          const msg = (error.message || '').toLowerCase();
+          if (msg.includes('already registered') || msg.includes('already been registered') || msg.includes('user already exists')) {
+            throw new Error('An account with this email already exists. Please sign in instead.');
+          }
+          throw error;
+        }
+        // Supabase obfuscates existing users by returning a user with no identities.
+        if (data.user && (data.user.identities?.length ?? 0) === 0) {
+          setMode('login');
+          throw new Error('An account with this email already exists. Please sign in instead.');
+        }
         toast({ title: 'Account created!', description: 'Welcome to Dronie.' });
         navigate('/dashboard');
+
       } else {
         const { data: signInData, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
