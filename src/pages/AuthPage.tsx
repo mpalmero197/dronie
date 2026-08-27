@@ -54,7 +54,7 @@ export default function AuthPage() {
         navigate('/dashboard');
 
       } else {
-        const { data: signInData, error } = await supabase.auth.signInWithPassword({ email, password });
+        const { data: signInData, error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password });
         if (error) throw error;
 
         // Paid-only gate: verify subscription (admins exempt) before allowing access.
