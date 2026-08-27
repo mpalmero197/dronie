@@ -14,6 +14,317 @@ export type Database = {
   }
   public: {
     Tables: {
+      adsp_incidents: {
+        Row: {
+          affected_users: number
+          corrective_action: string | null
+          created_at: string
+          description: string
+          faa_notified: boolean
+          id: string
+          reported_by: string | null
+          resolved_at: string | null
+          root_cause: string | null
+          service_kind: Database["public"]["Enums"]["adsp_service_kind"] | null
+          severity: Database["public"]["Enums"]["adsp_incident_severity"]
+          started_at: string
+          title: string
+          updated_at: string
+          users_notified: boolean
+        }
+        Insert: {
+          affected_users?: number
+          corrective_action?: string | null
+          created_at?: string
+          description: string
+          faa_notified?: boolean
+          id?: string
+          reported_by?: string | null
+          resolved_at?: string | null
+          root_cause?: string | null
+          service_kind?: Database["public"]["Enums"]["adsp_service_kind"] | null
+          severity?: Database["public"]["Enums"]["adsp_incident_severity"]
+          started_at?: string
+          title: string
+          updated_at?: string
+          users_notified?: boolean
+        }
+        Update: {
+          affected_users?: number
+          corrective_action?: string | null
+          created_at?: string
+          description?: string
+          faa_notified?: boolean
+          id?: string
+          reported_by?: string | null
+          resolved_at?: string | null
+          root_cause?: string | null
+          service_kind?: Database["public"]["Enums"]["adsp_service_kind"] | null
+          severity?: Database["public"]["Enums"]["adsp_incident_severity"]
+          started_at?: string
+          title?: string
+          updated_at?: string
+          users_notified?: boolean
+        }
+        Relationships: []
+      }
+      adsp_performance_samples: {
+        Row: {
+          available: boolean
+          data_currency_minutes: number | null
+          error_rate: number
+          id: string
+          latency_ms: number | null
+          sampled_at: string
+          service_kind: Database["public"]["Enums"]["adsp_service_kind"]
+        }
+        Insert: {
+          available?: boolean
+          data_currency_minutes?: number | null
+          error_rate?: number
+          id?: string
+          latency_ms?: number | null
+          sampled_at?: string
+          service_kind: Database["public"]["Enums"]["adsp_service_kind"]
+        }
+        Update: {
+          available?: boolean
+          data_currency_minutes?: number | null
+          error_rate?: number
+          id?: string
+          latency_ms?: number | null
+          sampled_at?: string
+          service_kind?: Database["public"]["Enums"]["adsp_service_kind"]
+        }
+        Relationships: []
+      }
+      adsp_personnel: {
+        Row: {
+          competency_verified_at: string | null
+          created_at: string
+          full_name: string
+          id: string
+          next_review: string | null
+          responsibilities: string | null
+          role_title: string
+          training_completed: string[]
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          competency_verified_at?: string | null
+          created_at?: string
+          full_name: string
+          id?: string
+          next_review?: string | null
+          responsibilities?: string | null
+          role_title: string
+          training_completed?: string[]
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          competency_verified_at?: string | null
+          created_at?: string
+          full_name?: string
+          id?: string
+          next_review?: string | null
+          responsibilities?: string | null
+          role_title?: string
+          training_completed?: string[]
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      adsp_qms_documents: {
+        Row: {
+          created_at: string
+          doc_type: string
+          document_url: string | null
+          effective_date: string | null
+          id: string
+          owner_name: string | null
+          reference: string | null
+          review_due: string | null
+          summary: string | null
+          title: string
+          updated_at: string
+          version: string
+        }
+        Insert: {
+          created_at?: string
+          doc_type?: string
+          document_url?: string | null
+          effective_date?: string | null
+          id?: string
+          owner_name?: string | null
+          reference?: string | null
+          review_due?: string | null
+          summary?: string | null
+          title: string
+          updated_at?: string
+          version?: string
+        }
+        Update: {
+          created_at?: string
+          doc_type?: string
+          document_url?: string | null
+          effective_date?: string | null
+          id?: string
+          owner_name?: string | null
+          reference?: string | null
+          review_due?: string | null
+          summary?: string | null
+          title?: string
+          updated_at?: string
+          version?: string
+        }
+        Relationships: []
+      }
+      adsp_service_records: {
+        Row: {
+          created_at: string
+          data_currency: string | null
+          data_source: string | null
+          error: string | null
+          id: string
+          job_id: string | null
+          latency_ms: number | null
+          ok: boolean
+          plan_id: string | null
+          project_id: string | null
+          request: Json
+          response: Json
+          service_kind: Database["public"]["Enums"]["adsp_service_kind"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data_currency?: string | null
+          data_source?: string | null
+          error?: string | null
+          id?: string
+          job_id?: string | null
+          latency_ms?: number | null
+          ok?: boolean
+          plan_id?: string | null
+          project_id?: string | null
+          request?: Json
+          response?: Json
+          service_kind: Database["public"]["Enums"]["adsp_service_kind"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          data_currency?: string | null
+          data_source?: string | null
+          error?: string | null
+          id?: string
+          job_id?: string | null
+          latency_ms?: number | null
+          ok?: boolean
+          plan_id?: string | null
+          project_id?: string | null
+          request?: Json
+          response?: Json
+          service_kind?: Database["public"]["Enums"]["adsp_service_kind"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      adsp_services: {
+        Row: {
+          coverage: string | null
+          created_at: string
+          data_sources: string[]
+          description: string
+          id: string
+          kind: Database["public"]["Enums"]["adsp_service_kind"]
+          limitations: string[]
+          name: string
+          performance_criteria: Json
+          source: string
+          status: Database["public"]["Enums"]["adsp_service_status"]
+          update_frequency: string | null
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          coverage?: string | null
+          created_at?: string
+          data_sources?: string[]
+          description: string
+          id?: string
+          kind: Database["public"]["Enums"]["adsp_service_kind"]
+          limitations?: string[]
+          name: string
+          performance_criteria?: Json
+          source?: string
+          status?: Database["public"]["Enums"]["adsp_service_status"]
+          update_frequency?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          coverage?: string | null
+          created_at?: string
+          data_sources?: string[]
+          description?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["adsp_service_kind"]
+          limitations?: string[]
+          name?: string
+          performance_criteria?: Json
+          source?: string
+          status?: Database["public"]["Enums"]["adsp_service_status"]
+          update_frequency?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Relationships: []
+      }
+      adsp_subscriptions: {
+        Row: {
+          accepted_limitations_at: string | null
+          created_at: string
+          drone_id: string | null
+          enabled: boolean
+          id: string
+          service_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          accepted_limitations_at?: string | null
+          created_at?: string
+          drone_id?: string | null
+          enabled?: boolean
+          id?: string
+          service_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          accepted_limitations_at?: string | null
+          created_at?: string
+          drone_id?: string | null
+          enabled?: boolean
+          id?: string
+          service_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "adsp_subscriptions_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "adsp_services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       analytics_events: {
         Row: {
           created_at: string
@@ -88,6 +399,106 @@ export type Database = {
           value?: string | null
         }
         Relationships: []
+      }
+      conformance_events: {
+        Row: {
+          altitude_m: number | null
+          created_at: string
+          detail: string | null
+          deviation_type: string
+          id: string
+          intent_id: string | null
+          job_id: string | null
+          latitude: number | null
+          longitude: number | null
+          magnitude: number | null
+          recorded_at: string
+          resolved: boolean
+          unit: string | null
+          user_id: string
+        }
+        Insert: {
+          altitude_m?: number | null
+          created_at?: string
+          detail?: string | null
+          deviation_type: string
+          id?: string
+          intent_id?: string | null
+          job_id?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          magnitude?: number | null
+          recorded_at?: string
+          resolved?: boolean
+          unit?: string | null
+          user_id: string
+        }
+        Update: {
+          altitude_m?: number | null
+          created_at?: string
+          detail?: string | null
+          deviation_type?: string
+          id?: string
+          intent_id?: string | null
+          job_id?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          magnitude?: number | null
+          recorded_at?: string
+          resolved?: boolean
+          unit?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conformance_events_intent_id_fkey"
+            columns: ["intent_id"]
+            isOneToOne: false
+            referencedRelation: "flight_intents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      deconfliction_checks: {
+        Row: {
+          clear: boolean
+          conflicts: Json
+          created_at: string
+          id: string
+          intent_id: string | null
+          request: Json
+          suggestions: Json
+          user_id: string
+        }
+        Insert: {
+          clear?: boolean
+          conflicts?: Json
+          created_at?: string
+          id?: string
+          intent_id?: string | null
+          request?: Json
+          suggestions?: Json
+          user_id: string
+        }
+        Update: {
+          clear?: boolean
+          conflicts?: Json
+          created_at?: string
+          id?: string
+          intent_id?: string | null
+          request?: Json
+          suggestions?: Json
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deconfliction_checks_intent_id_fkey"
+            columns: ["intent_id"]
+            isOneToOne: false
+            referencedRelation: "flight_intents"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       deliverable_shares: {
         Row: {
@@ -404,6 +815,72 @@ export type Database = {
           wind_direction?: number | null
           wind_speed?: number | null
           zoom_level?: number | null
+        }
+        Relationships: []
+      }
+      flight_intents: {
+        Row: {
+          created_at: string
+          end_time: string
+          id: string
+          job_id: string | null
+          max_alt_agl_m: number
+          max_lat: number
+          max_lng: number
+          min_alt_agl_m: number
+          min_lat: number
+          min_lng: number
+          name: string
+          plan_id: string | null
+          polygon: Json
+          project_id: string | null
+          shared: boolean
+          start_time: string
+          status: Database["public"]["Enums"]["flight_intent_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          end_time: string
+          id?: string
+          job_id?: string | null
+          max_alt_agl_m?: number
+          max_lat: number
+          max_lng: number
+          min_alt_agl_m?: number
+          min_lat: number
+          min_lng: number
+          name: string
+          plan_id?: string | null
+          polygon: Json
+          project_id?: string | null
+          shared?: boolean
+          start_time: string
+          status?: Database["public"]["Enums"]["flight_intent_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          end_time?: string
+          id?: string
+          job_id?: string | null
+          max_alt_agl_m?: number
+          max_lat?: number
+          max_lng?: number
+          min_alt_agl_m?: number
+          min_lat?: number
+          min_lng?: number
+          name?: string
+          plan_id?: string | null
+          polygon?: Json
+          project_id?: string | null
+          shared?: boolean
+          start_time?: string
+          status?: Database["public"]["Enums"]["flight_intent_status"]
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -2729,8 +3206,22 @@ export type Database = {
     }
     Enums: {
       account_type: "pilot" | "client" | "both"
+      adsp_incident_severity: "low" | "medium" | "high" | "critical"
+      adsp_service_kind:
+        | "strategic_deconfliction"
+        | "conformance_monitoring"
+        | "terrain_obstacle"
+        | "aeronautical_data"
+        | "weather"
+        | "flight_planning_support"
+      adsp_service_status:
+        | "operational"
+        | "degraded"
+        | "maintenance"
+        | "offline"
       app_role: "admin" | "pilot" | "viewer"
       drone_status: "idle" | "active" | "maintenance" | "offline"
+      flight_intent_status: "planned" | "active" | "completed" | "cancelled"
       industry_vertical:
         | "construction"
         | "real_estate"
@@ -2887,8 +3378,24 @@ export const Constants = {
   public: {
     Enums: {
       account_type: ["pilot", "client", "both"],
+      adsp_incident_severity: ["low", "medium", "high", "critical"],
+      adsp_service_kind: [
+        "strategic_deconfliction",
+        "conformance_monitoring",
+        "terrain_obstacle",
+        "aeronautical_data",
+        "weather",
+        "flight_planning_support",
+      ],
+      adsp_service_status: [
+        "operational",
+        "degraded",
+        "maintenance",
+        "offline",
+      ],
       app_role: ["admin", "pilot", "viewer"],
       drone_status: ["idle", "active", "maintenance", "offline"],
+      flight_intent_status: ["planned", "active", "completed", "cancelled"],
       industry_vertical: [
         "construction",
         "real_estate",
