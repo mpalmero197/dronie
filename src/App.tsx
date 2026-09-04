@@ -27,6 +27,7 @@ import RealityCapture from "./pages/RealityCapture.tsx";
 import RtkAlignment from "./pages/RtkAlignment.tsx";
 import AiInsights from "./pages/AiInsights.tsx";
 import Compliance from "./pages/Compliance.tsx";
+import AdspHub from "./pages/AdspHub.tsx";
 import GaussianSplats from "./pages/GaussianSplats.tsx";
 import EmbedSplats from "./pages/EmbedSplats.tsx";
 import SharedDeliverables from "./pages/SharedDeliverables.tsx";
@@ -110,6 +111,7 @@ const App = () => (
             <Route path="/rtk" element={<RtkAlignment />} />
             <Route path="/insights" element={<AiInsights />} />
             <Route path="/compliance" element={<Compliance />} />
+            <Route path="/adsp" element={<AdspHub />} />
             <Route path="/splats" element={<GaussianSplats />} />
             <Route path="/embed/splats/:token" element={<EmbedSplats />} />
             <Route path="/share/:token" element={<SharedDeliverables />} />
