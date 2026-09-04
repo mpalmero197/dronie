@@ -2,7 +2,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, FolderOpen, Map as MapIcon, Plane, Briefcase, Boxes,
   Sparkles, Video, Camera, MessagesSquare, CreditCard, Shield, Radar,
-  Satellite, Brain, ShieldCheck, Workflow as WorkflowIcon, Users, Bookmark,
+  Satellite, Brain, ShieldCheck, Radio, Workflow as WorkflowIcon, Users, Bookmark,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
@@ -28,6 +28,7 @@ const advanced: Item[] = [
   { title: "AI Insights", url: "/insights", icon: Brain },
   { title: "Splats", url: "/splats", icon: Sparkles },
   { title: "Compliance", url: "/compliance", icon: ShieldCheck },
+  { title: "Data Services", url: "/adsp", icon: Radio },
 ];
 
 const network: Item[] = [

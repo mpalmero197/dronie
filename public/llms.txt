@@ -24,6 +24,7 @@
 - [Gaussian splatting for drone capture](https://dronieapp.com/guides/gaussian-splatting) — 3DGS vs photogrammetry vs NeRF, capture pattern, embed workflow.
 - [Ground sample distance (GSD) explained](https://dronieapp.com/guides/gsd-ground-sample-distance) — GSD formula, worked examples, altitude/accuracy trade-offs.
 - [Part 107 & LAANC: a working pilot's checklist](https://dronieapp.com/guides/part-107-laanc) — U.S. commercial drone rules, airspace classes, LAANC workflow.
+- [Automated Data Service Providers under Part 146](https://dronieapp.com/guides/part-146-automated-data-service-provider) — ADSP obligations, strategic deconfliction, conformance monitoring, evidence retention.
 
 ## Product Surfaces
 - [Flight Planning](https://dronieapp.com/plan) — terrain-following waypoint planner with LAANC airspace overlays; exports to DJI Fly KMZ, Litchi CSV, UgCS.

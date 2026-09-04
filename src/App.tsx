@@ -27,6 +27,7 @@ import RealityCapture from "./pages/RealityCapture.tsx";
 import RtkAlignment from "./pages/RtkAlignment.tsx";
 import AiInsights from "./pages/AiInsights.tsx";
 import Compliance from "./pages/Compliance.tsx";
+import AdspHub from "./pages/AdspHub.tsx";
 import GaussianSplats from "./pages/GaussianSplats.tsx";
 import EmbedSplats from "./pages/EmbedSplats.tsx";
 import SharedDeliverables from "./pages/SharedDeliverables.tsx";
@@ -58,6 +59,7 @@ import DronePhotogrammetryGuide from "./pages/guides/DronePhotogrammetryGuide.ts
 import OrthoDsmDtmGuide from "./pages/guides/OrthoDsmDtmGuide.tsx";
 import GaussianSplattingGuide from "./pages/guides/GaussianSplattingGuide.tsx";
 import GsdGuide from "./pages/guides/GsdGuide.tsx";
+import Part146AdspGuide from "./pages/guides/Part146AdspGuide.tsx";
 import Part107LaancGuide from "./pages/guides/Part107LaancGuide.tsx";
 import Community from "./pages/Community.tsx";
 import CommunityCategory from "./pages/CommunityCategory.tsx";
@@ -110,6 +112,7 @@ const App = () => (
             <Route path="/rtk" element={<RtkAlignment />} />
             <Route path="/insights" element={<AiInsights />} />
             <Route path="/compliance" element={<Compliance />} />
+            <Route path="/adsp" element={<AdspHub />} />
             <Route path="/splats" element={<GaussianSplats />} />
             <Route path="/embed/splats/:token" element={<EmbedSplats />} />
             <Route path="/share/:token" element={<SharedDeliverables />} />
@@ -145,6 +148,7 @@ const App = () => (
             <Route path="/guides/gaussian-splatting" element={<GaussianSplattingGuide />} />
             <Route path="/guides/gsd-ground-sample-distance" element={<GsdGuide />} />
             <Route path="/guides/part-107-laanc" element={<Part107LaancGuide />} />
+            <Route path="/guides/part-146-automated-data-service-provider" element={<Part146AdspGuide />} />
             <Route path="/community" element={<Community />} />
             <Route path="/community/new" element={<CommunityNewThread />} />
             <Route path="/community/c/:slug" element={<CommunityCategory />} />
