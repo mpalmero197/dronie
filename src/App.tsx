@@ -59,6 +59,7 @@ import DronePhotogrammetryGuide from "./pages/guides/DronePhotogrammetryGuide.ts
 import OrthoDsmDtmGuide from "./pages/guides/OrthoDsmDtmGuide.tsx";
 import GaussianSplattingGuide from "./pages/guides/GaussianSplattingGuide.tsx";
 import GsdGuide from "./pages/guides/GsdGuide.tsx";
+import Part146AdspGuide from "./pages/guides/Part146AdspGuide.tsx";
 import Part107LaancGuide from "./pages/guides/Part107LaancGuide.tsx";
 import Community from "./pages/Community.tsx";
 import CommunityCategory from "./pages/CommunityCategory.tsx";
@@ -147,6 +148,7 @@ const App = () => (
             <Route path="/guides/gaussian-splatting" element={<GaussianSplattingGuide />} />
             <Route path="/guides/gsd-ground-sample-distance" element={<GsdGuide />} />
             <Route path="/guides/part-107-laanc" element={<Part107LaancGuide />} />
+            <Route path="/guides/part-146-automated-data-service-provider" element={<Part146AdspGuide />} />
             <Route path="/community" element={<Community />} />
             <Route path="/community/new" element={<CommunityNewThread />} />
             <Route path="/community/c/:slug" element={<CommunityCategory />} />
