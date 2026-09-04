@@ -33,6 +33,12 @@ const guides = [
     description: "The U.S. commercial drone rules in plain English — Part 107 limits, waivers, airspace classes, and how to file LAANC authorizations before you fly.",
     tag: "Regulations",
   },
+  {
+    path: "/guides/part-146-automated-data-service-provider",
+    title: "Automated Data Service Providers under Part 146",
+    description: "What an ADSP is, how strategic deconfliction and conformance monitoring work, and the records providers and BVLOS operators must keep.",
+    tag: "Regulations",
+  },
 ];
 
 export default function GuidesIndex() {
